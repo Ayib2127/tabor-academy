@@ -1,0 +1,340 @@
+"use client"
+
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import Link from "next/link"
+import { Mail, Phone, Loader2, Eye, EyeOff } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { SiteHeader } from "@/components/site-header"
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { supabase } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+
+const emailLoginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional(),
+})
+
+const phoneLoginSchema = z.object({
+  country: z.string().min(1, "Please select a country"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
+})
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
+  const countries = getCountries()
+
+  const {
+    register: registerEmail,
+    handleSubmit: handleSubmitEmail,
+    formState: { errors: emailErrors },
+  } = useForm({
+    // resolver: zodResolver(emailLoginSchema), // Comment out this line
+  })
+
+  const {
+    register: registerPhone,
+    handleSubmit: handleSubmitPhone,
+    formState: { errors: phoneErrors },
+  } = useForm({
+    resolver: zodResolver(phoneLoginSchema),
+  })
+
+  const onSubmitEmail = async (data: any) => {
+    setIsLoading(true)
+    setError("")
+    try {
+      console.log('Attempting Supabase sign in...');
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      })
+
+      console.log('Supabase sign in call finished.', { error });
+
+      if (error) {
+        console.log('Sign in error detected:', error);
+        throw error
+      }
+
+      console.log('Sign in successful, attempting toast and redirect.');
+      toast.success("Logged in successfully!")
+
+      // Fetch user role and redirect based on role
+      if (authData.user) {
+        console.log('Fetching profile for user ID:', authData.user.id);
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single()
+
+        if (profileError) {
+           console.error('Error fetching profile:', profileError)
+           // Optionally redirect to a default page or show an error if profile fetch fails
+           router.push('/dashboard');
+           return;
+        }
+
+        if (profile) {
+          console.log('Profile fetched, user role:', profile.role);
+          // Redirect based on role
+          if (profile.role === 'admin') {
+            console.log('Redirecting to admin dashboard');
+            router.push('/dashboard/admin')
+          } else if (profile.role === 'mentor') {
+            console.log('Redirecting to mentor dashboard');
+            router.push('/dashboard/mentor')
+          } else if (profile.role === 'instructor') {
+            console.log('Redirecting to instructor dashboard');
+            router.push('/dashboard/instructor')
+          } else {
+            console.log('Redirecting to default dashboard');
+            // Default to student dashboard for other roles or if role is null/undefined
+            router.push('/dashboard')
+          }
+        } else {
+          // If no profile found after successful login (shouldn't happen with trigger),
+          // redirect to default or show error
+          console.log('No profile found for user after login:', authData.user.id);
+          router.push('/dashboard');
+        }
+
+      } else {
+         // If authData.user is null after successful sign-in (shouldn't happen)
+         console.log('User object is null after successful sign-in.');
+         router.push('/dashboard');
+      }
+
+    } catch (err: any) {
+      console.error('Login error caught:', err)
+      setError(err.message || "An error occurred during login.")
+      toast.error(err.message || "Failed to log in.")
+    } finally {
+      setIsLoading(false)
+      console.log('Login process finished (finally block).');
+    }
+  }
+
+  const onSubmitPhone = async (data: any) => {
+    setIsLoading(true)
+    setError("")
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Redirect to phone verification page
+    } catch (err) {
+      setError("Invalid phone number")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      
+      <main className="flex-1">
+        <div className="container max-w-lg py-10">
+          <Card className="p-6">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold gradient-text mb-2">
+                Welcome Back
+              </h1>
+              <p className="text-muted-foreground">
+                Continue your learning journey with Tabor Digital Academy
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+                {error}
+              </div>
+            )}
+
+            <Tabs defaultValue="email" className="mb-8">
+              <TabsList className="grid grid-cols-3 mb-6">
+                <TabsTrigger value="email">Email</TabsTrigger>
+                <TabsTrigger value="phone">Phone</TabsTrigger>
+                <TabsTrigger value="social">Social</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="email">
+                <form onSubmit={(e) => {
+                  console.log('Form onSubmit handler triggered (via handleSubmitEmail).');
+                  handleSubmitEmail(onSubmitEmail)(e);
+                }} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      {...registerEmail("email")}
+                      className={emailErrors.email ? "border-red-500" : ""}
+                    />
+                    {emailErrors.email && (
+                      <p className="text-sm text-red-500">{emailErrors.email.message as string}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        {...registerEmail("password")}
+                        className={emailErrors.password ? "border-red-500 pr-10" : "pr-10"}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {emailErrors.password && (
+                      <p className="text-sm text-red-500">{emailErrors.password.message as string}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="rememberMe" {...registerEmail("rememberMe")} />
+                      <Label htmlFor="rememberMe" className="text-sm">
+                        Remember me
+                      </Label>
+                    </div>
+                    <Link
+                      href="/reset-password"
+                      className="text-sm text-orange-500 hover:underline"
+                    >
+                      Forgot Password?
+                    </Link>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Logging in...
+                      </>
+                    ) : (
+                      "Log In"
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="phone">
+                <form onSubmit={handleSubmitPhone(onSubmitPhone)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <select
+                      id="country"
+                      className="w-full p-2 border rounded-md"
+                      {...registerPhone("country")}
+                    >
+                      <option value="">Select Country</option>
+                      {countries.map((country) => (
+                        <option key={country} value={country}>
+                          {country} (+{getCountryCallingCode(country)})
+                        </option>
+                      ))}
+                    </select>
+                    {phoneErrors.country && (
+                      <p className="text-sm text-red-500">{phoneErrors.country.message as string}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      {...registerPhone("phone")}
+                      className={phoneErrors.phone ? "border-red-500" : ""}
+                    />
+                    {phoneErrors.phone && (
+                      <p className="text-sm text-red-500">{phoneErrors.phone.message as string}</p>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending Code...
+                      </>
+                    ) : (
+                      "Send Login Code"
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="social">
+                <div className="space-y-4">
+                  <Button variant="outline" className="w-full">
+                    Continue with Google
+                  </Button>
+                  <Button variant="outline" className="w-full">
+                    Continue with Facebook
+                  </Button>
+                  <Button variant="outline" className="w-full">
+                    Continue with LinkedIn
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                New to Tabor Digital Academy?{" "}
+                <Link href="/signup" className="text-orange-500 hover:underline">
+                  Sign up for free
+                </Link>
+              </p>
+
+              <div className="text-xs text-muted-foreground">
+                By continuing, you agree to our{" "}
+                <Link href="/terms" className="text-orange-500 hover:underline">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="text-orange-500 hover:underline">
+                  Privacy Policy
+                </Link>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </main>
+    </div>
+  )
+}
