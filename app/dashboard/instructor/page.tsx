@@ -311,39 +311,39 @@ export default function InstructorDashboardPage() {
 
               {wizardStep === 1 && (
                 <>
-                  <form onSubmit={handleSubmit(handleNextStep)} className="space-y-6">
-                    {/* Course Information Setup */}
-                    <Card className="p-6">
-                      <h2 className="text-xl font-semibold mb-4">Course Information</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Title */}
-                        <div>
-                          <Label htmlFor="title">Course Title</Label>
-                          <Controller
-                            name="title"
-                            control={control}
-                            render={({ field }) => <Input id="title" placeholder="e.g. Advanced Web Development" value={field.value} onChange={field.onChange} />}
-                          />
-                          {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
-                        </div>
+                <form onSubmit={handleSubmit(handleNextStep)} className="space-y-6">
+                  {/* Course Information Setup */}
+                  <Card className="p-6">
+                    <h2 className="text-xl font-semibold mb-4">Course Information</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Title */}
+                      <div>
+                        <Label htmlFor="title">Course Title</Label>
+                        <Controller
+                          name="title"
+                          control={control}
+                          render={({ field }) => <Input id="title" placeholder="e.g. Advanced Web Development" value={field.value} onChange={field.onChange} />}
+                        />
+                        {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+                      </div>
 
-                        {/* Subtitle */}
-                        <div>
-                          <Label htmlFor="subtitle">Course Subtitle (Optional)</Label>
-                          <Controller
-                            name="subtitle"
-                            control={control}
-                            render={({ field }) => <Input id="subtitle" placeholder="e.g. Become a full-stack expert" value={field.value} onChange={field.onChange} />}
-                          />
-                          {errors.subtitle && <p className="text-sm text-red-500">{errors.subtitle.message}</p>}
-                        </div>
+                      {/* Subtitle */}
+                      <div>
+                        <Label htmlFor="subtitle">Course Subtitle (Optional)</Label>
+                        <Controller
+                          name="subtitle"
+                          control={control}
+                          render={({ field }) => <Input id="subtitle" placeholder="e.g. Become a full-stack expert" value={field.value} onChange={field.onChange} />}
+                        />
+                        {errors.subtitle && <p className="text-sm text-red-500">{errors.subtitle.message}</p>}
+                      </div>
 
-                        {/* Description */}
-                        <div className="md:col-span-2">
-                          <Label htmlFor="description">Course Description</Label>
-                          <Controller
-                            name="description"
-                            control={control}
+                      {/* Description */}
+                      <div className="md:col-span-2">
+                        <Label htmlFor="description">Course Description</Label>
+                        <Controller
+                          name="description"
+                          control={control}
                             render={({ field }) => (
                               <RichTextEditor
                                 value={field.value}
@@ -351,16 +351,16 @@ export default function InstructorDashboardPage() {
                                 placeholder="Describe your course"
                               />
                             )}
-                          />
-                          {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
-                        </div>
+                        />
+                        {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
+                      </div>
 
-                        {/* Learning Outcomes */}
-                        <div className="md:col-span-2">
-                          <Label htmlFor="learningOutcomes">What will students learn?</Label>
-                          <Controller
-                            name="learningOutcomes"
-                            control={control}
+                      {/* Learning Outcomes */}
+                      <div className="md:col-span-2">
+                        <Label htmlFor="learningOutcomes">What will students learn?</Label>
+                        <Controller
+                          name="learningOutcomes"
+                          control={control}
                             render={({ field }) => (
                               <RichTextEditor
                                 value={field.value}
@@ -368,39 +368,39 @@ export default function InstructorDashboardPage() {
                                 placeholder="List 3-5 key outcomes"
                               />
                             )}
-                          />
-                          {errors.learningOutcomes && <p className="text-sm text-red-500">{errors.learningOutcomes.message}</p>}
-                        </div>
+                        />
+                        {errors.learningOutcomes && <p className="text-sm text-red-500">{errors.learningOutcomes.message}</p>}
+                      </div>
 
-                        {/* Target Audience */}
-                        <div>
-                          <Label htmlFor="targetAudience">Who is this course for? (Optional)</Label>
-                          <Controller
-                            name="targetAudience"
-                            control={control}
-                            render={({ field }) => <Input id="targetAudience" placeholder="e.g. Beginners in web development" value={field.value} onChange={field.onChange} />}
-                          />
-                          {errors.targetAudience && <p className="text-sm text-red-500">{errors.targetAudience.message}</p>}
-                        </div>
+                      {/* Target Audience */}
+                      <div>
+                        <Label htmlFor="targetAudience">Who is this course for? (Optional)</Label>
+                        <Controller
+                          name="targetAudience"
+                          control={control}
+                          render={({ field }) => <Input id="targetAudience" placeholder="e.g. Beginners in web development" value={field.value} onChange={field.onChange} />}
+                        />
+                        {errors.targetAudience && <p className="text-sm text-red-500">{errors.targetAudience.message}</p>}
+                      </div>
 
-                        {/* Prerequisites */}
-                        <div>
-                          <Label htmlFor="prerequisites">Prerequisites (Optional)</Label>
-                          <Controller
-                            name="prerequisites"
-                            control={control}
-                            render={({ field }) => <Input id="prerequisites" placeholder="e.g. Basic HTML/CSS knowledge" value={field.value} onChange={field.onChange} />}
-                          />
-                          {errors.prerequisites && <p className="text-sm text-red-500">{errors.prerequisites.message}</p>}
-                        </div>
+                      {/* Prerequisites */}
+                      <div>
+                        <Label htmlFor="prerequisites">Prerequisites (Optional)</Label>
+                        <Controller
+                          name="prerequisites"
+                          control={control}
+                          render={({ field }) => <Input id="prerequisites" placeholder="e.g. Basic HTML/CSS knowledge" value={field.value} onChange={field.onChange} />}
+                        />
+                        {errors.prerequisites && <p className="text-sm text-red-500">{errors.prerequisites.message}</p>}
+                      </div>
 
-                        {/* Category */}
-                        <div>
-                          <Label htmlFor="category">Category</Label>
-                          <Controller
-                            name="category"
-                            control={control}
-                            render={({ field }) => (
+                      {/* Category */}
+                      <div>
+                        <Label htmlFor="category">Category</Label>
+                        <Controller
+                          name="category"
+                          control={control}
+                          render={({ field }) => (
                               <CustomSelect
                                 id="category"
                                 label="Category"
@@ -420,15 +420,15 @@ export default function InstructorDashboardPage() {
                               />
                             )}
                           />
-                        </div>
+                      </div>
 
-                        {/* Level */}
-                        <div>
-                          <Label htmlFor="level">Skill Level</Label>
-                          <Controller
-                            name="level"
-                            control={control}
-                            render={({ field }) => (
+                      {/* Level */}
+                      <div>
+                        <Label htmlFor="level">Skill Level</Label>
+                        <Controller
+                          name="level"
+                          control={control}
+                          render={({ field }) => (
                               <CustomSelect
                                 id="level"
                                 label="Skill Level"
@@ -443,15 +443,15 @@ export default function InstructorDashboardPage() {
                               />
                             )}
                           />
-                        </div>
+                      </div>
 
-                        {/* Pricing Strategy */}
-                        <div>
-                          <Label htmlFor="pricingStrategy">Pricing Strategy</Label>
-                          <Controller
-                            name="pricingStrategy"
-                            control={control}
-                            render={({ field }) => (
+                      {/* Pricing Strategy */}
+                      <div>
+                        <Label htmlFor="pricingStrategy">Pricing Strategy</Label>
+                        <Controller
+                          name="pricingStrategy"
+                          control={control}
+                          render={({ field }) => (
                               <CustomSelect
                                 id="pricingStrategy"
                                 label="Pricing Strategy"
@@ -465,15 +465,15 @@ export default function InstructorDashboardPage() {
                               />
                             )}
                           />
-                        </div>
+                      </div>
 
-                        {/* Price (Conditional) */}
+                      {/* Price (Conditional) */}
                         {control._formValues.pricingStrategy === 'paid' && (
-                          <div>
+                      <div>
                             <Label htmlFor="price">Price</Label>
-                            <Controller
-                              name="price"
-                              control={control}
+                        <Controller
+                          name="price"
+                          control={control}
                               render={({ field }) => (
                                 <div className="relative">
                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -487,18 +487,18 @@ export default function InstructorDashboardPage() {
                                   />
                                 </div>
                               )}
-                            />
-                            {errors.price && <p className="text-sm text-red-500">{errors.price.message}</p>}
-                          </div>
+                        />
+                        {errors.price && <p className="text-sm text-red-500">{errors.price.message}</p>}
+                      </div>
                         )}
 
-                        {/* Language */}
-                        <div>
-                          <Label htmlFor="language">Language</Label>
-                          <Controller
-                            name="language"
-                            control={control}
-                            render={({ field }) => (
+                      {/* Language */}
+                      <div>
+                        <Label htmlFor="language">Language</Label>
+                        <Controller
+                          name="language"
+                          control={control}
+                          render={({ field }) => (
                               <CustomSelect
                                 id="language"
                                 label="Language"
@@ -520,14 +520,14 @@ export default function InstructorDashboardPage() {
                               />
                             )}
                           />
-                        </div>
+                      </div>
 
                         {/* Subtitle Languages */}
-                        <div>
-                          <Label htmlFor="subtitleLanguages">Subtitle Languages (Optional)</Label>
-                          <Controller
-                            name="subtitleLanguages"
-                            control={control}
+                      <div>
+                        <Label htmlFor="subtitleLanguages">Subtitle Languages (Optional)</Label>
+                        <Controller
+                          name="subtitleLanguages"
+                          control={control}
                             render={({ field }) => (
                               <>
                                 <Select
@@ -577,19 +577,19 @@ export default function InstructorDashboardPage() {
                                 )}
                               </>
                             )}
-                          />
-                          {errors.subtitleLanguages && <p className="text-sm text-red-500">{errors.subtitleLanguages.message}</p>}
-                        </div>
+                        />
+                        {errors.subtitleLanguages && <p className="text-sm text-red-500">{errors.subtitleLanguages.message}</p>}
+                      </div>
 
-                        {/* Thumbnail Upload */}
+                      {/* Thumbnail Upload */}
                         <div className="md:col-span-2">
                           <Label htmlFor="thumbnail">Course Thumbnail</Label>
-                          <Controller
-                            name="thumbnail"
-                            control={control}
-                            render={({ field: { value, onChange, ...field } }) => (
+                        <Controller
+                          name="thumbnail"
+                          control={control}
+                          render={({ field: { value, onChange, ...field } }) => (
                               <FileUpload
-                                value={value}
+                              value={value}
                                 onChange={onChange}
                                 accept={{
                                   'image/*': ['.png', '.jpg', '.jpeg', '.gif'],
@@ -597,20 +597,20 @@ export default function InstructorDashboardPage() {
                                 maxSize={5 * 1024 * 1024} // 5MB
                                 label="Upload course thumbnail"
                                 error={errors.thumbnail?.message}
-                              />
-                            )}
-                          />
-                        </div>
+                            />
+                          )}
+                        />
+                      </div>
 
-                        {/* Promotional Video Upload */}
+                      {/* Promotional Video Upload */}
                         <div className="md:col-span-2">
-                          <Label htmlFor="promotionalVideo">Promotional Video (Optional)</Label>
-                          <Controller
-                            name="promotionalVideo"
-                            control={control}
-                            render={({ field: { value, onChange, ...field } }) => (
+                        <Label htmlFor="promotionalVideo">Promotional Video (Optional)</Label>
+                        <Controller
+                          name="promotionalVideo"
+                          control={control}
+                          render={({ field: { value, onChange, ...field } }) => (
                               <FileUpload
-                                value={value}
+                              value={value}
                                 onChange={onChange}
                                 accept={{
                                   'video/*': ['.mp4', '.mov', '.avi'],
@@ -619,16 +619,16 @@ export default function InstructorDashboardPage() {
                                 preview={false}
                                 label="Upload promotional video"
                                 error={errors.promotionalVideo?.message}
-                              />
-                            )}
-                          />
-                        </div>
+                            />
+                          )}
+                        />
                       </div>
-                    </Card>
-                    <div className="flex justify-end">
-                      <Button type="submit">Next Step</Button>
                     </div>
-                  </form>
+                  </Card>
+                    <div className="flex justify-end">
+                    <Button type="submit">Next Step</Button>
+                  </div>
+                </form>
                   {/* Standalone Select for debugging */}
                   <div className="mt-8">
                     <h3 className="text-lg font-semibold mb-2">Standalone Debug Select</h3>
