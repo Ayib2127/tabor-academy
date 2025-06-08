@@ -18,6 +18,8 @@ import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
+console.log("Supabase client initialized:", supabase);
+
 const emailLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
@@ -75,29 +77,29 @@ export default function LoginPage() {
       // Fetch user role and redirect based on role
       if (authData.user) {
         console.log('Fetching profile for user ID:', authData.user.id);
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
+        const { data: userData, error: userError } = await supabase
+          .from('users')
           .select('role')
           .eq('id', authData.user.id)
           .single()
 
-        if (profileError) {
-           console.error('Error fetching profile:', profileError)
-           // Optionally redirect to a default page or show an error if profile fetch fails
+        if (userError) {
+           console.error('Error fetching user data:', userError)
+           // Optionally redirect to a default page or show an error if user fetch fails
            router.push('/dashboard');
            return;
         }
 
-        if (profile) {
-          console.log('Profile fetched, user role:', profile.role);
+        if (userData) {
+          console.log('User data fetched, user role:', userData.role);
           // Redirect based on role
-          if (profile.role === 'admin') {
+          if (userData.role === 'admin') {
             console.log('Redirecting to admin dashboard');
             router.push('/dashboard/admin')
-          } else if (profile.role === 'mentor') {
+          } else if (userData.role === 'mentor') {
             console.log('Redirecting to mentor dashboard');
             router.push('/dashboard/mentor')
-          } else if (profile.role === 'instructor') {
+          } else if (userData.role === 'instructor') {
             console.log('Redirecting to instructor dashboard');
             router.push('/dashboard/instructor')
           } else {
@@ -106,9 +108,9 @@ export default function LoginPage() {
             router.push('/dashboard')
           }
         } else {
-          // If no profile found after successful login (shouldn't happen with trigger),
+          // If no user data found after successful login (shouldn't happen with trigger),
           // redirect to default or show error
-          console.log('No profile found for user after login:', authData.user.id);
+          console.log('No user data found for user after login:', authData.user.id);
           router.push('/dashboard');
         }
 

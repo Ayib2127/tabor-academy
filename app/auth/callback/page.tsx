@@ -37,27 +37,27 @@ export default function SocialAuthCallback() {
            console.log('User session obtained:', user);
 
           if (user) {
-            console.log('Fetching profile for user ID:', user.id);
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
+            console.log('Fetching user data for user ID:', user.id);
+            const { data: userData, error: userError } = await supabase
+              .from('users')
               .select('role')
               .eq('id', user.id)
               .single()
 
-            if (profileError) {
-              console.error('Error fetching profile:', profileError)
+            if (userError) {
+              console.error('Error fetching user data:', userError)
               setAuthState("error")
-              setError("Failed to fetch user profile. Please try again.")
+              setError("Failed to fetch user data. Please try again.")
               return
             }
 
-            if (profile) {
-              console.log('Profile fetched, user role:', profile.role);
+            if (userData) {
+              console.log('User data fetched, user role:', userData.role);
               // Redirect based on role
-              if (profile.role === 'admin') {
+              if (userData.role === 'admin') {
                 console.log('Redirecting to admin dashboard');
                 router.push('/dashboard/admin')
-              } else if (profile.role === 'mentor') {
+              } else if (userData.role === 'mentor') {
                 console.log('Redirecting to mentor dashboard');
                 router.push('/dashboard/mentor')
               } else {
@@ -66,10 +66,10 @@ export default function SocialAuthCallback() {
                 router.push('/dashboard')
               }
             } else {
-              // If no profile found, maybe redirect to profile completion or handle as error
-              console.log('No profile found for user:', user.id);
+              // If no user data found, maybe redirect to profile completion or handle as error
+              console.log('No user data found for user:', user.id);
               setAuthState("error")
-              setError("User profile not found.")
+              setError("User data not found.")
             }
 
           } else {

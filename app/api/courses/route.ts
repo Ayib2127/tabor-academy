@@ -1,90 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { v4 as uuidv4 } from 'uuid';
+import * as Sentry from '@sentry/nextjs';
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic'; // Force dynamic rendering for this API route
+
+// Mock data for demonstration
+const courses = [
+  {
+    id: 'course1',
+    title: 'Full Stack Web Development',
+    description: 'Learn to build modern web applications.',
+    instructorId: 'instructor1',
+    createdAt: '2024-05-01',
+    updatedAt: '2024-05-10',
+    status: 'draft',
+  },
+  {
+    id: 'course2',
+    title: 'Introduction to Data Science',
+    description: 'A beginner-friendly data science course.',
+    instructorId: 'instructor1',
+    createdAt: '2024-04-15',
+    updatedAt: '2024-05-09',
+    status: 'published',
+  },
+];
+
+export async function GET(request: NextRequest): Promise<NextResponse<any>> {
+  const supabase = createClient();
+
   try {
-    // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const category = searchParams.get('category');
-    const level = searchParams.get('level');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const levels = searchParams.getAll('level');
+    const sortBy = searchParams.get('sortBy') || 'created_at';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+    const limit = parseInt(searchParams.get('limit') || '12');
     const page = parseInt(searchParams.get('page') || '1');
     const offset = (page - 1) * limit;
 
-    // Build the query
     let query = supabase
       .from('courses')
       .select(`
-        *,
-        users!courses_instructor_id_fkey (id, full_name, avatar_url),
-        course_categories!inner (
-          categories (id, name)
-        )
-      `)
-      .eq('is_published', true)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    // Apply filters if provided
-    if (category) {
-      query = query.eq('course_categories.categories.name', category);
-    }
-
-    if (level) {
-      query = query.eq('level', level);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-
-    // Get total count for pagination
-    const { count: totalCount, error: countError } = await supabase
-      .from('courses')
-      .select('id', { count: 'exact', head: true })
+        id,
+        title,
+        description,
+        thumbnail_url,
+        price,
+        level,
+        users ( full_name, avatar_url )
+      `, { count: 'exact' })
       .eq('is_published', true);
 
-    if (countError) {
-      console.error('Error getting count:', countError);
+    if (levels.length > 0) {
+      query = query.in('level', levels);
+    }
+
+    if (['created_at', 'title', 'price', 'level'].includes(sortBy)) {
+        query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+    }
+
+    query = query.range(offset, offset + limit - 1);
+
+    const { data: courses, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching courses with filters:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({
-      courses: data,
+      courses: courses,
       pagination: {
-        total: totalCount || 0,
+        total: count || 0,
         page,
         limit,
-        pages: Math.ceil((totalCount || 0) / limit)
+        pages: Math.ceil((count || 0) / limit)
       }
     });
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+
+  } catch (err) {
+    console.error('An unexpected error occurred:', err);
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const supabase = createClient(); // Call without arguments
+
   try {
-    const { title, description, level, price, thumbnailUrl } = await request.json();
-    
-    // Get the current user
+    // 1. Check for authenticated user session
     const { data: { session } } = await supabase.auth.getSession();
-    
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Check if the user is an instructor
+
+    // 2. Check if the authenticated user has the 'instructor' role
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('role')
@@ -92,39 +104,51 @@ export async function POST(request: NextRequest) {
       .single();
       
     if (userError || userData?.role !== 'instructor') {
-      return NextResponse.json(
-        { error: 'Only instructors can create courses' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Forbidden: Only instructors can create courses' }, { status: 403 });
+    }
+
+    // 3. Get the new course data from the request body
+    const { title, description, level, price, thumbnail_url } = await request.json();
+    
+    // TEMPORARY: Trigger a server-side error for Sentry testing
+    if (title === "trigger_sentry_error") {
+      console.error("Intentionally throwing a server-side error for Sentry test.");
+      throw new Error("This is a test server-side error for Sentry!");
     }
     
-    // Create the course
-    const { data, error } = await supabase
+    // Basic validation
+    if (!title || !description) {
+        return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+    }
+    
+    // 4. Insert the new course into the database
+    const { data: newCourse, error: insertError } = await supabase
       .from('courses')
       .insert({
         title,
         description,
         level,
         price: price || 0,
-        thumbnail_url: thumbnailUrl,
+        thumbnail_url,
         instructor_id: session.user.id,
-        is_published: false
+        is_published: false // Courses are unpublished by default
       })
       .select()
       .single();
       
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+    if (insertError) {
+      // Handle potential duplicate titles if the constraint is active
+      if (insertError.code === '23505') { 
+          return NextResponse.json({ error: 'A course with this title already exists.'}, { status: 409 });
+      }
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
     
-    return NextResponse.json({ course: data });
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    return NextResponse.json(newCourse, { status: 201 });
+
+  } catch (error: any) {
+    console.error('Error creating course:', error);
+    Sentry.captureException(error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

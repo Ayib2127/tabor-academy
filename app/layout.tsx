@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/react';
 import Script from 'next/script';
 import { GA_MEASUREMENT_ID } from '@/lib/analytics';
 import { AuthProvider } from '@/components/auth-provider';
+import SentryErrorBoundary from '@/components/SentryErrorBoundary';
 
 // Optimize font loading
 const inter = Inter({ 
@@ -111,13 +112,15 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={inter.className}>
-        <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="light">
-            {children}
-            <SiteFooter />
-            <Analytics />
-          </ThemeProvider>
-        </AuthProvider>
+        <SentryErrorBoundary fallback={<p>Something went wrong!</p>}>
+          <AuthProvider>
+            <ThemeProvider attribute="class" defaultTheme="light">
+              {children}
+              <SiteFooter />
+              <Analytics />
+            </ThemeProvider>
+          </AuthProvider>
+        </SentryErrorBoundary>
       </body>
     </html>
   );
