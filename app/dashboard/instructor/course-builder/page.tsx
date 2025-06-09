@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileUpload } from '@/components/ui/file-upload';
 import { SiteHeader } from '@/components/site-header';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -37,11 +36,13 @@ export default function CourseBuilderPage() {
         const fetchCategories = async () => {
             try {
                 setIsLoadingCategories(true);
+                console.log('Fetching categories...');
                 const response = await fetch('/api/categories');
                 if (!response.ok) {
                     throw new Error('Failed to fetch categories.');
                 }
                 const data = await response.json();
+                console.log('Categories fetched:', data);
                 setCategories(data);
             } catch (err: any) {
                 console.error('Error fetching categories:', err);
@@ -55,6 +56,7 @@ export default function CourseBuilderPage() {
 
     const handleCreateCourse = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        console.log('handleCreateCourse triggered');
         
         // Basic validation
         if (!title.trim()) {
@@ -114,6 +116,17 @@ export default function CourseBuilderPage() {
             toast.error(err.message || 'Failed to create course. Please try again.');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Simple file upload handler for demonstration
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setUrl: (url: string) => void) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // In a real app, you would upload this file to a storage service
+            // For now, we'll just create a fake URL
+            const fakeUrl = URL.createObjectURL(file);
+            setUrl(fakeUrl);
         }
     };
 
@@ -284,10 +297,11 @@ export default function CourseBuilderPage() {
                                     <Label htmlFor="thumbnail" className="text-base font-medium">
                                         Course Thumbnail (Optional)
                                     </Label>
-                                    <FileUpload 
+                                    <Input 
                                         id="thumbnail"
-                                        endpoint="/api/upload"
-                                        onUrlChange={(url) => setThumbnailUrl(url)}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleFileChange(e, setThumbnailUrl)}
                                         className="mt-1"
                                     />
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -300,10 +314,11 @@ export default function CourseBuilderPage() {
                                     <Label htmlFor="promoVideo" className="text-base font-medium">
                                         Promotional Video (Optional)
                                     </Label>
-                                    <FileUpload 
+                                    <Input 
                                         id="promoVideo"
-                                        endpoint="/api/upload"
-                                        onUrlChange={(url) => setPromoVideoUrl(url)}
+                                        type="file"
+                                        accept="video/*"
+                                        onChange={(e) => handleFileChange(e, setPromoVideoUrl)}
                                         className="mt-1"
                                     />
                                     <p className="text-sm text-muted-foreground mt-1">
