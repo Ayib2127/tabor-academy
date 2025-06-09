@@ -25,7 +25,6 @@ export function SiteHeader() {
               alt="Tabor Digital Academy"
               width={40}
               height={40}
-              className="h-10 w-auto"
             />
             <span className="hidden font-bold sm:inline-block gradient-text">
               Tabor Digital Academy

@@ -27,8 +27,8 @@ export default function CourseBuilderPage() {
     const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
     const [categoryId, setCategoryId] = useState('');
     const [tags, setTags] = useState('');
-    const [thumbnailUrl, setThumbnailUrl] = useState('');
-    const [promoVideoUrl, setPromoVideoUrl] = useState('');
+    const [thumbnailUrl, setThumbnailUrl] = useState<string>('');
+    const [promoVideoUrl, setPromoVideoUrl] = useState<string>('');
     const [categories, setCategories] = useState<Category[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -144,7 +144,7 @@ export default function CourseBuilderPage() {
                         </p>
                     </div>
 
-                    <Card className="card-hover gradient-border">
+                    <Card className="card-hover gradient-border w-full">
                         <CardHeader>
                             <CardTitle className="text-xl">Course Foundation</CardTitle>
                             <CardDescription>
@@ -281,43 +281,33 @@ export default function CourseBuilderPage() {
 
                                 {/* Course Thumbnail */}
                                 <div>
-                                    <Label className="text-base font-medium">
+                                    <Label htmlFor="thumbnail" className="text-base font-medium">
                                         Course Thumbnail (Optional)
                                     </Label>
-                                    <div className="mt-1">
-                                        <FileUpload
-                                            endpoint="courseThumbnail"
-                                            onChange={(url) => {
-                                                if (url) {
-                                                    setThumbnailUrl(url);
-                                                    toast.success("Thumbnail uploaded successfully!");
-                                                }
-                                            }}
-                                        />
-                                    </div>
+                                    <FileUpload 
+                                        id="thumbnail"
+                                        endpoint="/api/upload"
+                                        onUrlChange={(url) => setThumbnailUrl(url)}
+                                        className="mt-1"
+                                    />
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Upload an engaging thumbnail image for your course (recommended: 1280x720px).
+                                        Upload an eye-catching image for your course. (Max 5MB)
                                     </p>
                                 </div>
 
                                 {/* Promotional Video */}
                                 <div>
-                                    <Label className="text-base font-medium">
+                                    <Label htmlFor="promoVideo" className="text-base font-medium">
                                         Promotional Video (Optional)
                                     </Label>
-                                    <div className="mt-1">
-                                        <FileUpload
-                                            endpoint="courseVideo"
-                                            onChange={(url) => {
-                                                if (url) {
-                                                    setPromoVideoUrl(url);
-                                                    toast.success("Promotional video uploaded successfully!");
-                                                }
-                                            }}
-                                        />
-                                    </div>
+                                    <FileUpload 
+                                        id="promoVideo"
+                                        endpoint="/api/upload"
+                                        onUrlChange={(url) => setPromoVideoUrl(url)}
+                                        className="mt-1"
+                                    />
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Upload a short video to give students a preview of your course (max 2 minutes recommended).
+                                        Add a short video to introduce your course. (Max 20MB)
                                     </p>
                                 </div>
 
