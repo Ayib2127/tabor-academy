@@ -1,15 +1,19 @@
-// This file configures the initialization of Sentry on the server.
-// The config you add here will be used whenever the server handles a request.
-// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+// This file configures the Sentry Node.js SDK for use with Next.js
+// applications.
+// https://sentry.io/docs/platforms/javascript/guides/nextjs/
 
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
-  dsn: "https://7b5795934416089f4bf4c333efdfeb9e@o4509462425698304.ingest.us.sentry.io/4509463518511104",
+  dsn: process.env.SENTRY_DSN,
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
+  // Adjust this value in production, or use tracesSampler for greater control
+  tracesSampler: (samplingContext) => {
+    if (samplingContext.transactionContext && samplingContext.transactionContext.op === 'http.server') {
+      return 0.1;
+    }
+    return 0.05;
+  },
 
-  // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
+  debug: process.env.NODE_ENV === 'development',
 });

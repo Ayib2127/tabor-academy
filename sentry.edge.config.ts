@@ -6,11 +6,12 @@
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: "https://7b5795934416089f4bf4c333efdfeb9e@o4509462425698304.ingest.us.sentry.io/4509463518511104",
+  // Use environment variable for DSN
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
+  debug: process.env.NODE_ENV === 'development', // Set debug based on environment
 });

@@ -1,18 +1,19 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, PlusCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { Button } from '@/components/ui/button';
+import { GripVertical, Trash2, PlusCircle } from 'lucide-react';
 import { DraggableLesson } from './DraggableLesson';
+
+interface Lesson {
+  id: number;
+  title: string;
+}
 
 interface DraggableModuleProps {
   id: number;
   title: string;
-  lessons: Array<{
-    id: number;
-    title: string;
-  }>;
+  lessons: Lesson[];
   onDelete: (id: number) => void;
   onAddLesson: (moduleId: number) => void;
   onDeleteLesson: (moduleId: number, lessonId: number) => void;
@@ -42,58 +43,49 @@ export function DraggableModule({
   };
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      className="p-4 space-y-4 bg-white dark:bg-gray-800"
-    >
-      <div className="flex items-center justify-between">
+    <Card ref={setNodeRef} style={style} className="p-4">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <button
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-grab"
+          <div
             {...attributes}
             {...listeners}
+            className="cursor-grab hover:cursor-grabbing p-1 rounded hover:bg-gray-100"
           >
-            <GripVertical className="h-5 w-5 text-gray-400" />
-          </button>
-          <span className="font-semibold">{title}</span>
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+          <h3 className="font-semibold text-lg">{title}</h3>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => onDelete(id)}
-          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+          className="text-red-500 hover:text-red-700"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
-      <SortableContext
-        items={lessons.map(lesson => `lesson-${id}-${lesson.id}`)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="space-y-2 pl-8">
-          {lessons.map((lesson) => (
-            <DraggableLesson
-              key={lesson.id}
-              id={lesson.id}
-              moduleId={id}
-              title={lesson.title}
-              onDelete={() => onDeleteLesson(id, lesson.id)}
-            />
-          ))}
-        </div>
-      </SortableContext>
-
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => onAddLesson(id)}
-      >
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Add Lesson
-      </Button>
+      <div className="space-y-2 ml-6">
+        {lessons.map((lesson) => (
+          <DraggableLesson
+            key={lesson.id}
+            id={lesson.id}
+            moduleId={id}
+            title={lesson.title}
+            onDelete={onDeleteLesson}
+          />
+        ))}
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onAddLesson(id)}
+          className="w-full mt-2"
+        >
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Add Lesson
+        </Button>
+      </div>
     </Card>
   );
-} 
+}

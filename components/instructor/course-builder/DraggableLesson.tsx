@@ -1,13 +1,13 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GripVertical, Trash2, FileText } from 'lucide-react';
 
 interface DraggableLessonProps {
   id: number;
   moduleId: number;
   title: string;
-  onDelete: () => void;
+  onDelete: (moduleId: number, lessonId: number) => void;
 }
 
 export function DraggableLesson({
@@ -35,26 +35,27 @@ export function DraggableLesson({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300"
+      className="flex items-center justify-between p-2 bg-gray-50 rounded border"
     >
       <div className="flex items-center gap-2">
-        <button
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-grab"
+        <div
           {...attributes}
           {...listeners}
+          className="cursor-grab hover:cursor-grabbing p-1 rounded hover:bg-gray-200"
         >
-          <GripVertical className="h-4 w-4 text-gray-400" />
-        </button>
-        <span>{title}</span>
+          <GripVertical className="h-3 w-3 text-gray-400" />
+        </div>
+        <FileText className="h-4 w-4 text-gray-500" />
+        <span className="text-sm">{title}</span>
       </div>
       <Button
         variant="ghost"
         size="sm"
-        onClick={onDelete}
-        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+        onClick={() => onDelete(moduleId, id)}
+        className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
       >
         <Trash2 className="h-3 w-3" />
       </Button>
     </div>
   );
-} 
+}
