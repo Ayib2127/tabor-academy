@@ -22,7 +22,7 @@ export default function CourseBuilderPage() {
     const router = useRouter();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [price, setPrice] = useState(0);
+    const [price, setPrice] = useState<number>(0);
     const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
     const [categoryId, setCategoryId] = useState('');
     const [tags, setTags] = useState('');
@@ -54,9 +54,9 @@ export default function CourseBuilderPage() {
         fetchCategories();
     }, []);
 
-    const handleCreateCourse = async (e: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        console.log('handleCreateCourse triggered');
+        console.log('handleSubmit triggered', { title, description, level, categoryId, price, tags, thumbnailUrl, promoVideoUrl });
         
         // Basic validation
         if (!title.trim()) {
@@ -119,7 +119,7 @@ export default function CourseBuilderPage() {
         }
     };
 
-    // Simple file upload handler for demonstration
+    // Handle file upload
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setUrl: (url: string) => void) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -165,7 +165,7 @@ export default function CourseBuilderPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleCreateCourse} className="space-y-6">
+                            <form onSubmit={handleSubmit} className="space-y-6">
                                 {/* Course Title */}
                                 <div>
                                     <Label htmlFor="title" className="text-base font-medium">
@@ -204,7 +204,7 @@ export default function CourseBuilderPage() {
                                 </div>
 
                                 {/* Category and Level */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid md:grid-cols-2 gap-6">
                                     <div>
                                         <Label htmlFor="category" className="text-base font-medium">
                                             Category *
