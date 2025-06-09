@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
 // Mock data (should match your main courses list)
 const courses = [
@@ -56,66 +57,52 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient(); // Call without arguments
-  const { id: courseId } = params;
+  const courseId = params.id;
+  const supabase = createRouteHandlerClient({ cookies });
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
-    // 1. Check for authenticated user session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { is_published } = await request.json();
 
-    // 2. Get the course to verify ownership
-    const { data: existingCourse, error: fetchError } = await supabase
+    // Verify that the user is the instructor of this course
+    const { data: course, error: courseError } = await supabase
       .from('courses')
       .select('instructor_id')
       .eq('id', courseId)
       .single();
 
-    if (fetchError || !existingCourse) {
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+    if (courseError || !course) {
+      console.error('Course not found or unauthorized:', courseError);
+      return NextResponse.json({ error: 'Course not found or you are not authorized to update this course' }, { status: 404 });
     }
 
-    // 3. Security Check: Ensure the user owns the course they are trying to update
-    if (existingCourse.instructor_id !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden: You do not own this course' }, { status: 403 });
+    if (course.instructor_id !== user.id) {
+      return NextResponse.json({ error: 'Unauthorized: You are not the instructor of this course' }, { status: 403 });
     }
 
-    // 4. Get the updated course data from the request body
-    const { title, description, level, price, thumbnail_url, is_published } = await request.json();
-
-    // 5. Update the course in the database
-    const { data: updatedCourse, error: updateError } = await supabase
+    const { data, error } = await supabase
       .from('courses')
-      .update({
-        title,
-        description,
-        level,
-        price,
-        thumbnail_url,
-        is_published,
-        updated_at: new Date().toISOString(), // Manually set updated_at timestamp
-      })
+      .update({ is_published })
       .eq('id', courseId)
-      .select()
-      .single();
+      .select();
 
-    if (updateError) {
-      // Handle potential duplicate titles if the constraint is active
-      if (updateError.code === '23505') { 
-          return NextResponse.json({ error: 'A course with this title already exists.'}, { status: 409 });
-      }
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (error) {
+      console.error('Error updating course publication status:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(updatedCourse);
-
-  } catch (error) {
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    return NextResponse.json(data);
+  } catch (err: any) {
+    console.error('Unexpected error updating course publication status:', err);
+    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
   }
 }
 

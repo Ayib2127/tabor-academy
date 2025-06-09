@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -24,10 +24,35 @@ import {
   Settings,
   HelpCircle,
   ChevronRight,
-  Star
+  Star,
+  DollarSign
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
+
+interface Course {
+    id: string;
+    title: string;
+    is_published: boolean;
+    created_at: string;
+  thumbnail_url?: string; // Optional, as it might not be returned by the new API route
+  price?: number; // Optional
+  students?: number; // Optional
+  completionRate?: number; // Optional
+  recentActivity?: number; // Optional
+}
+
+interface ActivityItem {
+  id: string;
+  type: 'enrollment' | 'completion' | 'assignment' | 'question'; // Expanded types for potential future use
+  student: string;
+  action: string;
+  course: string;
+  time: string;
+}
 
 // Mock data for the instructor dashboard
 const instructorData = {
@@ -129,14 +154,108 @@ const instructorData = {
 export default function InstructorDashboardPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [instructorName, setInstructorName] = useState(instructorData.name)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [overallCompletionRate, setOverallCompletionRate] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+
+    useEffect(() => {
+    async function fetchInstructorData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError) {
+          throw new Error(userError.message);
+        }
+
+        if (!user) {
+          router.push('/login'); // Redirect to login if no user
+          return;
+        }
+
+        setInstructorName(user.user_metadata.full_name || user.email || 'Instructor');
+
+        // Fetch courses from the new API route
+        const coursesResponse = await fetch('/api/instructor/courses');
+                if (!coursesResponse.ok) {
+          const errorData = await coursesResponse.json();
+          throw new Error(errorData.error || 'Failed to fetch instructor courses.');
+        }
+        const { courses: coursesData, summaryStats } = await coursesResponse.json();
+        setCourses(coursesData);
+
+        // Update summary stats with fetched data
+        setTotalStudents(summaryStats.totalStudents);
+        setTotalRevenue(summaryStats.totalRevenue);
+
+        // Fetch recent activity from the new API route
+        const activityResponse = await fetch('/api/instructor/activity');
+        if (!activityResponse.ok) {
+          const errorData = await activityResponse.json();
+          throw new Error(errorData.error || 'Failed to fetch recent activity.');
+        }
+        const activityData: ActivityItem[] = await activityResponse.json();
+        setRecentActivity(activityData);
+
+        // Average Rating and Overall Completion Rate are not yet calculated in API, keep as placeholders for now
+        // setAverageRating(0); 
+        // setOverallCompletionRate(0); 
+
+      } catch (err: any) {
+        console.error("Error fetching instructor data:", err);
+        setError(err.message || 'Failed to fetch instructor data.');
+        toast.error(err.message || 'Failed to load dashboard data.');
+      } finally {
+                setLoading(false);
+            }
+    }
+
+    fetchInstructorData();
+  }, [router]);
 
   const handleCreateCourseClick = () => {
     router.push('/dashboard/instructor/course-builder')
   }
 
-  return (
+  const handleTogglePublish = async (courseId: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_published: newStatus }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update course status to ${newStatus}`);
+      }
+
+      toast.success(`Course ${newStatus ? 'published' : 'unpublished'} successfully!`);
+      // Optimistically update the UI
+      setCourses(prevCourses =>
+        prevCourses.map(course =>
+          course.id === courseId ? { ...course, is_published: newStatus } : course
+        )
+      );
+    } catch (err: any) {
+      console.error("Error toggling publish status:", err);
+      toast.error(err.message || 'Failed to update course status.');
+    }
+  };
+
+    return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+            <SiteHeader />
       
       <main className="flex-1 py-8">
         <div className="container px-4 md:px-6">
@@ -164,13 +283,13 @@ export default function InstructorDashboardPage() {
           <div className="mb-12">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-2">Welcome, {instructorData.name}</h1>
+                <h1 className="text-3xl font-bold mb-2">Welcome, {instructorName}</h1>
                 <p className="text-muted-foreground">Here's what's happening with your courses</p>
               </div>
               <Button className="bg-gradient-to-r from-brand-orange-600 to-brand-orange-500" onClick={handleCreateCourseClick}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create New Course
-              </Button>
+                            <PlusCircle className="h-4 w-4 mr-2" />
+                            Create New Course
+                        </Button>
             </div>
           </div>
 
@@ -183,7 +302,7 @@ export default function InstructorDashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Students</p>
-                  <h3 className="text-2xl font-bold">{instructorData.stats.activeStudents}</h3>
+                  <h3 className="text-2xl font-bold">{loading ? '...' : totalStudents}</h3>
                   <p className="text-sm text-green-500">+15% this month</p>
                 </div>
               </div>
@@ -196,7 +315,7 @@ export default function InstructorDashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Courses</p>
-                  <h3 className="text-2xl font-bold">{instructorData.stats.coursesActive}</h3>
+                  <h3 className="text-2xl font-bold">{loading ? '...' : courses.length}</h3>
                   <p className="text-sm text-green-500">+1 this week</p>
                 </div>
               </div>
@@ -205,24 +324,24 @@ export default function InstructorDashboardPage() {
             <Card className="p-6 card-hover gradient-border">
               <div className="flex items-center gap-4">
                 <div className="bg-brand-orange-100 rounded-full p-3">
-                  <Star className="h-6 w-6 text-brand-orange-500" />
+                  <DollarSign className="h-6 w-6 text-brand-orange-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Average Rating</p>
-                  <h3 className="text-2xl font-bold">{instructorData.stats.rating}</h3>
-                  <p className="text-sm text-green-500">Top Rated</p>
+                  <p className="text-sm text-muted-foreground">Total Revenue</p>
+                  <h3 className="text-2xl font-bold">{loading ? '...' : `$${totalRevenue.toFixed(2)}`}</h3>
+                  <p className="text-sm text-green-500">+10% this month</p>
                 </div>
               </div>
             </Card>
 
             <Card className="p-6 card-hover gradient-border">
-              <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4">
                 <div className="bg-brand-teal-100 rounded-full p-3">
                   <BarChart className="h-6 w-6 text-brand-teal-500" />
                 </div>
-                <div>
+                                                <div>
                   <p className="text-sm text-muted-foreground">Completion Rate</p>
-                  <h3 className="text-2xl font-bold">{instructorData.stats.completionRate}%</h3>
+                  <h3 className="text-2xl font-bold">{loading ? '...' : `${overallCompletionRate}%`}</h3>
                   <p className="text-sm text-green-500">Above Average</p>
                 </div>
               </div>
@@ -251,109 +370,144 @@ export default function InstructorDashboardPage() {
             </div>
           </div>
 
-          {/* Course Management */}
+          {/* Active Courses */}
           <div className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Your Courses</h2>
-              <Button variant="outline">Manage All Courses</Button>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {instructorData.activeCourses.map((course) => (
-                <Card key={course.id} className="card-hover gradient-border">
-                  <div className="relative h-48">
-                    <Image
-                      src={course.image}
-                      alt={course.title}
-                      fill
-                      className="object-cover rounded-t-lg"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-semibold mb-4">{course.title}</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Students</span>
-                        <span className="font-medium">{course.students}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Completion Rate</span>
-                        <span className="font-medium">{course.completionRate}%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Recent Activity</span>
-                        <span className="font-medium">{course.recentActivity} actions</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 mt-6">
-                      <Button variant="outline" className="flex-1">Edit</Button>
-                      <Button className="flex-1">View</Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Student Activity */}
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <Card className="p-6 card-hover gradient-border">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold">Recent Student Activity</h2>
-                  <Button variant="ghost">View All</Button>
-                </div>
-                <div className="space-y-6">
-                  {instructorData.studentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-4">
-                      <div className="bg-brand-orange-100 rounded-full p-2">
-                        {activity.type === "assignment" && <FileText className="h-5 w-5 text-brand-orange-500" />}
-                        {activity.type === "question" && <MessageSquare className="h-5 w-5 text-brand-orange-500" />}
-                        {activity.type === "completion" && <CheckCircle className="h-5 w-5 text-brand-orange-500" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{activity.student}</h3>
-                          <span className="text-sm text-muted-foreground">{activity.time}</span>
+            <h2 className="text-2xl font-bold mb-6">Your Active Courses</h2>
+            {
+              loading ? (
+                <p>Loading courses...</p>
+              ) : error ? (
+                <p className="text-red-500">Error: {error}</p>
+              ) : courses.length === 0 ? (
+                <p>No courses found. Create your first course!</p>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-6">
+                  {courses.map((course) => (
+                    <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
+                      <Image
+                        src={course.thumbnail_url || "/placeholder.svg"}
+                        alt={course.title}
+                        width={400}
+                        height={225}
+                        className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                      />
+                      <div className="p-4">
+                        <h3 className="text-lg font-bold mb-2">{course.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Status: {course.is_published ? <span className="text-green-600">Published</span> : <span className="text-orange-500">Draft</span>}
+                        </p>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            <span>{course.students || 0} Students</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Progress value={course.completionRate || 0} className="w-24 h-2" />
+                            <span>{course.completionRate || 0}% Complete</span>
+                                                </div>
+                                            </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link href={`/dashboard/instructor/courses/${course.id}`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Course
+                            </Link>
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link href={`/dashboard/instructor/courses/${course.id}/students`}>
+                              <Users className="h-4 w-4 mr-2" />
+                              View Students
+                            </Link>
+                          </Button>
+                          <Button
+                            variant={course.is_published ? "destructive" : "outline"}
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleTogglePublish(course.id, course.is_published)}
+                          >
+                            {course.is_published ? 'Unpublish' : 'Publish'}
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
+                              <BarChart className="h-4 w-4 mr-2" />
+                              Analytics
+                            </Link>
+                          </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{activity.action}</p>
-                        <p className="text-sm text-brand-orange-500">{activity.course}</p>
-                      </div>
-                    </div>
+                                            </div>
+                    </Card>
                   ))}
                 </div>
-              </Card>
-            </div>
+              )
+            }
+          </div>
 
-            <div>
-              <Card className="p-6 card-hover gradient-border">
-                <h2 className="text-2xl font-bold mb-6">Quick Tools</h2>
-                <div className="space-y-4">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Video className="h-4 w-4 mr-2" />
-                    Record New Lesson
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Create Assignment
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send Announcement
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Course Settings
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <HelpCircle className="h-4 w-4 mr-2" />
-                    Get Support
-                  </Button>
+          {/* Recent Activity */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">Recent Activity</h2>
+            {
+              loading ? (
+                <p>Loading recent activity...</p>
+              ) : error ? (
+                <p className="text-red-500">Error: {error}</p>
+              ) : recentActivity.length === 0 ? (
+                <p>No recent activity found.</p>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2">
+                    <div className="space-y-4">
+                      {recentActivity.map((activity) => (
+                        <Card key={activity.id} className="p-4 flex items-center justify-between card-hover">
+                          <div className="flex items-center gap-4">
+                            <div className="bg-gray-100 rounded-full p-3">
+                              {activity.type === 'assignment' && <FileText className="h-5 w-5 text-gray-600" />}
+                              {activity.type === 'question' && <MessageSquare className="h-5 w-5 text-gray-600" />}
+                              {activity.type === 'completion' && <CheckCircle className="h-5 w-5 text-gray-600" />}
+                              {activity.type === 'enrollment' && <Users className="h-5 w-5 text-gray-600" />} 
+                            </div>
+                            <div>
+                              <p className="font-semibold">{activity.student} {activity.action} {activity.course}</p>
+                              <p className="text-sm text-muted-foreground">{new Date(activity.time).toLocaleString()}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Card className="p-6 card-hover gradient-border">
+                      <h2 className="text-2xl font-bold mb-6">Quick Tools</h2>
+                      <div className="space-y-4">
+                        <Button variant="outline" className="w-full justify-start">
+                          <Video className="h-4 w-4 mr-2" />
+                          Record New Lesson
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Create Assignment
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Send Announcement
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Course Settings
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <HelpCircle className="h-4 w-4 mr-2" />
+                          Get Support
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
                 </div>
-              </Card>
-            </div>
+              )
+            }
           </div>
         </div>
       </main>
     </div>
   )
-}
+} 

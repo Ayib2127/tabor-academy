@@ -9,7 +9,7 @@ import { GA_MEASUREMENT_ID } from '@/lib/analytics';
 import { AuthProvider } from '@/components/auth-provider';
 
 // Optimize font loading
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
