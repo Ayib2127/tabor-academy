@@ -14,10 +14,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { SiteHeader } from "@/components/site-header"
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { v4 as uuidv4 } from 'uuid'
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -42,7 +41,6 @@ export default function SignUpPage() {
   const [selectedMethod, setSelectedMethod] = useState<"email" | "phone" | "social">("email")
   const [step, setStep] = useState(1)
   const countries = getCountries()
-  const supabase = createClientComponentClient();
 
   const {
     register,

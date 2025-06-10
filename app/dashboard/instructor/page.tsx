@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -29,8 +29,9 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { toast } from 'sonner'
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface Course {
     id: string;
@@ -162,56 +163,37 @@ export default function InstructorDashboardPage() {
   const [averageRating, setAverageRating] = useState(0);
   const [overallCompletionRate, setOverallCompletionRate] = useState(0);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
-  const supabase = createClientComponentClient();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+      setUser(session.user);
+    };
+    
+    checkAuth();
+  }, [router]);
 
   useEffect(() => {
     async function fetchInstructorData() {
+      if (!user) return;
+      
       setLoading(true);
       setError(null);
       try {
-        // Get the current user session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw new Error(sessionError.message);
-        }
-        
-        if (!session) {
-          console.error("No active session found");
-          throw new Error("No active session found. Please log in.");
-        }
-        
-        console.log("Session found:", session);
-        
-        // Get user details
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError) {
-          console.error("User error:", userError);
-          throw new Error(userError.message);
-        }
-
-        if (!user) {
-          router.push('/login');
-          return;
-        }
-
-        setInstructorName(user.user_metadata?.full_name || user.email || 'Instructor');
+        setInstructorName(user.user_metadata.full_name || user.email || 'Instructor');
 
         // Fetch courses from the API route
-        const coursesResponse = await fetch('/api/instructor/courses', {
-          credentials: 'include', // Important for including cookies
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
+        const coursesResponse = await fetch('/api/instructor/courses');
         if (!coursesResponse.ok) {
           const errorData = await coursesResponse.json();
           throw new Error(errorData.error || 'Failed to fetch instructor courses.');
         }
-        
         const { courses: coursesData, summaryStats } = await coursesResponse.json();
         setCourses(coursesData);
 
@@ -220,21 +202,15 @@ export default function InstructorDashboardPage() {
         setTotalRevenue(summaryStats.totalRevenue);
         setOverallCompletionRate(summaryStats.averageCompletionRate || 0);
 
-        // Fetch recent activity from the new API route
-        const activityResponse = await fetch('/api/instructor/activity', {
-          credentials: 'include', // Important for including cookies
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!activityResponse.ok) {
-          const errorData = await activityResponse.json();
-          throw new Error(errorData.error || 'Failed to fetch recent activity.');
-        }
-        
-        const activityData: ActivityItem[] = await activityResponse.json();
-        setRecentActivity(activityData);
+        // Use mock data for activity for now
+        setRecentActivity(instructorData.studentActivity.map(item => ({
+          id: item.id.toString(),
+          type: item.type as any,
+          student: item.student,
+          action: item.action,
+          course: item.course,
+          time: item.time
+        })));
 
       } catch (err: any) {
         console.error("Error fetching instructor data:", err);
@@ -246,32 +222,33 @@ export default function InstructorDashboardPage() {
     }
 
     fetchInstructorData();
-  }, [router, supabase]);
+  }, [user, router]);
 
   const handleCreateCourseClick = () => {
     router.push('/dashboard/instructor/course-builder')
   }
 
   const handleTogglePublish = async (courseId: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
     try {
       const response = await fetch(`/api/courses/${courseId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ is_published: !currentStatus }),
+        body: JSON.stringify({ is_published: newStatus }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to update course status to ${!currentStatus}`);
+        throw new Error(errorData.error || `Failed to update course status to ${newStatus}`);
       }
 
-      toast.success(`Course ${!currentStatus ? 'published' : 'unpublished'} successfully!`);
+      toast.success(`Course ${newStatus ? 'published' : 'unpublished'} successfully!`);
       // Optimistically update the UI
       setCourses(prevCourses =>
         prevCourses.map(course =>
-          course.id === courseId ? { ...course, is_published: !currentStatus } : course
+          course.id === courseId ? { ...course, is_published: newStatus } : course
         )
       );
     } catch (err: any) {
@@ -279,6 +256,21 @@ export default function InstructorDashboardPage() {
       toast.error(err.message || 'Failed to update course status.');
     }
   };
+
+  // If not authenticated, show a loading state
+  if (!user) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -301,7 +293,7 @@ export default function InstructorDashboardPage() {
             <Button variant="ghost" className="relative ml-4">
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 bg-brand-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                5
+                3
               </span>
             </Button>
           </div>
@@ -310,7 +302,9 @@ export default function InstructorDashboardPage() {
           <div className="mb-12">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-2">Welcome, {instructorName}</h1>
+                <h1 className="text-3xl font-bold mb-2">
+                  Welcome, {instructorName}! 👋
+                </h1>
                 <p className="text-muted-foreground">
                   Here's what's happening with your courses
                 </p>
@@ -370,7 +364,7 @@ export default function InstructorDashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Completion Rate</p>
-                  <h3 className="text-2xl font-bold">{loading ? '...' : `${overallCompletionRate.toFixed(0)}%`}</h3>
+                  <h3 className="text-2xl font-bold">{loading ? '...' : `${overallCompletionRate}%`}</h3>
                   <p className="text-sm text-green-500">Above Average</p>
                 </div>
               </div>
@@ -423,7 +417,7 @@ export default function InstructorDashboardPage() {
                 {courses.map((course) => (
                   <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
                     <Image
-                      src={course.thumbnail_url || "/placeholder.svg"}
+                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3"}
                       alt={course.title}
                       width={400}
                       height={225}
@@ -473,12 +467,6 @@ export default function InstructorDashboardPage() {
                         >
                           {course.is_published ? 'Unpublish' : 'Publish'}
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
-                            <BarChart className="h-4 w-4 mr-2" />
-                            Analytics
-                          </Link>
-                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -511,8 +499,8 @@ export default function InstructorDashboardPage() {
                               {activity.type === 'enrollment' && <Users className="h-5 w-5 text-gray-600" />} 
                             </div>
                             <div>
-                              <p className="font-semibold">{activity.student} {activity.action} {activity.course}</p>
-                              <p className="text-sm text-muted-foreground">{new Date(activity.time).toLocaleString()}</p>
+                              <p className="font-semibold">{activity.student} {activity.action}</p>
+                              <p className="text-sm text-muted-foreground">{activity.time}</p>
                             </div>
                           </div>
                           <ChevronRight className="h-5 w-5 text-muted-foreground" />

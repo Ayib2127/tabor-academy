@@ -1,30 +1,46 @@
-import { createServerComponentClient, createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from './types';
 
-// Create a client for server components
 export function createClient() {
   const cookieStore = cookies();
-  
-  return createServerComponentClient<Database>({
-    cookies: () => cookieStore,
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        try {
+          cookieStore.set({ name, value, ...options });
+        } catch (error) {
+          // This will throw in middleware, but we can safely ignore it
+          console.error('Error setting cookie:', error);
+        }
+      },
+      remove(name: string, options: any) {
+        try {
+          cookieStore.set({ name, value: '', ...options });
+        } catch (error) {
+          // This will throw in middleware, but we can safely ignore it
+          console.error('Error removing cookie:', error);
+        }
+      },
+    },
   });
 }
 
-// Create a client specifically for route handlers
-export function createRouteHandlerClient() {
-  const cookieStore = cookies();
-  
-  return createRouteHandlerClient<Database>({
-    cookies: () => cookieStore,
-  });
-}
-
-// Create a server client for direct use
+// Create a separate function for server components that don't need to set cookies
 export function createServerClient() {
   const cookieStore = cookies();
   
-  return createServerComponentClient<Database>({
-    cookies: () => cookieStore,
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: cookieStore,
   });
 }
