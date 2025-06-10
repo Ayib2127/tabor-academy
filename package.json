@@ -71,6 +71,7 @@
     "react-dom": "18.2.0",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.53.0",
+    "react-hot-toast": "^2.5.2",
     "react-infinite-scroll-component": "^6.1.0",
     "react-intersection-observer": "^9.8.1",
     "sonner": "^2.0.5",
@@ -96,5 +97,9 @@
     "netlify-cli": "^17.15.1",
     "ts-jest": "^29.1.2",
     "vercel": "^33.5.1"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.9",
+    "utf-8-validate": "^5.0.10"
   }
 }

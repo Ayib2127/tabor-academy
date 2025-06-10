@@ -38,11 +38,11 @@ interface Course {
     title: string;
     is_published: boolean;
     created_at: string;
-  thumbnail_url?: string; // Optional, as it might not be returned by the new API route
-  price?: number; // Optional
-  students?: number; // Optional
-  completionRate?: number; // Optional
-  recentActivity?: number; // Optional
+    thumbnail_url?: string;
+    price?: number;
+    students?: number;
+    completionRate?: number;
+    recentActivity?: number;
 }
 
 interface ActivityItem {
@@ -176,15 +176,15 @@ export default function InstructorDashboardPage() {
         }
 
         if (!user) {
-          router.push('/login'); // Redirect to login if no user
+          router.push('/login');
           return;
         }
 
         setInstructorName(user.user_metadata.full_name || user.email || 'Instructor');
 
-        // Fetch courses from the new API route
+        // Fetch courses from the API route
         const coursesResponse = await fetch('/api/instructor/courses');
-                if (!coursesResponse.ok) {
+        if (!coursesResponse.ok) {
           const errorData = await coursesResponse.json();
           throw new Error(errorData.error || 'Failed to fetch instructor courses.');
         }
@@ -194,6 +194,7 @@ export default function InstructorDashboardPage() {
         // Update summary stats with fetched data
         setTotalStudents(summaryStats.totalStudents);
         setTotalRevenue(summaryStats.totalRevenue);
+        setOverallCompletionRate(summaryStats.averageCompletionRate || 0);
 
         // Fetch recent activity from the new API route
         const activityResponse = await fetch('/api/instructor/activity');
@@ -373,73 +374,89 @@ export default function InstructorDashboardPage() {
           {/* Active Courses */}
           <div className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Your Active Courses</h2>
-            {
-              loading ? (
-                <p>Loading courses...</p>
-              ) : error ? (
-                <p className="text-red-500">Error: {error}</p>
-              ) : courses.length === 0 ? (
-                <p>No courses found. Create your first course!</p>
-              ) : (
-                <div className="grid md:grid-cols-3 gap-6">
-                  {courses.map((course) => (
-                    <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
-                      <Image
-                        src={course.thumbnail_url || "/placeholder.svg"}
-                        alt={course.title}
-                        width={400}
-                        height={225}
-                        className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                      />
-                      <div className="p-4">
-                        <h3 className="text-lg font-bold mb-2">{course.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Status: {course.is_published ? <span className="text-green-600">Published</span> : <span className="text-orange-500">Draft</span>}
-                        </p>
-                        <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            <span>{course.students || 0} Students</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Progress value={course.completionRate || 0} className="w-24 h-2" />
-                            <span>{course.completionRate || 0}% Complete</span>
-                                                </div>
-                                            </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" className="flex-1" asChild>
-                                                <Link href={`/dashboard/instructor/courses/${course.id}`}>
-                                                        <Edit className="h-4 w-4 mr-2" />
-                              Edit Course
-                            </Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/dashboard/instructor/courses/${course.id}/students`}>
-                              <Users className="h-4 w-4 mr-2" />
-                              View Students
-                            </Link>
-                          </Button>
-                          <Button
-                            variant={course.is_published ? "destructive" : "outline"}
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => handleTogglePublish(course.id, course.is_published)}
-                          >
-                            {course.is_published ? 'Unpublish' : 'Publish'}
-                                                    </Button>
-                          <Button variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
-                              <BarChart className="h-4 w-4 mr-2" />
-                              Analytics
-                                                </Link>
-                          </Button>
+            {loading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange-500"></div>
+              </div>
+            ) : error ? (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600">{error}</p>
+              </div>
+            ) : courses.length === 0 ? (
+              <div className="text-center p-8">
+                <p className="text-muted-foreground mb-4">No courses found. Create your first course!</p>
+                <Button onClick={handleCreateCourseClick} className="bg-gradient-to-r from-brand-orange-500 to-brand-teal-500">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create Course
+                </Button>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {courses.map((course) => (
+                  <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
+                    <Image
+                      src={course.thumbnail_url || "/placeholder.svg"}
+                      alt={course.title}
+                      width={400}
+                      height={225}
+                      className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                    />
+                    <div className="p-4">
+                      <h3 className="text-lg font-bold mb-2">{course.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Status: {course.is_published ? 
+                          <span className="text-green-600">Published</span> : 
+                          <span className="text-orange-500">Draft</span>
+                        }
+                      </p>
+                      <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          <span>{course.students || 0} Students</span>
                         </div>
-                                            </div>
-                    </Card>
-                  ))}
-                </div>
-              )
-            }
+                        <div className="flex items-center gap-2">
+                          <Progress 
+                            value={course.completionRate || 0} 
+                            className="w-24 h-2 bg-muted"
+                          />
+                          <span className="font-medium">
+                            {course.completionRate?.toFixed(0) || 0}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link href={`/dashboard/instructor/courses/${course.id}`}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Course
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link href={`/dashboard/instructor/courses/${course.id}/students`}>
+                            <Users className="h-4 w-4 mr-2" />
+                            View Students
+                          </Link>
+                        </Button>
+                        <Button
+                          variant={course.is_published ? "destructive" : "outline"}
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleTogglePublish(course.id, course.is_published)}
+                        >
+                          {course.is_published ? 'Unpublish' : 'Publish'}
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
+                            <BarChart className="h-4 w-4 mr-2" />
+                            Analytics
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent Activity */}
