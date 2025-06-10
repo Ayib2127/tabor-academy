@@ -1,0 +1,140 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  console.log('--- API Call: /api/instructor/students/[id] ---');
+  console.log('Request URL:', request.url);
+  console.log('Student ID:', params.id);
+
+  const studentId = params.id;
+  const supabase = createRouteHandlerClient({ cookies });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('Supabase getUser Error (Student Details API):', userError.message);
+    return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
+  }
+
+  if (!user) {
+    console.warn('Authentication failed (Student Details API): No user object found from session.');
+    return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
+  }
+
+  console.log('Instructor User ID (Student Details API):', user.id);
+
+  try {
+    // 1. Fetch student's profile information
+    const { data: studentProfile, error: profileError } = await supabase
+      .from('users') // Assuming 'users' table holds profile data joined on auth.users.id
+      .select('id, full_name, email, avatar_url')
+      .eq('id', studentId)
+      .single();
+
+    if (profileError || !studentProfile) {
+      console.error('Error fetching student profile:', profileError);
+      return NextResponse.json({ error: 'Student profile not found or access denied.' }, { status: 404 });
+    }
+
+    // 2. Fetch courses the student is enrolled in AND are taught by the current instructor
+    const { data: enrolledCoursesRaw, error: enrolledCoursesError } = await supabase
+      .from('enrollments')
+      .select(`
+        course_id,
+        enrolled_at,
+        courses (id, title, instructor_id, is_published, thumbnail_url)
+      `)
+      .eq('user_id', studentId)
+      .eq('courses.instructor_id', user.id); // Crucial: ensure instructor owns the course
+
+    if (enrolledCoursesError) {
+      console.error('Error fetching enrolled courses for student:', enrolledCoursesError);
+      return NextResponse.json({ error: enrolledCoursesError.message }, { status: 500 });
+    }
+
+    const coursesEnrolledDetails = await Promise.all(
+      enrolledCoursesRaw.map(async (enrollment: any) => {
+        const course = enrollment.courses;
+        if (!course) return null; // Should not happen if join is successful and RLS is correct
+
+        // Fetch all published lessons for this course
+        const { data: lessons, error: lessonsError } = await supabase
+          .from('lessons')
+          .select('id, is_published')
+          .eq('course_id', course.id)
+          .eq('is_published', true); // Only count published lessons
+
+        if (lessonsError) {
+          console.error(`Error fetching lessons for course ${course.id}:`, lessonsError);
+          return {
+            course_id: course.id,
+            course_title: course.title,
+            enrolled_at: enrollment.enrolled_at,
+            progress: 0,
+            completed_lessons: 0,
+            total_lessons: 0,
+            status: 'in-progress'
+          };
+        }
+
+        const totalLessons = lessons.length;
+
+        // Fetch progress for this student in this course
+        const { data: progressRecords, error: progressError } = await supabase
+          .from('progress')
+          .select('lesson_id, completed')
+          .eq('user_id', studentId)
+          .in('lesson_id', lessons.map(l => l.id));
+
+        if (progressError) {
+          console.error(`Error fetching progress for student ${studentId} in course ${course.id}:`, progressError);
+          return {
+            course_id: course.id,
+            course_title: course.title,
+            enrolled_at: enrollment.enrolled_at,
+            progress: 0,
+            completed_lessons: 0,
+            total_lessons: 0,
+            status: 'in-progress'
+          };
+        }
+
+        const completedLessons = progressRecords.filter(pr => pr.completed).length;
+        const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+        const status = progressPercentage === 100 ? 'completed' : 'in-progress';
+
+        return {
+          course_id: course.id,
+          course_title: course.title,
+          enrolled_at: enrollment.enrolled_at,
+          progress: progressPercentage,
+          completed_lessons: completedLessons,
+          total_lessons: totalLessons,
+          status: status
+        };
+      })
+    );
+
+    // Filter out any null entries that might result from courses not found
+    const filteredCoursesEnrolledDetails = coursesEnrolledDetails.filter(c => c !== null);
+
+    const studentDetails = {
+      id: studentProfile.id,
+      full_name: studentProfile.full_name,
+      email: studentProfile.email,
+      avatar_url: studentProfile.avatar_url,
+      courses_enrolled: filteredCoursesEnrolledDetails,
+    };
+
+    console.log('API Response: Student details fetched successfully for:', studentId);
+    return NextResponse.json(studentDetails);
+
+  } catch (err: any) {
+    console.error('Unexpected error fetching individual student data:', err);
+    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+  }
+} 

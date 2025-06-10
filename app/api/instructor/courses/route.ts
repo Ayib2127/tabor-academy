@@ -9,7 +9,7 @@ interface CourseData {
   created_at: string;
   thumbnail_url?: string;
   price?: number;
-  enrollments?: { count: number }[];
+  // Removed enrollments? field as we're fetching count separately
 }
 
 export async function GET(request: Request) {
@@ -20,7 +20,6 @@ export async function GET(request: Request) {
     const supabase = createRouteHandlerClient({ cookies });
 
     try {
-        // Get the current user from the session
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
         if (userError) {
@@ -33,10 +32,9 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
         }
 
-        // Fetch courses from the database
         const { data: coursesData, error: coursesError } = await supabase
             .from('courses')
-            .select('id, title, is_published, created_at, thumbnail_url, price, enrollments(count)')
+            .select('id, title, is_published, created_at, thumbnail_url, price') // Removed enrollments(count) here
             .eq('instructor_id', user.id);
 
         if (coursesError) {
@@ -44,34 +42,42 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: coursesError.message }, { status: 500 });
         }
 
-        let totalStudents = 0;
-        let totalRevenue = 0;
-        let totalCompletionRate = 0;
-        let coursesWithCompletion = 0;
+        let totalStudentsDashboard = 0; // Renamed to avoid conflict with course.students
+        let totalRevenueDashboard = 0; // Renamed to avoid conflict
+        let totalCompletionRateSum = 0; // Sum for overall average
+        let coursesCountForAverage = 0;
 
         const processedCourses = await Promise.all(coursesData?.map(async (course: CourseData) => {
-            const studentCount = course.enrollments ? course.enrollments[0]?.count || 0 : 0;
-            const revenue = (course.price || 0) * studentCount;
+            // Fetch student count for each course explicitly
+            const { count: studentCount, error: studentCountError } = await supabase
+                .from('enrollments')
+                .select('*', { count: 'exact', head: true })
+                .eq('course_id', course.id);
 
-            // Fetch completion rate for the current user and course
-            const { data: completionRate, error: completionError } = await supabase.rpc('get_course_completion_rate', {
+            if (studentCountError) {
+                console.error(`Error fetching student count for course ${course.id}:`, studentCountError.message);
+            }
+
+            const currentStudentCount = studentCount || 0;
+            const revenue = (course.price || 0) * currentStudentCount;
+
+            // Fetch average completion rate for the course
+            const { data: averageCompletionRateForCourse, error: completionError } = await supabase.rpc('get_course_average_completion_rate', {
                 p_course_id: course.id,
-                p_user_id: user.id // Assuming the instructor is also a user whose completion rate we want to see for their own courses
             });
 
             if (completionError) {
-                console.error(`Error fetching completion rate for course ${course.id}:`, completionError.message);
-                // Optionally handle error, maybe set completionRate to 0 or null
+                console.error(`Error fetching average completion rate for course ${course.id}:`, completionError.message);
             }
 
-            const currentCourseCompletionRate = completionRate || 0;
+            const currentCourseAverageCompletionRate = averageCompletionRateForCourse || 0;
 
-            totalStudents += studentCount;
-            totalRevenue += revenue;
-            // Only add to totalCompletionRate if it's a valid number
-            if (typeof currentCourseCompletionRate === 'number' && !isNaN(currentCourseCompletionRate)) {
-                totalCompletionRate += currentCourseCompletionRate;
-                coursesWithCompletion++;
+            totalStudentsDashboard += currentStudentCount;
+            totalRevenueDashboard += revenue;
+
+            if (typeof currentCourseAverageCompletionRate === 'number' && !isNaN(currentCourseAverageCompletionRate)) {
+                totalCompletionRateSum += currentCourseAverageCompletionRate;
+                coursesCountForAverage++;
             }
 
             return {
@@ -81,13 +87,13 @@ export async function GET(request: Request) {
                 created_at: course.created_at,
                 thumbnail_url: course.thumbnail_url,
                 price: course.price,
-                students: studentCount,
-                completionRate: currentCourseCompletionRate // Add the completion rate here
+                students: currentStudentCount, // Use the fetched student count
+                completionRate: parseFloat(currentCourseAverageCompletionRate.toFixed(2)) // Format to 2 decimal places
             };
         }) || []);
 
-        const averageCompletionRate = coursesWithCompletion > 0
-            ? totalCompletionRate / coursesWithCompletion
+        const overallAverageCompletionRate = coursesCountForAverage > 0
+            ? totalCompletionRateSum / coursesCountForAverage
             : 0;
 
         console.log('API Response: Courses fetched successfully.');
@@ -95,9 +101,9 @@ export async function GET(request: Request) {
         return NextResponse.json({
             courses: processedCourses,
             summaryStats: {
-                totalStudents,
-                totalRevenue,
-                averageCompletionRate,
+                totalStudents: totalStudentsDashboard,
+                totalRevenue: totalRevenueDashboard,
+                averageCompletionRate: parseFloat(overallAverageCompletionRate.toFixed(2)),
             },
         });
     } catch (err: any) {

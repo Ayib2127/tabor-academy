@@ -147,6 +147,15 @@ const instructorData = {
       icon: Video,
       color: "text-brand-teal-500",
       bgColor: "bg-brand-teal-100"
+    },
+    {
+      id: 5,
+      title: "Student Management",
+      count: 0,
+      icon: Users,
+      color: "text-brand-purple-500",
+      bgColor: "bg-brand-purple-100",
+      href: "/dashboard/instructor/students"
     }
   ]
 }
@@ -179,7 +188,7 @@ export default function InstructorDashboardPage() {
     checkAuth();
   }, [router]);
 
-  useEffect(() => {
+    useEffect(() => {
     async function fetchInstructorData() {
       if (!user) return;
       
@@ -190,7 +199,7 @@ export default function InstructorDashboardPage() {
 
         // Fetch courses from the API route
         const coursesResponse = await fetch('/api/instructor/courses');
-        if (!coursesResponse.ok) {
+                if (!coursesResponse.ok) {
           const errorData = await coursesResponse.json();
           throw new Error(errorData.error || 'Failed to fetch instructor courses.');
         }
@@ -212,13 +221,13 @@ export default function InstructorDashboardPage() {
           time: item.time
         })));
 
-      } catch (err: any) {
+            } catch (err: any) {
         console.error("Error fetching instructor data:", err);
         setError(err.message || 'Failed to fetch instructor data.');
         toast.error(err.message || 'Failed to load dashboard data.');
-      } finally {
-        setLoading(false);
-      }
+            } finally {
+                setLoading(false);
+            }
     }
 
     fetchInstructorData();
@@ -272,9 +281,9 @@ export default function InstructorDashboardPage() {
     );
   }
 
-  return (
+    return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+            <SiteHeader />
       
       <main className="flex-1 py-8">
         <div className="container px-4 md:px-6">
@@ -310,9 +319,9 @@ export default function InstructorDashboardPage() {
                 </p>
               </div>
               <Button className="bg-gradient-to-r from-brand-orange-600 to-brand-orange-500" onClick={handleCreateCourseClick}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create New Course
-              </Button>
+                            <PlusCircle className="h-4 w-4 mr-2" />
+                            Create New Course
+                        </Button>
             </div>
           </div>
 
@@ -358,11 +367,11 @@ export default function InstructorDashboardPage() {
             </Card>
 
             <Card className="p-6 card-hover gradient-border">
-              <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4">
                 <div className="bg-brand-teal-100 rounded-full p-3">
                   <BarChart className="h-6 w-6 text-brand-teal-500" />
                 </div>
-                <div>
+                                                <div>
                   <p className="text-sm text-muted-foreground">Completion Rate</p>
                   <h3 className="text-2xl font-bold">{loading ? '...' : `${overallCompletionRate}%`}</h3>
                   <p className="text-sm text-green-500">Above Average</p>
@@ -372,26 +381,25 @@ export default function InstructorDashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
-            <div className="grid md:grid-cols-4 gap-6">
-              {instructorData.quickActions.map((action) => (
-                <Card key={action.id} className="p-6 card-hover gradient-border">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`${action.bgColor} rounded-full p-2`}>
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {instructorData.quickActions.map(action => (
+                <Link key={action.id} href={action.href || '#'} className="block">
+                  <Card className="p-4 flex flex-col items-start justify-between h-full hover:shadow-lg transition-shadow duration-200">
+                    <div className={`p-3 rounded-full ${action.bgColor} mb-3`}>
                       <action.icon className={`h-6 w-6 ${action.color}`} />
                     </div>
-                    <span className="text-sm font-medium">{action.count} Pending</span>
-                  </div>
-                  <h3 className="font-semibold">{action.title}</h3>
-                  <Button variant="ghost" size="sm" className="mt-4">
-                    View All
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Card>
+                    <h3 className="font-semibold text-lg">{action.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">{action.count > 0 ? `${action.count} Pending` : 'No pending items'}</p>
+                    <span className="text-brand-blue-500 hover:text-brand-blue-700 flex items-center">
+                      View All <ChevronRight className="h-4 w-4 ml-1" />
+                    </span>
+                  </Card>
+                </Link>
               ))}
             </div>
-          </div>
+          </section>
 
           {/* Active Courses */}
           <div className="mb-12">
@@ -400,11 +408,11 @@ export default function InstructorDashboardPage() {
               <div className="flex items-center justify-center p-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange-500"></div>
               </div>
-            ) : error ? (
+              ) : error ? (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600">{error}</p>
               </div>
-            ) : courses.length === 0 ? (
+              ) : courses.length === 0 ? (
               <div className="text-center p-8">
                 <p className="text-muted-foreground mb-4">No courses found. Create your first course!</p>
                 <Button onClick={handleCreateCourseClick} className="bg-gradient-to-r from-brand-orange-500 to-brand-teal-500">
@@ -412,30 +420,30 @@ export default function InstructorDashboardPage() {
                   Create Course
                 </Button>
               </div>
-            ) : (
-              <div className="grid md:grid-cols-3 gap-6">
-                {courses.map((course) => (
-                  <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
-                    <Image
+              ) : (
+                <div className="grid md:grid-cols-3 gap-6">
+                  {courses.map((course) => (
+                    <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
+                      <Image
                       src={course.thumbnail_url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3"}
-                      alt={course.title}
-                      width={400}
-                      height={225}
-                      className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                    />
-                    <div className="p-4">
-                      <h3 className="text-lg font-bold mb-2">{course.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">
+                        alt={course.title}
+                        width={400}
+                        height={225}
+                        className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                      />
+                      <div className="p-4">
+                        <h3 className="text-lg font-bold mb-2">{course.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
                         Status: {course.is_published ? 
                           <span className="text-green-600">Published</span> : 
                           <span className="text-orange-500">Draft</span>
                         }
-                      </p>
-                      <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{course.students || 0} Students</span>
-                        </div>
+                        </p>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            <span>{course.students || 0} Students</span>
+                          </div>
                         <div className="flex items-center gap-2">
                           <Progress 
                             value={course.completionRate || 0} 
@@ -444,34 +452,33 @@ export default function InstructorDashboardPage() {
                           <span className="font-medium">
                             {course.completionRate?.toFixed(0) || 0}%
                           </span>
+                                                </div>
+                                            </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                                                <Link href={`/dashboard/instructor/courses/${course.id}/content`}>
+                                                        <Edit className="h-4 w-4 mr-2" />
+                              Edit Course
+                            </Link>
+                          </Button>
+                          <Link href={`/dashboard/instructor/students?courseId=${course.id}`}>
+                            <Button size="sm" variant="outline">
+                              <Users className="h-4 w-4 mr-2" /> View Students
+                            </Button>
+                          </Link>
+                          <Button
+                            variant={course.is_published ? "destructive" : "outline"}
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleTogglePublish(course.id, course.is_published)}
+                          >
+                            {course.is_published ? 'Unpublish' : 'Publish'}
+                          </Button>
                         </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <Link href={`/dashboard/instructor/courses/${course.id}`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Course
-                          </Link>
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <Link href={`/dashboard/instructor/courses/${course.id}/students`}>
-                            <Users className="h-4 w-4 mr-2" />
-                            View Students
-                          </Link>
-                        </Button>
-                        <Button
-                          variant={course.is_published ? "destructive" : "outline"}
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleTogglePublish(course.id, course.is_published)}
-                        >
-                          {course.is_published ? 'Unpublish' : 'Publish'}
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                                            </div>
+                    </Card>
+                  ))}
+                </div>
             )}
           </div>
 
@@ -507,7 +514,7 @@ export default function InstructorDashboardPage() {
                         </Card>
                       ))}
                     </div>
-                  </div>
+                                </div>
                   <div>
                     <Card className="p-6 card-hover gradient-border">
                       <h2 className="text-2xl font-bold mb-6">Quick Tools</h2>
@@ -532,9 +539,9 @@ export default function InstructorDashboardPage() {
                           <HelpCircle className="h-4 w-4 mr-2" />
                           Get Support
                         </Button>
-                      </div>
-                    </Card>
-                  </div>
+                        </div>
+                </Card>
+            </div>
                 </div>
               )
             }
@@ -543,4 +550,4 @@ export default function InstructorDashboardPage() {
       </main>
     </div>
   )
-}
+} 

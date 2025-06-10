@@ -6,6 +6,10 @@ export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/students ---');
   console.log('Request URL:', request.url);
 
+  const { searchParams } = new URL(request.url);
+  const courseIdFilter = searchParams.get('courseId'); // Get courseId from query parameter
+  console.log('Course ID Filter:', courseIdFilter);
+
   console.log('Incoming cookies (Students):', cookies().getAll());
   const supabase = createRouteHandlerClient({ cookies });
 
@@ -24,18 +28,29 @@ export async function GET(request: Request) {
   console.log('User found in Students API:', user.id, user.email);
 
   try {
-    // Fetch all courses taught by this instructor
-    const { data: instructorCourses, error: coursesError } = await supabase
-      .from('courses')
-      .select('id, title')
-      .eq('instructor_id', user.id);
+    let targetCourseIds: string[] = [];
 
-    if (coursesError) {
-      console.error('Error fetching instructor courses (Students):', coursesError);
-      return NextResponse.json({ error: coursesError.message }, { status: 500 });
+    if (courseIdFilter) {
+      // If a specific courseId is provided, use it directly
+      targetCourseIds = [courseIdFilter];
+    } else {
+      // Otherwise, fetch all courses taught by this instructor
+      const { data: instructorCourses, error: coursesError } = await supabase
+        .from('courses')
+        .select('id') // Only need the ID here
+        .eq('instructor_id', user.id);
+
+      if (coursesError) {
+        console.error('Error fetching instructor courses (Students):', coursesError);
+        return NextResponse.json({ error: coursesError.message }, { status: 500 });
+      }
+      targetCourseIds = instructorCourses?.map(course => course.id) || [];
     }
 
-    const courseIds = instructorCourses?.map(course => course.id) || [];
+    if (targetCourseIds.length === 0) {
+        console.log('No courses found for instructor or given courseId. Returning empty student list.');
+        return NextResponse.json([]); // No courses, so no students
+    }
 
     // Fetch all enrollments for these courses, along with student details
     const { data: enrollments, error: enrollmentsError } = await supabase
@@ -44,9 +59,9 @@ export async function GET(request: Request) {
         user_id,
         enrolled_at,
         courses (id, title),
-        users (id, full_name, email)
+        users (id, full_name, email, avatar_url) // Added avatar_url here
       `)
-      .in('course_id', courseIds);
+      .in('course_id', targetCourseIds);
 
     if (enrollmentsError) {
       console.error('Error fetching enrollments (Students):', enrollmentsError);
@@ -57,7 +72,7 @@ export async function GET(request: Request) {
     const { data: lessons, error: lessonsError } = await supabase
       .from('lessons')
       .select('id, course_id, is_published')
-      .in('course_id', courseIds);
+      .in('course_id', targetCourseIds);
 
     if (lessonsError) {
       console.error('Error fetching lessons (Students):', lessonsError);
@@ -84,16 +99,21 @@ export async function GET(request: Request) {
 
     enrollments.forEach(enrollment => {
       const studentId = enrollment.user_id;
-      const studentFullName = enrollment.users?.[0]?.full_name || 'N/A';
-      const studentEmail = enrollment.users?.[0]?.email || 'N/A';
-      const courseId = enrollment.courses?.[0]?.id;
-      const courseTitle = enrollment.courses?.[0]?.title || 'N/A';
+      // Corrected access for user details
+      const studentFullName = enrollment.users?.full_name || 'N/A';
+      const studentEmail = enrollment.users?.email || 'N/A';
+      const studentAvatarUrl = enrollment.users?.avatar_url || '/default-avatar.png'; // Added avatar_url
+
+      // Corrected access for course details
+      const courseId = enrollment.courses?.id;
+      const courseTitle = enrollment.courses?.title || 'N/A';
 
       if (!studentsMap.has(studentId)) {
         studentsMap.set(studentId, {
           id: studentId,
           full_name: studentFullName,
           email: studentEmail,
+          avatar_url: studentAvatarUrl, // Added avatar_url
           courses_enrolled: []
         });
       }
