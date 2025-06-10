@@ -70,4 +70,4 @@ export async function GET(request: Request) {
     console.error('Unexpected error fetching recent activity:', err);
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
   }
-}
+} 

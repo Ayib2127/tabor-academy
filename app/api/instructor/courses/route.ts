@@ -49,12 +49,30 @@ export async function GET(request: Request) {
         let totalCompletionRate = 0;
         let coursesWithCompletion = 0;
 
-        const processedCourses = coursesData?.map((course: CourseData) => {
+        const processedCourses = await Promise.all(coursesData?.map(async (course: CourseData) => {
             const studentCount = course.enrollments ? course.enrollments[0]?.count || 0 : 0;
             const revenue = (course.price || 0) * studentCount;
 
+            // Fetch completion rate for the current user and course
+            const { data: completionRate, error: completionError } = await supabase.rpc('get_course_completion_rate', {
+                p_course_id: course.id,
+                p_user_id: user.id // Assuming the instructor is also a user whose completion rate we want to see for their own courses
+            });
+
+            if (completionError) {
+                console.error(`Error fetching completion rate for course ${course.id}:`, completionError.message);
+                // Optionally handle error, maybe set completionRate to 0 or null
+            }
+
+            const currentCourseCompletionRate = completionRate || 0;
+
             totalStudents += studentCount;
             totalRevenue += revenue;
+            // Only add to totalCompletionRate if it's a valid number
+            if (typeof currentCourseCompletionRate === 'number' && !isNaN(currentCourseCompletionRate)) {
+                totalCompletionRate += currentCourseCompletionRate;
+                coursesWithCompletion++;
+            }
 
             return {
                 id: course.id,
@@ -64,16 +82,22 @@ export async function GET(request: Request) {
                 thumbnail_url: course.thumbnail_url,
                 price: course.price,
                 students: studentCount,
-                completionRate: 0 // We'll calculate this separately if needed
+                completionRate: currentCourseCompletionRate // Add the completion rate here
             };
-        }) || [];
+        }) || []);
+
+        const averageCompletionRate = coursesWithCompletion > 0
+            ? totalCompletionRate / coursesWithCompletion
+            : 0;
+
+        console.log('API Response: Courses fetched successfully.');
 
         return NextResponse.json({
             courses: processedCourses,
             summaryStats: {
                 totalStudents,
                 totalRevenue,
-                averageCompletionRate: 0,
+                averageCompletionRate,
             },
         });
     } catch (err: any) {

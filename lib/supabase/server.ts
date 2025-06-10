@@ -32,15 +32,3 @@ export function createClient() {
     },
   });
 }
-
-// Create a separate function for server components that don't need to set cookies
-export function createServerClient() {
-  const cookieStore = cookies();
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: cookieStore,
-  });
-}
