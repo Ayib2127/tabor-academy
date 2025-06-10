@@ -272,7 +272,7 @@ export function SiteHeader() {
             <div className="border-t pt-4 mt-4">
               {user ? (
                 <>
-                  <Button variant="ghost" className="w-full justify-start" asChild>
+                  <Button variant="ghost\" className="w-full justify-start\" asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </Button>
                   <Button variant="ghost" className="w-full justify-start" asChild>
