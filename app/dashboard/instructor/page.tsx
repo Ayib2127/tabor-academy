@@ -29,8 +29,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase/client';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 
 interface Course {
@@ -163,15 +162,33 @@ export default function InstructorDashboardPage() {
   const [averageRating, setAverageRating] = useState(0);
   const [overallCompletionRate, setOverallCompletionRate] = useState(0);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const supabase = createClientComponentClient();
 
-    useEffect(() => {
+  useEffect(() => {
     async function fetchInstructorData() {
       setLoading(true);
       setError(null);
       try {
+        // Get the current user session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw new Error(sessionError.message);
+        }
+        
+        if (!session) {
+          console.error("No active session found");
+          throw new Error("No active session found. Please log in.");
+        }
+        
+        console.log("Session found:", session);
+        
+        // Get user details
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
         if (userError) {
+          console.error("User error:", userError);
           throw new Error(userError.message);
         }
 
@@ -180,14 +197,21 @@ export default function InstructorDashboardPage() {
           return;
         }
 
-        setInstructorName(user.user_metadata.full_name || user.email || 'Instructor');
+        setInstructorName(user.user_metadata?.full_name || user.email || 'Instructor');
 
         // Fetch courses from the API route
-        const coursesResponse = await fetch('/api/instructor/courses');
+        const coursesResponse = await fetch('/api/instructor/courses', {
+          credentials: 'include', // Important for including cookies
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
         if (!coursesResponse.ok) {
           const errorData = await coursesResponse.json();
           throw new Error(errorData.error || 'Failed to fetch instructor courses.');
         }
+        
         const { courses: coursesData, summaryStats } = await coursesResponse.json();
         setCourses(coursesData);
 
@@ -197,55 +221,57 @@ export default function InstructorDashboardPage() {
         setOverallCompletionRate(summaryStats.averageCompletionRate || 0);
 
         // Fetch recent activity from the new API route
-        const activityResponse = await fetch('/api/instructor/activity');
+        const activityResponse = await fetch('/api/instructor/activity', {
+          credentials: 'include', // Important for including cookies
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
         if (!activityResponse.ok) {
           const errorData = await activityResponse.json();
           throw new Error(errorData.error || 'Failed to fetch recent activity.');
         }
+        
         const activityData: ActivityItem[] = await activityResponse.json();
         setRecentActivity(activityData);
 
-        // Average Rating and Overall Completion Rate are not yet calculated in API, keep as placeholders for now
-        // setAverageRating(0); 
-        // setOverallCompletionRate(0); 
-
-            } catch (err: any) {
+      } catch (err: any) {
         console.error("Error fetching instructor data:", err);
         setError(err.message || 'Failed to fetch instructor data.');
         toast.error(err.message || 'Failed to load dashboard data.');
-            } finally {
-                setLoading(false);
-            }
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchInstructorData();
-  }, [router]);
+  }, [router, supabase]);
 
   const handleCreateCourseClick = () => {
     router.push('/dashboard/instructor/course-builder')
   }
 
   const handleTogglePublish = async (courseId: string, currentStatus: boolean) => {
-    const newStatus = !currentStatus;
     try {
       const response = await fetch(`/api/courses/${courseId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ is_published: newStatus }),
+        body: JSON.stringify({ is_published: !currentStatus }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to update course status to ${newStatus}`);
+        throw new Error(errorData.error || `Failed to update course status to ${!currentStatus}`);
       }
 
-      toast.success(`Course ${newStatus ? 'published' : 'unpublished'} successfully!`);
+      toast.success(`Course ${!currentStatus ? 'published' : 'unpublished'} successfully!`);
       // Optimistically update the UI
       setCourses(prevCourses =>
         prevCourses.map(course =>
-          course.id === courseId ? { ...course, is_published: newStatus } : course
+          course.id === courseId ? { ...course, is_published: !currentStatus } : course
         )
       );
     } catch (err: any) {
@@ -254,9 +280,9 @@ export default function InstructorDashboardPage() {
     }
   };
 
-    return (
+  return (
     <div className="flex min-h-screen flex-col">
-            <SiteHeader />
+      <SiteHeader />
       
       <main className="flex-1 py-8">
         <div className="container px-4 md:px-6">
@@ -288,9 +314,9 @@ export default function InstructorDashboardPage() {
                 <p className="text-muted-foreground">Here's what's happening with your courses</p>
               </div>
               <Button className="bg-gradient-to-r from-brand-orange-600 to-brand-orange-500" onClick={handleCreateCourseClick}>
-                            <PlusCircle className="h-4 w-4 mr-2" />
-                            Create New Course
-                        </Button>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Create New Course
+              </Button>
             </div>
           </div>
 
@@ -336,13 +362,13 @@ export default function InstructorDashboardPage() {
             </Card>
 
             <Card className="p-6 card-hover gradient-border">
-                                            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4">
                 <div className="bg-brand-teal-100 rounded-full p-3">
                   <BarChart className="h-6 w-6 text-brand-teal-500" />
                 </div>
-                                                <div>
+                <div>
                   <p className="text-sm text-muted-foreground">Completion Rate</p>
-                  <h3 className="text-2xl font-bold">{loading ? '...' : `${overallCompletionRate}%`}</h3>
+                  <h3 className="text-2xl font-bold">{loading ? '...' : `${overallCompletionRate.toFixed(0)}%`}</h3>
                   <p className="text-sm text-green-500">Above Average</p>
                 </div>
               </div>
@@ -491,7 +517,7 @@ export default function InstructorDashboardPage() {
                         </Card>
                       ))}
                     </div>
-                                </div>
+                  </div>
                   <div>
                     <Card className="p-6 card-hover gradient-border">
                       <h2 className="text-2xl font-bold mb-6">Quick Tools</h2>
@@ -516,9 +542,9 @@ export default function InstructorDashboardPage() {
                           <HelpCircle className="h-4 w-4 mr-2" />
                           Get Support
                         </Button>
-                        </div>
-                </Card>
-            </div>
+                      </div>
+                    </Card>
+                  </div>
                 </div>
               )
             }
@@ -527,4 +553,4 @@ export default function InstructorDashboardPage() {
       </main>
     </div>
   )
-} 
+}

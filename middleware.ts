@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { checkRateLimit } from '@/lib/utils/security';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
+  
+  // Create a Supabase client configured to use cookies
+  const supabase = createMiddlewareClient({ req: request, res: response });
+  
+  // Refresh session if expired - required for Server Components
+  await supabase.auth.getSession();
 
   // Security headers
   response.headers.set('X-DNS-Prefetch-Control', 'on');
@@ -14,17 +20,6 @@ export function middleware(request: NextRequest) {
   response.headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), interest-cohort=()'
-  );
-  response.headers.set(
-    'Content-Security-Policy',
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://va.vercel-scripts.com; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "img-src 'self' data: https: blob:; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "connect-src 'self' https://api.taboracademy.com https://www.google-analytics.com https://*.supabase.co https://fmbakckfxuabratissxg.supabase.co; " +
-    "media-src 'self' https://storage.taboracademy.com; " +
-    "frame-src 'self' https://www.youtube-nocookie.com;"
   );
 
   // CORS headers for API routes
@@ -37,23 +32,6 @@ export function middleware(request: NextRequest) {
     // Handle preflight requests
     if (request.method === 'OPTIONS') {
       return new NextResponse(null, { headers: response.headers });
-    }
-
-    // Rate limiting for API routes
-    const clientIp = request.ip || 'unknown';
-    const isWithinLimit = checkRateLimit(`${clientIp}:${request.nextUrl.pathname}`);
-    
-    if (!isWithinLimit) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Too many requests' }),
-        {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            ...response.headers
-          }
-        }
-      );
     }
   }
 
@@ -73,7 +51,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    '/api/:path*',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

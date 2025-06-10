@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { SiteHeader } from "@/components/site-header"
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { supabase } from "@/lib/supabase/client"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -41,6 +41,7 @@ export default function SignUpPage() {
   const [selectedMethod, setSelectedMethod] = useState<"email" | "phone" | "social">("email")
   const [step, setStep] = useState(1)
   const countries = getCountries()
+  const supabase = createClientComponentClient();
 
   const {
     register,
@@ -64,6 +65,7 @@ export default function SignUpPage() {
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
+            full_name: `${data.firstName} ${data.lastName}`,
           },
         },
       })
