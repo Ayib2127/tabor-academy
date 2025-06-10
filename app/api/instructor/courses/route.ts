@@ -1,34 +1,25 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { toast } from 'react-hot-toast';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
     console.log('--- API Call: /api/instructor/courses ---');
     console.log('Request URL:', request.url);
 
-    const res = NextResponse.json({});
-
-    const supabase = createRouteHandlerClient({ cookies }, {
-        response: res,
-    });
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError) {
-        console.error('Supabase getUser Error:', userError.message);
-        return NextResponse.json({ error: userError.message }, { status: 500 });
-    }
-
-    if (!user) {
-        console.warn('Authentication failed: No user found for instructor dashboard API.');
-        return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
-    }
-
-    console.log('User found in API:', user.id, user.email);
-    console.log('Instructor ID from request:', user.id);
+    const supabase = createClient();
 
     try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError) {
+            console.error('Error getting user session:', userError);
+            return NextResponse.json({ error: userError.message }, { status: 500 });
+        }
+
+        if (!user) {
+            console.log('Authentication failed: No user found for instructor courses API.');
+            return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+        }
+
         const { data: coursesData, error: coursesError } = await supabase
             .from('courses')
             .select('id, title, is_published, created_at, thumbnail_url, price, enrollments(count)')
@@ -42,50 +33,53 @@ export async function GET(request: Request) {
         let totalStudents = 0;
         let totalRevenue = 0;
         let totalCompletionRate = 0;
+        let coursesWithCompletion = 0;
 
-        const processedCourses = await Promise.all(coursesData?.map(async course => {
-            const studentCount = course.enrollments ? course.enrollments[0]?.count || 0 : 0;
-            const revenue = (course.price || 0) * studentCount;
+        const processedCourses = await Promise.all(
+            coursesData?.map(async (course) => {
+                const studentCount = course.enrollments ? course.enrollments[0]?.count || 0 : 0;
+                const revenue = (course.price || 0) * studentCount;
 
-            const { data: completionRate, error: completionError } = await supabase
-                .rpc('get_course_completion_rate', {
+                totalStudents += studentCount;
+                totalRevenue += revenue;
+
+                const { data: completionRateData, error: completionRateError } = await supabase.rpc('get_course_completion_rate', {
                     p_course_id: course.id,
                     p_user_id: user.id
                 });
 
-            if (completionError) {
-                console.error(`Error fetching completion rate for course ${course.id}:`, completionError.message);
-            }
+                let completionRate = 0;
+                if (completionRateError) {
+                    console.error('Error fetching completion rate:', completionRateError);
+                } else {
+                    completionRate = completionRateData || 0;
+                    if (completionRate > 0) {
+                        totalCompletionRate += completionRate;
+                        coursesWithCompletion++;
+                    }
+                }
 
-            const currentCourseCompletionRate = completionRate || 0;
-            totalStudents += studentCount;
-            totalRevenue += revenue;
-            totalCompletionRate += currentCourseCompletionRate;
+                return {
+                    id: course.id,
+                    title: course.title,
+                    is_published: course.is_published,
+                    created_at: course.created_at,
+                    thumbnail_url: course.thumbnail_url,
+                    price: course.price,
+                    students: studentCount,
+                    completionRate: completionRate
+                };
+            }) || []
+        );
 
-            return {
-                id: course.id,
-                title: course.title,
-                is_published: course.is_published,
-                created_at: course.created_at,
-                thumbnail_url: course.thumbnail_url,
-                price: course.price,
-                students: studentCount,
-                completionRate: currentCourseCompletionRate
-            };
-        }) || []);
-
-        const averageCompletionRate = processedCourses.length > 0
-            ? totalCompletionRate / processedCourses.length
-            : 0;
-
-        console.log('API Response: Courses fetched successfully.');
+        const averageCompletionRate = coursesWithCompletion > 0 ? totalCompletionRate / coursesWithCompletion : 0;
 
         return NextResponse.json({
             courses: processedCourses,
             summaryStats: {
                 totalStudents,
                 totalRevenue,
-                averageCompletionRate
+                averageCompletionRate,
             },
         });
     } catch (err: any) {
