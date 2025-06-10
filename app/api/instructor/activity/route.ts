@@ -1,5 +1,5 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } = require("next/headers");
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 interface ActivityItem {
@@ -15,7 +15,8 @@ export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/activity ---');
   console.log('Request URL:', request.url);
 
-  const supabase = createRouteHandlerClient({ cookies }); // Simplified initialization
+  console.log('Incoming cookies (activity API):', cookies().getAll());
+  const supabase = createRouteHandlerClient({ cookies });
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
