@@ -1,35 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import * as Sentry from '@sentry/nextjs';
 
 export const dynamic = 'force-dynamic'; // Force dynamic rendering for this API route
 
-// Mock data for demonstration
-const courses = [
-  {
-    id: 'course1',
-    title: 'Full Stack Web Development',
-    description: 'Learn to build modern web applications.',
-    instructorId: 'instructor1',
-    createdAt: '2024-05-01',
-    updatedAt: '2024-05-10',
-    status: 'draft',
-  },
-  {
-    id: 'course2',
-    title: 'Introduction to Data Science',
-    description: 'A beginner-friendly data science course.',
-    instructorId: 'instructor1',
-    createdAt: '2024-04-15',
-    updatedAt: '2024-05-09',
-    status: 'published',
-  },
-];
-
 export async function GET(request: NextRequest): Promise<NextResponse<any>> {
-  const supabase = createClient();
+  const supabase = createRouteHandlerClient({ cookies });
 
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -87,7 +65,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<any>> {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient(); // Call without arguments
+  const supabase = createRouteHandlerClient({ cookies });
 
   try {
     // 1. Check for authenticated user session

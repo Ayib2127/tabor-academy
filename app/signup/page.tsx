@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { v4 as uuidv4 } from 'uuid'
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -80,7 +81,7 @@ export default function SignUpPage() {
         // The trigger ensures the profile is created with the correct auth.uid()
 
         toast.success("Account created successfully! Please check your email for verification.")
-        router.push('/login')
+        setStep(2)
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to create account")
@@ -338,7 +339,7 @@ export default function SignUpPage() {
                 className="bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
                 asChild
               >
-                <Link href="/dashboard">Go to Dashboard</Link>
+                <Link href="/login">Go to Login</Link>
               </Button>
             </div>
           )}

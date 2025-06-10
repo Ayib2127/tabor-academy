@@ -1,33 +1,29 @@
-import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/students ---');
   console.log('Request URL:', request.url);
 
-  // Explicitly inspect cookies before creating the client
-  const allCookies = cookies().getAll();
-  console.log('SERVER-SIDE: All Request Cookies (Students):', JSON.stringify(allCookies, null, 2));
+  console.log('Incoming cookies (Students):', cookies().getAll());
+  const supabase = createRouteHandlerClient({ cookies });
 
-  const supabase = createRouteHandlerClient();
-  console.log('SERVER-SIDE: Supabase Route Handler Client initialized (Students).');
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('Supabase getUser Error (Students):', userError.message, userError);
+    return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
+  }
+
+  if (!user) {
+    console.warn('Authentication failed (Students): No user object found from session.');
+    return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
+  }
+
+  console.log('User found in Students API:', user.id, user.email);
 
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError) {
-      console.error('SERVER-SIDE: Supabase getUser Error (Students):', userError.message, userError);
-      return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
-    }
-
-    if (!user) {
-      console.warn('SERVER-SIDE: Authentication failed (Students): No user object found from session.');
-      return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
-    }
-
-    console.log('SERVER-SIDE: User found in Students API:', user.id, user.email);
-
     // Fetch all courses taught by this instructor
     const { data: instructorCourses, error: coursesError } = await supabase
       .from('courses')
@@ -35,7 +31,7 @@ export async function GET(request: Request) {
       .eq('instructor_id', user.id);
 
     if (coursesError) {
-      console.error('SERVER-SIDE: Error fetching instructor courses (Students):', coursesError);
+      console.error('Error fetching instructor courses (Students):', coursesError);
       return NextResponse.json({ error: coursesError.message }, { status: 500 });
     }
 
@@ -53,7 +49,7 @@ export async function GET(request: Request) {
       .in('course_id', courseIds);
 
     if (enrollmentsError) {
-      console.error('SERVER-SIDE: Error fetching enrollments (Students):', enrollmentsError);
+      console.error('Error fetching enrollments (Students):', enrollmentsError);
       return NextResponse.json({ error: enrollmentsError.message }, { status: 500 });
     }
 
@@ -64,7 +60,7 @@ export async function GET(request: Request) {
       .in('course_id', courseIds);
 
     if (lessonsError) {
-      console.error('SERVER-SIDE: Error fetching lessons (Students):', lessonsError);
+      console.error('Error fetching lessons (Students):', lessonsError);
       return NextResponse.json({ error: lessonsError.message }, { status: 500 });
     }
 
@@ -79,7 +75,7 @@ export async function GET(request: Request) {
       .in('lesson_id', lessonIds);
 
     if (progressError) {
-      console.error('SERVER-SIDE: Error fetching progress records (Students):', progressError);
+      console.error('Error fetching progress records (Students):', progressError);
       return NextResponse.json({ error: progressError.message }, { status: 500 });
     }
 
@@ -128,11 +124,11 @@ export async function GET(request: Request) {
 
     const studentsList = Array.from(studentsMap.values());
 
-    console.log('SERVER-SIDE: API Response: Students fetched successfully.');
+    console.log('API Response: Students fetched successfully.');
     return NextResponse.json(studentsList);
 
   } catch (err: any) {
-    console.error('SERVER-SIDE: Unexpected error fetching instructor students:', err);
+    console.error('Unexpected error fetching instructor students:', err);
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
   }
 }

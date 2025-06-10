@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
   const courseId = params.id;
+  const supabase = createRouteHandlerClient({ cookies });
 
   try {
     // Verify that the user is authenticated and is the instructor of this course
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Error getting user:', userError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,6 +25,7 @@ export async function GET(
       .single();
 
     if (courseError || !courseData) {
+      console.error('Error fetching course:', courseError);
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
 

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { CourseStructure } from '@/components/instructor/course-builder/CourseStructure';
-import { SiteHeader } from "@/components/site-header"; // Assuming SiteHeader is needed here
+import { SiteHeader } from "@/components/site-header";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface Lesson {
     id: number;
@@ -24,13 +25,16 @@ export default function CourseEditorPage() {
     const [error, setError] = useState<string | null>(null);
     const [showAddModuleInput, setShowAddModuleInput] = useState(false);
     const [newModuleTitle, setNewModuleTitle] = useState('');
+    const supabase = createClientComponentClient();
 
     const fetchCourseModules = useCallback(async () => {
         if (!courseId) return;
 
         try {
             setLoading(true);
-            const response = await fetch(`/api/courses/${courseId}/modules`);
+            const response = await fetch(`/api/courses/${courseId}/modules`, {
+                credentials: 'include',
+            });
             if (!response.ok) {
                 throw new Error('Failed to fetch course modules.');
             }
@@ -59,6 +63,7 @@ export default function CourseEditorPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title }),
+                credentials: 'include',
             });
             const newModule = await response.json();
             if (!response.ok) {
@@ -78,6 +83,7 @@ export default function CourseEditorPage() {
             // Simulate API call for deleting a module
             const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}`, {
                 method: 'DELETE',
+                credentials: 'include',
             });
             if (!response.ok) {
                 throw new Error('Failed to delete module.');
@@ -102,6 +108,7 @@ export default function CourseEditorPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: lessonTitle }),
+                credentials: 'include',
             });
             const newLesson = await response.json();
             if (!response.ok) {
@@ -125,6 +132,7 @@ export default function CourseEditorPage() {
             // Simulate API call for deleting a lesson
             const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`, {
                 method: 'DELETE',
+                credentials: 'include',
             });
             if (!response.ok) {
                 throw new Error('Failed to delete lesson.');
@@ -150,6 +158,7 @@ export default function CourseEditorPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ moduleIds: reorderedModules.map(m => m.id) }),
+                credentials: 'include',
             });
             if (!response.ok) {
                 throw new Error('Failed to reorder modules.');
@@ -177,6 +186,7 @@ export default function CourseEditorPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ lessonIds: reorderedLessons.map(l => l.id) }),
+                credentials: 'include',
             });
             if (!response.ok) {
                 throw new Error('Failed to reorder lessons.');
@@ -237,4 +247,4 @@ export default function CourseEditorPage() {
             </div>
         </>
     );
-} 
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 interface ActivityItem {
@@ -15,28 +15,22 @@ export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/activity ---');
   console.log('Request URL:', request.url);
 
-  // Explicitly inspect cookies before creating the client
-  const allCookies = cookies().getAll();
-  console.log('SERVER-SIDE: All Request Cookies (Activity):', JSON.stringify(allCookies, null, 2));
+  console.log('Incoming cookies (activity API):', cookies().getAll());
+  const supabase = createRouteHandlerClient({ cookies });
 
-  const supabase = createRouteHandlerClient();
-  console.log('SERVER-SIDE: Supabase Route Handler Client initialized (Activity).');
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('Error getting user session:', userError);
+    return NextResponse.json({ error: userError.message }, { status: 500 });
+  }
+
+  if (!user) {
+    console.log('Authentication failed: No user found for instructor activity API.');
+    return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+  }
 
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError) {
-      console.error('SERVER-SIDE: Supabase getUser Error (Activity):', userError.message, userError);
-      return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
-    }
-
-    if (!user) {
-      console.warn('SERVER-SIDE: Authentication failed (Activity): No user object found from session.');
-      return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
-    }
-
-    console.log('SERVER-SIDE: User found in Activity API:', user.id, user.email);
-
     // Fetch recent activity data for the instructor's courses
     // This query needs to join enrollments and courses to filter by instructor_id
     const { data: recentActivityData, error: activityError } = await supabase
@@ -69,7 +63,6 @@ export async function GET(request: Request) {
       time: item.created_at, // Use created_at as time
     }));
 
-    console.log('SERVER-SIDE: API Response: Activity fetched successfully.');
     return NextResponse.json(processedActivity);
 
   } catch (err: any) {

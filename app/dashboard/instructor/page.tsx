@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -29,8 +29,8 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { toast } from 'sonner';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { toast } from 'sonner'
 
 interface Course {
     id: string;
@@ -311,7 +311,9 @@ export default function InstructorDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Welcome, {instructorName}</h1>
-                <p className="text-muted-foreground">Here's what's happening with your courses</p>
+                <p className="text-muted-foreground">
+                  Here's what's happening with your courses
+                </p>
               </div>
               <Button className="bg-gradient-to-r from-brand-orange-600 to-brand-orange-500" onClick={handleCreateCourseClick}>
                 <PlusCircle className="h-4 w-4 mr-2" />

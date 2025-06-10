@@ -1,82 +1,30 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerComponentClient, createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { Database } from './types';
 
+// Create a client for server components
 export function createClient() {
   const cookieStore = cookies();
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name, value, options) {
-        try {
-          cookieStore.set({ name, value, ...options });
-        } catch (error) {
-          // This will throw in middleware, but we can safely ignore it
-          console.error(`Error setting cookie ${name}:`, error);
-        }
-      },
-      remove(name, options) {
-        try {
-          cookieStore.set({ name, value: '', ...options });
-        } catch (error) {
-          // This will throw in middleware, but we can safely ignore it
-          console.error(`Error removing cookie ${name}:`, error);
-        }
-      },
-    },
+  
+  return createServerComponentClient<Database>({
+    cookies: () => cookieStore,
   });
 }
 
-// Create a separate function for route handlers
+// Create a client specifically for route handlers
 export function createRouteHandlerClient() {
   const cookieStore = cookies();
   
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name, value, options) {
-        try {
-          cookieStore.set({ name, value, ...options });
-        } catch (error) {
-          // This will throw in middleware, but we can safely ignore it
-          console.error(`Error setting cookie ${name}:`, error);
-        }
-      },
-      remove(name, options) {
-        try {
-          cookieStore.set({ name, value: '', ...options });
-        } catch (error) {
-          // This will throw in middleware, but we can safely ignore it
-          console.error(`Error removing cookie ${name}:`, error);
-        }
-      },
-    },
+  return createRouteHandlerClient<Database>({
+    cookies: () => cookieStore,
   });
 }
 
-// Create a separate function for server components
-export function createServerComponentClient() {
+// Create a server client for direct use
+export function createServerClient() {
   const cookieStore = cookies();
   
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
-      },
-    },
+  return createServerComponentClient<Database>({
+    cookies: () => cookieStore,
   });
 }
