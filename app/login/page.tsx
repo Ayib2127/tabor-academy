@@ -14,11 +14,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { SiteHeader } from "@/components/site-header"
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { supabase } from "@/lib/supabase/client"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-
-console.log("Supabase client initialized:", supabase);
 
 const emailLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -37,13 +35,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const countries = getCountries()
+  const supabase = createClientComponentClient();
 
   const {
     register: registerEmail,
     handleSubmit: handleSubmitEmail,
     formState: { errors: emailErrors },
   } = useForm({
-    // resolver: zodResolver(emailLoginSchema), // Comment out this line
+    resolver: zodResolver(emailLoginSchema),
   })
 
   const {
@@ -174,10 +173,7 @@ export default function LoginPage() {
               </TabsList>
 
               <TabsContent value="email">
-                <form onSubmit={(e) => {
-                  console.log('Form onSubmit handler triggered (via handleSubmitEmail).');
-                  handleSubmitEmail(onSubmitEmail)(e);
-                }} className="space-y-4">
+                <form onSubmit={handleSubmitEmail(onSubmitEmail)} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
                     <Input

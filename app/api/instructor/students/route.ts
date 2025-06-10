@@ -1,46 +1,33 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/students ---');
   console.log('Request URL:', request.url);
 
-  let supabase;
-  try {
-    // Explicitly inspect cookies before creating the client
-    const allCookies = cookies().getAll();
-    console.log('SERVER-SIDE: All Request Cookies (Students):', JSON.stringify(allCookies, null, 2));
+  // Explicitly inspect cookies before creating the client
+  const allCookies = cookies().getAll();
+  console.log('SERVER-SIDE: All Request Cookies (Students):', JSON.stringify(allCookies, null, 2));
 
-    supabase = createRouteHandlerClient({ cookies }, {
-      cookieOptions: {
-        domain: process.env.NODE_ENV === 'production' ? new URL(process.env.NEXT_PUBLIC_VERCEL_URL || 'https://your-production-domain.com').hostname : 'localhost',
-        path: '/',
-        sameSite: 'Lax',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    });
-    console.log('SERVER-SIDE: Supabase Route Handler Client initialized (Students).');
-  } catch (e: any) {
-    console.error('SERVER-SIDE: Error initializing Supabase client in Students API route:', e.message, e);
-    return NextResponse.json({ error: 'Failed to initialize Supabase client.' }, { status: 500 });
-  }
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError) {
-    console.error('SERVER-SIDE: Supabase getUser Error (Students):', userError.message, userError);
-    return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
-  }
-
-  if (!user) {
-    console.warn('SERVER-SIDE: Authentication failed (Students): No user object found from session.');
-    return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
-  }
-
-  console.log('SERVER-SIDE: User found in Students API:', user.id, user.email);
+  const supabase = createRouteHandlerClient();
+  console.log('SERVER-SIDE: Supabase Route Handler Client initialized (Students).');
 
   try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('SERVER-SIDE: Supabase getUser Error (Students):', userError.message, userError);
+      return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
+    }
+
+    if (!user) {
+      console.warn('SERVER-SIDE: Authentication failed (Students): No user object found from session.');
+      return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
+    }
+
+    console.log('SERVER-SIDE: User found in Students API:', user.id, user.email);
+
     // Fetch all courses taught by this instructor
     const { data: instructorCourses, error: coursesError } = await supabase
       .from('courses')
@@ -148,4 +135,4 @@ export async function GET(request: Request) {
     console.error('SERVER-SIDE: Unexpected error fetching instructor students:', err);
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
   }
-} 
+}

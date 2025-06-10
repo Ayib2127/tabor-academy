@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Check, AlertCircle, Link as LinkIcon } from "lucide-react"
+import { Loader2, Check, AlertCircle, ChevronLeft, Link as LinkIcon } from "lucide-react"
 import Link from "next/link"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
@@ -26,9 +26,6 @@ export default function SocialAuthCallback() {
   useEffect(() => {
     const handleAuth = async () => {
       try {
-        // Simulate API authentication process
-        // await new Promise(resolve => setTimeout(resolve, 2000)) // Remove this simulation
-
         // After successful authentication callback, get user session
         const { data: { session } } = await supabase.auth.getSession()
 
@@ -60,9 +57,12 @@ export default function SocialAuthCallback() {
               } else if (userData.role === 'mentor') {
                 console.log('Redirecting to mentor dashboard');
                 router.push('/dashboard/mentor')
+              } else if (userData.role === 'instructor') {
+                console.log('Redirecting to instructor dashboard');
+                router.push('/dashboard/instructor')
               } else {
                 console.log('Redirecting to default dashboard');
-                // Default to student/instructor dashboard for other roles or if role is null/undefined
+                // Default to student dashboard for other roles or if role is null/undefined
                 router.push('/dashboard')
               }
             } else {
