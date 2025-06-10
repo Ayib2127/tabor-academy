@@ -31,10 +31,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Fetch recent activity data for the instructor's courses
-    // This query needs to join enrollments and courses to filter by instructor_id
+    // First, get the course IDs
+    const { data: courseIds } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('instructor_id', user.id);
+
+    // Then use those IDs in the activity query
     const { data: recentActivityData, error: activityError } = await supabase
-      .from('activity_log') // Assuming you have an 'activity_log' table
+      .from('activity_log')
       .select(`
         id,
         type,
@@ -43,11 +48,7 @@ export async function GET(request: Request) {
         courses (title),
         action_description
       `)
-      .in('course_id', supabase
-        .from('courses')
-        .select('id')
-        .eq('instructor_id', user.id)
-      );
+      .in('course_id', courseIds?.map(c => c.id) || []);
 
     if (activityError) {
       console.error('Error fetching recent activity:', activityError);
@@ -57,9 +58,9 @@ export async function GET(request: Request) {
     const processedActivity: ActivityItem[] = recentActivityData.map(item => ({
       id: item.id,
       type: item.type as ActivityItem['type'],
-      student: item.users?.full_name || 'Unknown Student',
+      student: item.users?.[0]?.full_name || 'Unknown Student',
       action: item.action_description || 'performed an action',
-      course: item.courses?.title || 'Unknown Course',
+      course: item.courses?.[0]?.title || 'Unknown Course',
       time: item.created_at, // Use created_at as time
     }));
 

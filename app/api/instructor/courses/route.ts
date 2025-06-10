@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+
+interface CourseData {
+  id: string;
+  title: string;
+  is_published: boolean;
+  created_at: string;
+  thumbnail_url?: string;
+  price?: number;
+  enrollments?: { count: number }[];
+}
 
 export async function GET(request: Request) {
     console.log('--- API Call: /api/instructor/courses ---');
     console.log('Request URL:', request.url);
 
     console.log('Incoming cookies (courses API):', cookies().getAll());
-    const supabase = createClient();
+    const supabase = createRouteHandlerClient({ cookies });
 
     try {
         // Get the current user from the session
@@ -39,7 +49,7 @@ export async function GET(request: Request) {
         let totalCompletionRate = 0;
         let coursesWithCompletion = 0;
 
-        const processedCourses = coursesData?.map(course => {
+        const processedCourses = coursesData?.map((course: CourseData) => {
             const studentCount = course.enrollments ? course.enrollments[0]?.count || 0 : 0;
             const revenue = (course.price || 0) * studentCount;
 

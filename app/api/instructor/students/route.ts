@@ -84,10 +84,10 @@ export async function GET(request: Request) {
 
     enrollments.forEach(enrollment => {
       const studentId = enrollment.user_id;
-      const studentFullName = enrollment.users?.full_name || 'N/A';
-      const studentEmail = enrollment.users?.email || 'N/A';
-      const courseId = enrollment.courses?.id;
-      const courseTitle = enrollment.courses?.title || 'N/A';
+      const studentFullName = enrollment.users?.[0]?.full_name || 'N/A';
+      const studentEmail = enrollment.users?.[0]?.email || 'N/A';
+      const courseId = enrollment.courses?.[0]?.id;
+      const courseTitle = enrollment.courses?.[0]?.title || 'N/A';
 
       if (!studentsMap.has(studentId)) {
         studentsMap.set(studentId, {
