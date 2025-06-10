@@ -208,11 +208,11 @@ export default function InstructorDashboardPage() {
         // setAverageRating(0); 
         // setOverallCompletionRate(0); 
 
-      } catch (err: any) {
+            } catch (err: any) {
         console.error("Error fetching instructor data:", err);
         setError(err.message || 'Failed to fetch instructor data.');
         toast.error(err.message || 'Failed to load dashboard data.');
-      } finally {
+            } finally {
                 setLoading(false);
             }
     }
@@ -408,8 +408,8 @@ export default function InstructorDashboardPage() {
                                             </div>
                         <div className="flex space-x-2">
                           <Button variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/dashboard/instructor/courses/${course.id}`}>
-                              <Edit className="h-4 w-4 mr-2" />
+                                                <Link href={`/dashboard/instructor/courses/${course.id}`}>
+                                                        <Edit className="h-4 w-4 mr-2" />
                               Edit Course
                             </Link>
                           </Button>
@@ -426,12 +426,12 @@ export default function InstructorDashboardPage() {
                             onClick={() => handleTogglePublish(course.id, course.is_published)}
                           >
                             {course.is_published ? 'Unpublish' : 'Publish'}
-                          </Button>
+                                                    </Button>
                           <Button variant="outline" size="sm" className="flex-1" asChild>
                             <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
                               <BarChart className="h-4 w-4 mr-2" />
                               Analytics
-                            </Link>
+                                                </Link>
                           </Button>
                         </div>
                                             </div>
@@ -474,7 +474,7 @@ export default function InstructorDashboardPage() {
                         </Card>
                       ))}
                     </div>
-                  </div>
+                                </div>
                   <div>
                     <Card className="p-6 card-hover gradient-border">
                       <h2 className="text-2xl font-bold mb-6">Quick Tools</h2>
@@ -499,9 +499,9 @@ export default function InstructorDashboardPage() {
                           <HelpCircle className="h-4 w-4 mr-2" />
                           Get Support
                         </Button>
-                      </div>
-                    </Card>
-                  </div>
+                        </div>
+                </Card>
+            </div>
                 </div>
               )
             }
