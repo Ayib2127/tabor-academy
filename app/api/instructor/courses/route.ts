@@ -1,25 +1,26 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
     console.log('--- API Call: /api/instructor/courses ---');
     console.log('Request URL:', request.url);
 
-    const supabase = createClient();
+    const supabase = createRouteHandlerClient({ cookies });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+        console.error('Error getting user session:', userError);
+        return NextResponse.json({ error: userError.message }, { status: 500 });
+    }
+
+    if (!user) {
+        console.log('Authentication failed: No user found for instructor courses API.');
+        return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+    }
 
     try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError) {
-            console.error('Error getting user session:', userError);
-            return NextResponse.json({ error: userError.message }, { status: 500 });
-        }
-
-        if (!user) {
-            console.log('Authentication failed: No user found for instructor courses API.');
-            return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
-        }
-
         const { data: coursesData, error: coursesError } = await supabase
             .from('courses')
             .select('id, title, is_published, created_at, thumbnail_url, price, enrollments(count)')
