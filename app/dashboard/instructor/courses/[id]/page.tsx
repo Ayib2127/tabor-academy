@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { CourseStructure } from '@/components/instructor/course-builder/CourseStructure';
 import { SiteHeader } from "@/components/site-header";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface Lesson {
     id: number;
@@ -223,7 +225,14 @@ export default function CourseEditorPage() {
         <>
             <SiteHeader />
             <div className="container mx-auto py-8">
-                <h1 className="text-3xl font-bold mb-6">Edit Course: {courseId}</h1>
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold">Edit Course: {courseId}</h1>
+                    <Link href={`/dashboard/instructor/courses/${courseId}/preview`} passHref>
+                        <Button variant="outline">
+                            Preview Course
+                        </Button>
+                    </Link>
+                </div>
                 <CourseStructure
                     modules={modules}
                     onModulesChange={setModules}

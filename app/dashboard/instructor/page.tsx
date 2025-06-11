@@ -456,16 +456,17 @@ export default function InstructorDashboardPage() {
                                             </div>
                         <div className="flex space-x-2">
                           <Button variant="outline" size="sm" className="flex-1" asChild>
-                                                <Link href={`/dashboard/instructor/courses/${course.id}/content`}>
-                                                        <Edit className="h-4 w-4 mr-2" />
+                            <Link href={`/dashboard/instructor/courses/${course.id}`}>
+                              <Edit className="h-4 w-4 mr-2" />
                               Edit Course
                             </Link>
                           </Button>
-                          <Link href={`/dashboard/instructor/students?courseId=${course.id}`}>
-                            <Button size="sm" variant="outline">
-                              <Users className="h-4 w-4 mr-2" /> View Students
-                            </Button>
-                          </Link>
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link href={`/dashboard/instructor/students?courseId=${course.id}`}>
+                              <Users className="h-4 w-4 mr-2" />
+                              View Students
+                            </Link>
+                          </Button>
                           <Button
                             variant={course.is_published ? "destructive" : "outline"}
                             size="sm"
@@ -473,6 +474,12 @@ export default function InstructorDashboardPage() {
                             onClick={() => handleTogglePublish(course.id, course.is_published)}
                           >
                             {course.is_published ? 'Unpublish' : 'Publish'}
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
+                              <BarChart className="h-4 w-4 mr-2" />
+                              Analytics
+                            </Link>
                           </Button>
                         </div>
                                             </div>
