@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -32,12 +32,28 @@ import {
   ArrowRight
 } from "lucide-react"
 import Link from "next/link"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function MobileSettingsPage() {
   const [theme, setTheme] = useState("light")
   const [fontSize, setFontSize] = useState(16)
   const [performanceMode, setPerformanceMode] = useState("balanced")
   const [biometricEnabled, setBiometricEnabled] = useState(true)
+  const [categories, setCategories] = useState<string[]>([])
+  const supabase = createClientComponentClient()
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase.from('categories').select('name');
+      if (error) {
+        console.error("Error fetching categories:", error);
+      } else if (data) {
+        setCategories(data.map(cat => cat.name));
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Mock settings data
   const settings = {

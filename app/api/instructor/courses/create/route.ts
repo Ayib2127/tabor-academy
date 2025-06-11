@@ -45,13 +45,24 @@ export async function POST(request: Request) {
     const courseData: CourseCreationData = await request.json();
     console.log('Received course data:', courseData.title);
 
+    // Fetch the category ID
+    const { data: categoryData, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', courseData.category)
+      .single();
+
+    if (categoryError || !categoryData) {
+      console.error('Error fetching category ID or category not found:', categoryError?.message || 'Category not found');
+      return NextResponse.json({ error: 'Invalid category selected.' }, { status: 400 });
+    }
+
     // 1. Insert into courses table
     const { data: newCourse, error: courseError } = await supabase
       .from('courses')
       .insert({
         title: courseData.title,
         description: courseData.description,
-        category: courseData.category,
         level: courseData.level,
         price: courseData.price,
         thumbnail_url: courseData.thumbnailUrl,
@@ -66,6 +77,19 @@ export async function POST(request: Request) {
     if (courseError) {
       console.error('Error inserting course:', courseError);
       return NextResponse.json({ error: courseError.message }, { status: 500 });
+    }
+
+    // 2. Insert into course_categories table
+    const { error: courseCategoryError } = await supabase
+      .from('course_categories')
+      .insert({
+        course_id: newCourse.id,
+        category_id: categoryData.id,
+      });
+
+    if (courseCategoryError) {
+      console.error('Error inserting course category:', courseCategoryError);
+      return NextResponse.json({ error: courseCategoryError.message }, { status: 500 });
     }
 
     // 2. Insert modules and lessons

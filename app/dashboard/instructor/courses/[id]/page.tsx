@@ -40,18 +40,18 @@ interface CoursePreviewPageProps {
 export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
   const { id: courseId } = params;
   const [course, setCourse] = useState<Course | null>(null);
-  const [modules, setModules] = useState<Module[]>([]);
+    const [modules, setModules] = useState<Module[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const supabase = createClientComponentClient();
 
   useEffect(() => {
-    if (!courseId) return;
+        if (!courseId) return;
 
     const fetchCourseContent = async () => {
-      try {
-        setLoading(true);
+        try {
+            setLoading(true);
         // Fetch course details
         const { data: courseData, error: courseError } = await supabase
           .from('courses')
@@ -81,7 +81,7 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
         }));
         setModules(organizedModules);
 
-      } catch (err: any) {
+        } catch (err: any) {
         console.error("Error fetching course content:", err);
         setError(err.message || 'Failed to fetch course content.');
         toast.error(err.message || 'Failed to load course content.');
@@ -95,16 +95,16 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
 
   const totalLessons = modules.reduce((count, module) => count + module.lessons.length, 0);
 
-  if (loading) {
-    return (
+    if (loading) {
+        return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-orange-500"></div>
-      </div>
-    );
-  }
+                </div>
+        );
+    }
 
-  if (error) {
-    return (
+    if (error) {
+        return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
         <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
         <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Course</h2>
@@ -122,12 +122,12 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
         <p className="text-gray-600 mb-4">The course you are looking for does not exist or you do not have access.</p>
         <Link href="/dashboard/instructor/courses"><Button>Back to My Courses</Button></Link>
       </div>
-    );
-  }
+        );
+    }
 
-  return (
+    return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-      <SiteHeader />
+            <SiteHeader />
       <div className="flex-1 container py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Course Details Column */}
         <div className="md:col-span-2 space-y-8">
@@ -220,5 +220,5 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
         </div>
       </div>
     </div>
-  );
+    );
 }
