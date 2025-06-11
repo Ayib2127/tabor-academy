@@ -11,6 +11,7 @@ import { CourseMediaStep } from "@/components/instructor/course-builder/course-m
 import { CourseReviewStep } from "@/components/instructor/course-builder/course-review-step"
 import { toast } from "@/components/ui/use-toast"
 import { SiteHeader } from "@/components/site-header"
+import { useRouter } from "next/navigation"
 
 interface CourseData {
   title: string
@@ -51,6 +52,7 @@ export default function CourseWizardPage() {
     promoVideoUrl: "",
     modules: [],
   })
+  const router = useRouter()
 
   const updateCourseData = (updates: Partial<CourseData>) => {
     setCourseData((prev) => ({ ...prev, ...updates }))
@@ -110,15 +112,40 @@ export default function CourseWizardPage() {
     }
   }
 
-  const handlePublish = () => {
-    // Here you would typically handle the course publication
-    // For now, we'll just show a success message
-    toast({
-      title: "Course Published!",
-      description: "Your course has been successfully published and is now available to students.",
-      variant: "default",
-    })
-  }
+  const handlePublish = async () => {
+    try {
+      const response = await fetch('/api/instructor/courses/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(courseData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create course.');
+      }
+
+      const result = await response.json();
+      toast({
+        title: "Course Created!",
+        description: "Your course has been successfully created and saved as a draft.",
+        variant: "default",
+      });
+
+      // Redirect to the instructor dashboard or the newly created course's edit page
+      router.push('/dashboard/instructor');
+
+    } catch (err: any) {
+      console.error('Error publishing course:', err);
+      toast({
+        title: "Error Creating Course",
+        description: err.message || 'An unexpected error occurred while creating your course.',
+        variant: "destructive",
+      });
+    }
+  };
 
     return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-white">
