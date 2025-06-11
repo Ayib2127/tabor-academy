@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 // GET function to list all lessons for a course
@@ -7,32 +7,66 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const supabase = createClient();
+    console.log('API Route: /api/courses/[id]/lessons - Incoming request');
+    const incomingCookies = request.headers.get('cookie');
+    console.log('API Route: Incoming Cookies Header:', incomingCookies); // Log the raw cookie header
+
+    const supabase = createRouteHandlerClient({ cookies });
     const courseId = params.id;
 
     try {
-        // Anyone who is authenticated can see the lesson list for now.
-        // We can add more specific instructor/enrollment checks if needed later.
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            console.error("API Route: Authentication error:", userError?.message);
+            // Added more specific logging for debugging
+            if (userError) {
+                console.error("API Route: Supabase Auth Error Code:", userError.code);
+                console.error("API Route: Supabase Auth Error Details:", userError.details);
+                console.error("API Route: Supabase Auth Error Hint:", userError.hint);
+            }
+            return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
         }
 
-        const { data: lessons, error } = await supabase
+        console.log("API Route: Authenticated user ID:", user.id); // Confirm user ID
+
+        const { data: courseData, error: courseError } = await supabase
+            .from('courses')
+            .select('instructor_id')
+            .eq('id', courseId)
+            .single();
+
+        if (courseError || !courseData) {
+            console.error("API Route: Error fetching course instructor:", courseError?.message);
+            return NextResponse.json({ error: 'Course not found or instructor not linked.' }, { status: 404 });
+        }
+
+        const isInstructor = user.id === courseData.instructor_id;
+        console.log("API Route: Is user instructor?", isInstructor);
+
+        let query = supabase
             .from('lessons')
             .select('*')
             .eq('course_id', courseId)
             .order('position', { ascending: true });
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+        if (!isInstructor) {
+            query = query.eq('is_published', true);
         }
 
+        const { data: lessons, error: lessonsError } = await query;
+
+        if (lessonsError) {
+            console.error("API Route: Error fetching lessons:", lessonsError.message);
+            return NextResponse.json({ error: 'Failed to fetch lessons.' }, { status: 500 });
+        }
+
+        console.log("API Route: Successfully fetched lessons count:", lessons?.length);
         return NextResponse.json(lessons);
 
-    } catch (error) {
-        console.error('An unexpected error occurred:', error);
-        return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    } catch (error: any) {
+        console.error("API Route: Unexpected error in GET /api/courses/[id]/lessons:", error.message);
+        return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
     }
 }
 
@@ -40,13 +74,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
+  const supabase = createRouteHandlerClient({ cookies });
   const courseId = params.id;
 
   try {
     // 1. Get the authenticated user's session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) {
+    const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+    if (sessionError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -61,7 +95,7 @@ export async function POST(
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
 
-    if (courseData.instructor_id !== session.user.id) {
+    if (courseData.instructor_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden: You are not the instructor of this course' }, { status: 403 });
     }
 

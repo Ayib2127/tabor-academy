@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, BookOpen, PlayCircle, Lock, CheckCircle } from 'lucide-react';
+import { ChevronLeft, BookOpen, PlayCircle, Lock, CheckCircle, Video } from 'lucide-react';
 import Link from 'next/link';
 
 interface Lesson {
@@ -38,6 +38,7 @@ export default function CoursePreviewPage() {
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +91,15 @@ export default function CoursePreviewPage() {
         })).sort((a, b) => a.position - b.position); // Sort modules by position if available
 
         setModules(organizedModules);
+
+        // NEW: Set initial selected lesson to the first published lesson
+        const firstPublishedLesson = lessonsData.find(lesson => lesson.is_published);
+        if (firstPublishedLesson) {
+          setSelectedLesson(firstPublishedLesson);
+        } else if (lessonsData.length > 0) {
+          // If no published lessons, select the first draft lesson
+          setSelectedLesson(lessonsData[0]);
+        }
 
       } catch (err: any) {
         setError(err.message);
@@ -157,18 +167,48 @@ export default function CoursePreviewPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Main Content Area (e.g., first lesson video, or general overview) */}
+            {/* Main Content Area: Displays selected lesson or course overview */}
             <div className="md:col-span-2">
               <Card className="p-6">
-                <h2 className="text-2xl font-bold mb-4">Course Overview</h2>
-                {/* Potentially display the first published lesson video here, or a general course promo video */}
-                <p className="text-muted-foreground">
-                  This section would dynamically display the main content (e.g., video player for the current lesson, or a course overview).
-                </p>
-                {/* For demonstration, just a placeholder */}
-                <div className="bg-gray-200 h-64 flex items-center justify-center rounded-lg mt-4">
-                  <PlayCircle className="h-16 w-16 text-gray-500" />
-                </div>
+                {selectedLesson ? (
+                  <>
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                      {selectedLesson.video_url && <Video className="h-6 w-6" />}
+                      {selectedLesson.title}
+                    </h2>
+                    {selectedLesson.video_url && (
+                      <div className="aspect-video bg-black rounded-lg overflow-hidden mb-4">
+                        <video
+                          src={selectedLesson.video_url}
+                          controls
+                          className="w-full h-full object-cover"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    )}
+                    {selectedLesson.content && (
+                      <div className="prose max-w-none"> {/* Use prose for basic markdown styling if you have @tailwindcss/typography */}
+                        <h3 className="text-xl font-semibold mb-2">Lesson Content</h3>
+                        <div dangerouslySetInnerHTML={{ __html: selectedLesson.content }} />
+                      </div>
+                    )}
+                    {!selectedLesson.video_url && !selectedLesson.content && (
+                        <p className="text-muted-foreground">This lesson has no content or video yet.</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold mb-4">Course Overview</h2>
+                    <p className="text-muted-foreground">
+                      This is the general overview of your course. Select a lesson from the curriculum to preview its content.
+                    </p>
+                    {/* Placeholder for course image or promo video if available */}
+                    <div className="bg-gray-200 h-64 flex items-center justify-center rounded-lg mt-4">
+                      <PlayCircle className="h-16 w-16 text-gray-500" />
+                    </div>
+                  </>
+                )}
               </Card>
             </div>
 
@@ -187,7 +227,11 @@ export default function CoursePreviewPage() {
                           {module.lessons.map(lesson => (
                             <li
                               key={lesson.id}
-                              className={`flex items-center gap-2 p-2 rounded-md ${!lesson.is_published ? 'bg-gray-100 text-gray-500' : 'hover:bg-gray-50'}`}
+                              className={`flex items-center gap-2 p-2 rounded-md transition-colors 
+                                ${lesson.is_published ? 'cursor-pointer hover:bg-gray-100' : 'bg-gray-50 text-gray-400 opacity-80'}
+                                ${selectedLesson?.id === lesson.id ? 'bg-brand-orange-100 text-brand-orange-700 font-medium' : ''}
+                              `}
+                              onClick={() => lesson.is_published && setSelectedLesson(lesson)} // Make only published lessons clickable
                             >
                               {lesson.is_published ? (
                                 <CheckCircle className="h-5 w-5 text-green-500" />

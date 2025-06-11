@@ -173,6 +173,7 @@ export default function InstructorDashboardPage() {
   const [overallCompletionRate, setOverallCompletionRate] = useState(0);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
     // Check if user is authenticated
@@ -250,21 +251,31 @@ export default function InstructorDashboardPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to update course status to ${newStatus}`);
+        throw new Error(errorData.error || 'Failed to update course status.');
       }
 
-      toast.success(`Course ${newStatus ? 'published' : 'unpublished'} successfully!`);
-      // Optimistically update the UI
+      // Update the local state to reflect the change
       setCourses(prevCourses =>
         prevCourses.map(course =>
           course.id === courseId ? { ...course, is_published: newStatus } : course
         )
       );
+      toast.success(`Course ${newStatus ? 'published' : 'unpublished'} successfully!`);
     } catch (err: any) {
-      console.error("Error toggling publish status:", err);
+      console.error('Error updating course status:', err);
       toast.error(err.message || 'Failed to update course status.');
     }
   };
+
+  const filteredCourses = courses.filter(course => {
+    if (activeTab === "published") {
+      return course.is_published && course.title.toLowerCase().includes(searchQuery.toLowerCase());
+    } else if (activeTab === "drafts") {
+      return !course.is_published && course.title.toLowerCase().includes(searchQuery.toLowerCase());
+    } else {
+      return course.title.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+  });
 
   // If not authenticated, show a loading state
   if (!user) {
@@ -395,7 +406,7 @@ export default function InstructorDashboardPage() {
                     <span className="text-brand-blue-500 hover:text-brand-blue-700 flex items-center">
                       View All <ChevronRight className="h-4 w-4 ml-1" />
                     </span>
-                  </Card>
+                </Card>
                 </Link>
               ))}
             </div>
@@ -404,88 +415,94 @@ export default function InstructorDashboardPage() {
           {/* Active Courses */}
           <div className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Your Active Courses</h2>
-            {loading ? (
-              <div className="flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange-500"></div>
+            {/* Search and Tabs */}
+            <div className="mb-6">
+              <div className="flex space-x-4 border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className={`px-4 py-2 text-sm font-medium ${activeTab === "all" ? "border-b-2 border-brand-orange-500 text-brand-orange-500" : "text-gray-600 hover:text-gray-800"}`}
+                >
+                  All Courses
+                </button>
+                <button
+                  onClick={() => setActiveTab("published")}
+                  className={`px-4 py-2 text-sm font-medium ${activeTab === "published" ? "border-b-2 border-brand-orange-500 text-brand-orange-500" : "text-gray-600 hover:text-gray-800"}`}
+                >
+                  Published
+                </button>
+                <button
+                  onClick={() => setActiveTab("drafts")}
+                  className={`px-4 py-2 text-sm font-medium ${activeTab === "drafts" ? "border-b-2 border-brand-orange-500 text-brand-orange-500" : "text-gray-600 hover:text-gray-800"}`}
+                >
+                  Drafts
+                </button>
               </div>
-              ) : error ? (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600">{error}</p>
+            </div>
+
+            {loading && (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-orange-500"></div>
               </div>
-              ) : courses.length === 0 ? (
-              <div className="text-center p-8">
-                <p className="text-muted-foreground mb-4">No courses found. Create your first course!</p>
-                <Button onClick={handleCreateCourseClick} className="bg-gradient-to-r from-brand-orange-500 to-brand-teal-500">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Course
-                </Button>
-              </div>
-              ) : (
-                <div className="grid md:grid-cols-3 gap-6">
-                  {courses.map((course) => (
-                    <Card key={course.id} className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-2">
-                      <Image
-                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3"}
-                        alt={course.title}
-                        width={400}
-                        height={225}
-                        className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                      />
+            )}
+
+            {error && <p className="text-red-500 text-center mt-8">Error: {error}</p>}
+
+            {!loading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredCourses.length > 0 ? (
+                  filteredCourses.map((course) => (
+                    <Card key={course.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="relative h-48 w-full">
+                        <Image
+                          src={course.thumbnail_url || '/placeholder.png'}
+                          alt={course.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div
+                          className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${course.is_published ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+                        >
+                          {course.is_published ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {course.is_published ? "Published" : "Draft"}
+                        </div>
+                      </div>
                       <div className="p-4">
-                        <h3 className="text-lg font-bold mb-2">{course.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                        Status: {course.is_published ? 
-                          <span className="text-green-600">Published</span> : 
-                          <span className="text-orange-500">Draft</span>
-                        }
-                        </p>
-                        <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            <span>{course.students || 0} Students</span>
+                        <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-800">{course.title}</h3>
+                        <div className="flex items-center text-sm text-gray-600 mb-2">
+                          <Users className="h-4 w-4 mr-2" /> {course.students || 0} Students
+                        </div>
+                        <div className="mb-4">
+                          <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>Progress</span>
+                            <span>{course.completionRate || 0}%</span>
                           </div>
-                        <div className="flex items-center gap-2">
-                          <Progress 
-                            value={course.completionRate || 0} 
-                            className="w-24 h-2 bg-muted"
-                          />
-                          <span className="font-medium">
-                            {course.completionRate?.toFixed(0) || 0}%
-                          </span>
-                                                </div>
-                                            </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/dashboard/instructor/courses/${course.id}`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Course
-                            </Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/dashboard/instructor/students?courseId=${course.id}`}>
-                              <Users className="h-4 w-4 mr-2" />
-                              View Students
-                            </Link>
-                          </Button>
+                          <Progress value={course.completionRate || 0} className="h-2 bg-gray-200" />
+                        </div>
+                        <div className="flex justify-between items-center space-x-2">
+                          <Link href={`/dashboard/instructor/courses/${course.id}/content`} className="flex-1">
+                            <Button variant="outline" className="w-full border-gray-300 text-gray-700 hover:bg-gray-100">
+                              <Edit className="h-4 w-4 mr-2" /> Edit Course
+                            </Button>
+                          </Link>
+                          <Link href={`/dashboard/instructor/courses/${course.id}/students`} className="flex-1">
+                            <Button variant="outline" className="w-full border-gray-300 text-gray-700 hover:bg-gray-100">
+                              <Users className="h-4 w-4 mr-2" /> View Students
+                            </Button>
+                          </Link>
                           <Button
-                            variant={course.is_published ? "destructive" : "outline"}
-                            size="sm"
-                            className="flex-1"
                             onClick={() => handleTogglePublish(course.id, course.is_published)}
+                            className={`flex-shrink-0 ${course.is_published ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}
                           >
-                            {course.is_published ? 'Unpublish' : 'Publish'}
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1" asChild>
-                            <Link href={`/dashboard/learning-analytics?courseId=${course.id}`}>
-                              <BarChart className="h-4 w-4 mr-2" />
-                              Analytics
-                            </Link>
+                            {course.is_published ? "Unpublish" : "Publish"}
                           </Button>
                         </div>
-                                            </div>
+                      </div>
                     </Card>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-600 col-span-full">No courses found matching your criteria.</p>
+                )}
+              </div>
             )}
           </div>
 

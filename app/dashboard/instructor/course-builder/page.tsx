@@ -1,368 +1,233 @@
 "use client"
 
-import { useState, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SiteHeader } from '@/components/site-header';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { ArrowLeft, ArrowRight, CheckCircle, BookOpen, Settings, ImageIcon, Eye } from "lucide-react"
+import { CourseBasicsStep } from "@/components/instructor/course-builder/course-basics-step"
+import { CourseStructureStep } from "@/components/instructor/course-builder/course-structure-step"
+import { CourseMediaStep } from "@/components/instructor/course-builder/course-media-step"
+import { CourseReviewStep } from "@/components/instructor/course-builder/course-review-step"
+import { toast } from "@/components/ui/use-toast"
+import { SiteHeader } from "@/components/site-header"
 
-interface Category {
-    id: string;
-    name: string;
+interface CourseData {
+  title: string
+  description: string
+  category: string
+  level: "beginner" | "intermediate" | "advanced"
+  tags: string[]
+  price: number
+  thumbnailUrl: string
+  promoVideoUrl: string
+  modules: Array<{
+    id: number
+    title: string
+    lessons: Array<{
+      id: number
+      title: string
+    }>
+  }>
 }
 
-export default function CourseBuilderPage() {
-    const router = useRouter();
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [price, setPrice] = useState<number>(0);
-    const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
-    const [categoryId, setCategoryId] = useState('');
-    const [tags, setTags] = useState('');
-    const [thumbnailUrl, setThumbnailUrl] = useState<string>('');
-    const [promoVideoUrl, setPromoVideoUrl] = useState<string>('');
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+const steps = [
+  { id: 1, title: "Course Basics", icon: BookOpen, description: "Title, description, and category" },
+  { id: 2, title: "Course Structure", icon: Settings, description: "Modules and lessons" },
+  { id: 3, title: "Media & Pricing", icon: ImageIcon, description: "Thumbnail, video, and price" },
+  { id: 4, title: "Review & Publish", icon: Eye, description: "Final review and publish" },
+]
 
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                setIsLoadingCategories(true);
-                console.log('Fetching categories...');
-                const response = await fetch('/api/categories');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch categories.');
-                }
-                const data = await response.json();
-                console.log('Categories fetched:', data);
-                setCategories(data);
-            } catch (err: any) {
-                console.error('Error fetching categories:', err);
-                toast.error(err.message || 'Failed to load categories');
-            } finally {
-                setIsLoadingCategories(false);
-            }
-        };
-        fetchCategories();
-    }, []);
+export default function CourseWizardPage() {
+  const [currentStep, setCurrentStep] = useState(1)
+  const [courseData, setCourseData] = useState<CourseData>({
+    title: "",
+    description: "",
+    category: "",
+    level: "beginner",
+    tags: [],
+    price: 0,
+    thumbnailUrl: "",
+    promoVideoUrl: "",
+    modules: [],
+  })
 
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        console.log('handleSubmit triggered', { title, description, level, categoryId, price, tags, thumbnailUrl, promoVideoUrl });
-        
-        // Basic validation
-        if (!title.trim()) {
-            toast.error('Course title is required');
-            return;
-        }
-        
-        if (!description.trim()) {
-            toast.error('Course description is required');
-            return;
-        }
+  const updateCourseData = (updates: Partial<CourseData>) => {
+    setCourseData((prev) => ({ ...prev, ...updates }))
+  }
 
-        if (!categoryId) {
-            toast.error('Please select a category');
-            return;
-        }
+  const nextStep = () => {
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
 
-        setIsSubmitting(true);
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
 
-        try {
-            const courseData = {
-                title: title.trim(),
-                description: description.trim(),
-                price: price || 0,
-                level,
-                category_id: categoryId,
-                tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
-                thumbnail_url: thumbnailUrl || null,
-                promo_video_url: promoVideoUrl || null
-            };
+  const progress = (currentStep / steps.length) * 100
 
-            console.log('Creating course with data:', courseData);
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return <CourseBasicsStep courseData={courseData} updateCourseData={updateCourseData} />
+      case 2:
+        return <CourseStructureStep courseData={courseData} updateCourseData={updateCourseData} />
+      case 3:
+        return <CourseMediaStep courseData={courseData} updateCourseData={updateCourseData} />
+      case 4:
+        return <CourseReviewStep courseData={courseData} />
+      default:
+        return null
+    }
+  }
 
-            const response = await fetch('/api/courses', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(courseData),
-            });
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          courseData.title.trim() &&
+          courseData.description.trim() &&
+          courseData.category &&
+          courseData.level
+        )
+      case 2:
+        return (
+          courseData.modules.length > 0 &&
+          courseData.modules.every((m) => m.title.trim()) &&
+          courseData.modules.some((m) => m.lessons.length > 0) &&
+          courseData.modules.every((m) => m.lessons.every((l) => l.title.trim()))
+        )
+      case 3:
+        return true // Media step is optional
+      case 4:
+        return true // Review step is always enabled
+      default:
+        return false
+    }
+  }
 
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP ${response.status}: Failed to create course`);
-            }
-
-            toast.success('Course created successfully! Redirecting to the course editor...');
-
-            // Redirect to the course editor or dashboard
-            setTimeout(() => {
-                router.push(`/dashboard/instructor/courses/${result.id}`);
-            }, 1000);
-
-        } catch (err: any) {
-            console.error('Error creating course:', err);
-            toast.error(err.message || 'Failed to create course. Please try again.');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    // Handle file upload
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setUrl: (url: string) => void) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            // In a real app, you would upload this file to a storage service
-            // For now, we'll just create a fake URL
-            const fakeUrl = URL.createObjectURL(file);
-            setUrl(fakeUrl);
-        }
-    };
+  const handlePublish = () => {
+    // Here you would typically handle the course publication
+    // For now, we'll just show a success message
+    toast({
+      title: "Course Published!",
+      description: "Your course has been successfully published and is now available to students.",
+      variant: "default",
+    })
+  }
 
     return (
-        <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-white">
             <SiteHeader />
-            
-            <main className="flex-1 py-8">
-                <div className="container mx-auto px-4 max-w-4xl">
-                    {/* Navigation */}
-                    <div className="mb-8">
-                        <Link 
-                            href="/dashboard/instructor" 
-                            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Dashboard
-                        </Link>
-                    </div>
-
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold tracking-tighter gradient-text mb-2">
-                            Create a New Course
-                        </h1>
-                        <p className="text-muted-foreground text-lg">
-                            Start with a great title and description. You can add lessons and other details after creation.
-                        </p>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] rounded-lg flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-white" />
                     </div>
-
-                    <Card className="card-hover gradient-border w-full">
-                        <CardHeader>
-                            <CardTitle className="text-xl">Course Foundation</CardTitle>
-                            <CardDescription>
-                                Fill out the essential details for your new course. All fields marked with * are required.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Course Title */}
                                 <div>
-                                    <Label htmlFor="title" className="text-base font-medium">
-                                        Course Title *
-                                    </Label>
-                                    <Input
-                                        id="title"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        placeholder="e.g., Introduction to Digital Marketing"
-                                        required
-                                        className="mt-1"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        A catchy and descriptive title for your course.
-                                    </p>
+              <h1 className="text-3xl font-bold text-[#2C3E50]">Create New Course</h1>
+              <p className="text-[#2C3E50]/70">Build an engaging learning experience step by step</p>
+            </div>
                                 </div>
 
-                                {/* Course Description */}
-                                <div>
-                                    <Label htmlFor="description" className="text-base font-medium">
-                                        Course Description *
-                                    </Label>
-                                    <Textarea
-                                        id="description"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        placeholder="A brief summary of your course content, what students will learn, and why they should enroll."
-                                        required
-                                        rows={4}
-                                        className="mt-1"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Describe what students will learn and why they should take this course.
-                                    </p>
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-[#2C3E50]">
+                Step {currentStep} of {steps.length}
+              </span>
+              <span className="text-sm text-[#2C3E50]/70">{Math.round(progress)}% Complete</span>
+            </div>
+            <Progress value={progress} className="h-2 bg-[#E5E8E8]" />
                                 </div>
 
-                                {/* Category and Level */}
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <Label htmlFor="category" className="text-base font-medium">
-                                            Category *
-                                        </Label>
-                                        <Select 
-                                            onValueChange={setCategoryId} 
-                                            value={categoryId}
-                                            disabled={isLoadingCategories}
-                                        >
-                                            <SelectTrigger className="mt-1">
-                                                <SelectValue placeholder={
-                                                    isLoadingCategories ? "Loading categories..." : "Select a category"
-                                                } />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categories.map((category) => (
-                                                    <SelectItem key={category.id} value={category.id}>
-                                                        {category.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Help students find your course by choosing a category.
-                                        </p>
+          {/* Step Navigation */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {steps.map((step, index) => {
+              const isActive = currentStep === step.id
+              const isCompleted = currentStep > step.id
+              const Icon = step.icon
+
+              return (
+                <Card
+                  key={step.id}
+                  className={`relative transition-all duration-200 ${
+                    isActive
+                      ? "ring-2 ring-[#FF6B35] bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5"
+                      : isCompleted
+                        ? "bg-[#1B4D3E]/5 border-[#1B4D3E]/20"
+                        : "bg-white hover:bg-[#F7F9F9]"
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          isActive
+                            ? "bg-[#FF6B35] text-white"
+                            : isCompleted
+                              ? "bg-[#1B4D3E] text-white"
+                              : "bg-[#E5E8E8] text-[#2C3E50]/60"
+                        }`}
+                      >
+                        {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                                     </div>
-                                    
-                                    <div>
-                                        <Label htmlFor="level" className="text-base font-medium">
-                                            Skill Level *
-                                        </Label>
-                                        <Select 
-                                            onValueChange={(value) => setLevel(value as typeof level)} 
-                                            value={level}
-                                        >
-                                            <SelectTrigger className="mt-1">
-                                                <SelectValue placeholder="Select a level" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="beginner">Beginner</SelectItem>
-                                                <SelectItem value="intermediate">Intermediate</SelectItem>
-                                                <SelectItem value="advanced">Advanced</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            What skill level is required for this course?
-                                        </p>
+                      <div className="flex-1 min-w-0">
+                        <h3
+                          className={`font-semibold text-sm ${
+                            isActive ? "text-[#FF6B35]" : isCompleted ? "text-[#1B4D3E]" : "text-[#2C3E50]"
+                          }`}
+                        >
+                          {step.title}
+                        </h3>
+                        <p className="text-xs text-[#2C3E50]/60 truncate">{step.description}</p>
                                     </div>
                                 </div>
-
-                                {/* Tags */}
-                                <div>
-                                    <Label htmlFor="tags" className="text-base font-medium">
-                                        Tags (Optional)
-                                    </Label>
-                                    <Input
-                                        id="tags"
-                                        value={tags}
-                                        onChange={(e) => setTags(e.target.value)}
-                                        placeholder="e.g., SEO, Social Media, Startups"
-                                        className="mt-1"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Add comma-separated tags to improve discoverability.
-                                    </p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+                                </div>
                                 </div>
 
-                                {/* Price */}
-                                <div>
-                                    <Label htmlFor="price" className="text-base font-medium">
-                                        Price (USD)
-                                    </Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        value={price}
-                                        onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        className="mt-1"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Set a price for your course. Enter 0 for a free course.
-                                    </p>
-                                </div>
+        {/* Step Content */}
+        <div className="mb-8">{renderStepContent()}</div>
 
-                                {/* Course Thumbnail */}
-                                <div>
-                                    <Label htmlFor="thumbnail" className="text-base font-medium">
-                                        Course Thumbnail (Optional)
-                                    </Label>
-                                    <Input 
-                                        id="thumbnail"
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => handleFileChange(e, setThumbnailUrl)}
-                                        className="mt-1"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Upload an eye-catching image for your course. (Max 5MB)
-                                    </p>
-                                </div>
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center">
+          <Button variant="outline" onClick={prevStep} disabled={currentStep === 1} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Previous
+          </Button>
 
-                                {/* Promotional Video */}
-                                <div>
-                                    <Label htmlFor="promoVideo" className="text-base font-medium">
-                                        Promotional Video (Optional)
-                                    </Label>
-                                    <Input 
-                                        id="promoVideo"
-                                        type="file"
-                                        accept="video/*"
-                                        onChange={(e) => handleFileChange(e, setPromoVideoUrl)}
-                                        className="mt-1"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Add a short video to introduce your course. (Max 20MB)
-                                    </p>
-                                </div>
-
-                                {/* Submit Button */}
-                                <div className="flex gap-4 pt-6">
+          <div className="flex gap-3">
+            {currentStep < steps.length ? (
                                     <Button 
-                                        type="button" 
-                                        variant="outline" 
-                                        onClick={() => router.back()}
-                                        disabled={isSubmitting}
-                                    >
-                                        Cancel
+                onClick={nextStep}
+                disabled={!canProceed()}
+                className="flex items-center gap-2 bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white"
+              >
+                Next Step
+                <ArrowRight className="w-4 h-4" />
                                     </Button>
+            ) : (
                                     <Button 
-                                        type="submit" 
-                                        disabled={isSubmitting || isLoadingCategories}
-                                        className="bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 hover:from-brand-orange-700 hover:to-brand-orange-600"
+                onClick={handlePublish}
+                className="flex items-center gap-2 bg-gradient-to-r from-[#1B4D3E] to-[#4ECDC4] hover:from-[#1B4D3E]/90 hover:to-[#4ECDC4]/90 text-white"
                                     >
-                                        {isSubmitting ? 'Creating Course...' : 'Create Course and Continue'}
+                <CheckCircle className="w-4 h-4" />
+                Publish Course
                                     </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-
-                    {/* Help Section */}
-                    <Card className="mt-8 bg-blue-50 border-blue-200">
-                        <CardContent className="pt-6">
-                            <h3 className="font-semibold text-blue-900 mb-2">💡 Course Creation Tips</h3>
-                            <ul className="text-sm text-blue-800 space-y-1">
-                                <li>• Choose a clear, descriptive title that tells students exactly what they'll learn</li>
-                                <li>• Write a compelling description that highlights the value and outcomes</li>
-                                <li>• Select the most relevant category to help students discover your course</li>
-                                <li>• Use specific tags that students might search for</li>
-                                <li>• A good thumbnail can significantly increase enrollment rates</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
+            )}
                 </div>
-            </main>
         </div>
-    );
+      </div>
+    </div>
+  )
 }

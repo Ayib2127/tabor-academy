@@ -65,6 +65,7 @@ export default function SignUpPage() {
             first_name: data.firstName,
             last_name: data.lastName,
             full_name: `${data.firstName} ${data.lastName}`,
+            role: 'student',
           },
         },
       })

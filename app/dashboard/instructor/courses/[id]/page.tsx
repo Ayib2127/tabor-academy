@@ -3,15 +3,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { CourseStructure } from '@/components/instructor/course-builder/CourseStructure';
 import { SiteHeader } from "@/components/site-header";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Play, Lock, CheckCircle, FileText } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 interface Lesson {
     id: number;
     title: string;
+    is_published: boolean;
 }
 
 interface Module {
@@ -20,240 +24,201 @@ interface Module {
     lessons: Lesson[];
 }
 
-export default function CourseEditorPage() {
-    const { id: courseId } = useParams<{ id: string }>();
-    const [modules, setModules] = useState<Module[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [showAddModuleInput, setShowAddModuleInput] = useState(false);
-    const [newModuleTitle, setNewModuleTitle] = useState('');
-    const supabase = createClientComponentClient();
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail_url: string;
+  price: number;
+  modules: Module[]; // Add modules to the Course interface
+}
 
-    const fetchCourseModules = useCallback(async () => {
-        if (!courseId) return;
+interface CoursePreviewPageProps {
+  params: { id: string };
+}
 
-        try {
-            setLoading(true);
-            const response = await fetch(`/api/courses/${courseId}/modules`, {
-                credentials: 'include',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to fetch course modules.');
-            }
-            const data: Module[] = await response.json();
-            setModules(data);
-        } catch (err: any) {
-            setError(err.message);
-            toast.error(err.message);
-        } finally {
-            setLoading(false);
+export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
+  const { id: courseId } = params;
+  const [course, setCourse] = useState<Course | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    if (!courseId) return;
+
+    const fetchCourseContent = async () => {
+      try {
+        setLoading(true);
+        // Fetch course details
+        const { data: courseData, error: courseError } = await supabase
+          .from('courses')
+          .select('*, modules:course_modules(*, lessons:module_lessons(*))') // Fetch modules and lessons
+          .eq('id', courseId)
+          .single();
+
+        if (courseError) {
+          throw new Error(courseError.message);
         }
-    }, [courseId]);
 
-    useEffect(() => {
-        fetchCourseModules();
-    }, [fetchCourseModules]);
+        if (!courseData) {
+          throw new Error('Course not found.');
+        }
 
-    const handleAddModule = async (title: string) => {
-        if (!title.trim()) {
-            toast.error('Module title cannot be empty.');
-            return;
-        }
-        try {
-            // Simulate API call for adding a module
-            const response = await fetch(`/api/courses/${courseId}/modules`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title }),
-                credentials: 'include',
-            });
-            const newModule = await response.json();
-            if (!response.ok) {
-                throw new Error(newModule.error || 'Failed to add module.');
-            }
-            setModules(prev => [...prev, newModule]);
-            setNewModuleTitle('');
-            setShowAddModuleInput(false);
-            toast.success('Module added successfully!');
-        } catch (err: any) {
-            toast.error(err.message);
-        }
+        setCourse(courseData as Course);
+
+        // Organize lessons into modules
+        const organizedModules: Module[] = courseData.modules.map((mod: any) => ({
+          id: mod.id,
+          title: mod.title,
+          lessons: mod.lessons.map((lesson: any) => ({
+            id: lesson.id,
+            title: lesson.title,
+            is_published: lesson.is_published, // Ensure is_published is fetched
+          })),
+        }));
+        setModules(organizedModules);
+
+      } catch (err: any) {
+        console.error("Error fetching course content:", err);
+        setError(err.message || 'Failed to fetch course content.');
+        toast.error(err.message || 'Failed to load course content.');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const handleDeleteModule = async (moduleId: number) => {
-        try {
-            // Simulate API call for deleting a module
-            const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to delete module.');
-            }
-            setModules(prev => prev.filter(mod => mod.id !== moduleId));
-            toast.success('Module deleted successfully!');
-        } catch (err: any) {
-            toast.error(err.message);
-        }
-    };
+    fetchCourseContent();
+  }, [courseId]);
 
-    const handleAddLesson = async (moduleId: number) => {
-        const lessonTitle = prompt('Enter lesson title:'); // For simplicity, using prompt
-        if (!lessonTitle?.trim()) {
-            if (lessonTitle !== null) toast.error('Lesson title cannot be empty.');
-            return;
-        }
+  const totalLessons = modules.reduce((count, module) => count + module.lessons.length, 0);
 
-        try {
-            // Simulate API call for adding a lesson
-            const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}/lessons`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: lessonTitle }),
-                credentials: 'include',
-            });
-            const newLesson = await response.json();
-            if (!response.ok) {
-                throw new Error(newLesson.error || 'Failed to add lesson.');
-            }
-            setModules(prev =>
-                prev.map(mod =>
-                    mod.id === moduleId
-                        ? { ...mod, lessons: [...mod.lessons, newLesson] }
-                        : mod
-                )
-            );
-            toast.success('Lesson added successfully!');
-        } catch (err: any) {
-            toast.error(err.message);
-        }
-    };
-
-    const handleDeleteLesson = async (moduleId: number, lessonId: number) => {
-        try {
-            // Simulate API call for deleting a lesson
-            const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to delete lesson.');
-            }
-            setModules(prev =>
-                prev.map(mod =>
-                    mod.id === moduleId
-                        ? { ...mod, lessons: mod.lessons.filter(lesson => lesson.id !== lessonId) }
-                        : mod
-                )
-            );
-            toast.success('Lesson deleted successfully!');
-        } catch (err: any) {
-            toast.error(err.message);
-        }
-    };
-
-    const handleReorderModules = async (reorderedModules: Module[]) => {
-        setModules(reorderedModules); // Optimistic update
-        try {
-            // Simulate API call to update module order
-            const response = await fetch(`/api/courses/${courseId}/modules/reorder`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ moduleIds: reorderedModules.map(m => m.id) }),
-                credentials: 'include',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to reorder modules.');
-            }
-            toast.success('Modules reordered successfully!');
-        } catch (err: any) {
-            toast.error(err.message);
-            // Revert on error if necessary, or refetch
-            fetchCourseModules();
-        }
-    };
-
-    const handleReorderLessons = async (moduleId: number, reorderedLessons: Lesson[]) => {
-        setModules(prev =>
-            prev.map(mod =>
-                mod.id === moduleId
-                    ? { ...mod, lessons: reorderedLessons }
-                    : mod
-            )
-        ); // Optimistic update
-
-        try {
-            // Simulate API call to update lesson order within a module
-            const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}/lessons/reorder`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lessonIds: reorderedLessons.map(l => l.id) }),
-                credentials: 'include',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to reorder lessons.');
-            }
-            toast.success('Lessons reordered successfully!');
-        } catch (err: any) {
-            toast.error(err.message);
-            // Revert on error if necessary, or refetch
-            fetchCourseModules();
-        }
-    };
-
-    if (loading) {
-        return (
-            <>
-                <SiteHeader />
-                <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
-                </div>
-            </>
-        );
-    }
-
-    if (error) {
-        return (
-            <>
-                <SiteHeader />
-                <div className="text-red-500 p-4">Error: {error}</div>
-            </>
-        );
-    }
-
+  if (loading) {
     return (
-        <>
-            <SiteHeader />
-            <div className="container mx-auto py-8">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Edit Course: {courseId}</h1>
-                    <Link href={`/dashboard/instructor/courses/${courseId}/preview`} passHref>
-                        <Button variant="outline">
-                            Preview Course
-                        </Button>
-                    </Link>
-                </div>
-                <CourseStructure
-                    modules={modules}
-                    onModulesChange={setModules}
-                    onAddModule={handleAddModule}
-                    onDeleteModule={handleDeleteModule}
-                    onAddLesson={handleAddLesson}
-                    onDeleteLesson={handleDeleteLesson}
-                    showAddModuleInput={showAddModuleInput}
-                    newModuleTitle={newModuleTitle}
-                    onNewModuleTitleChange={(title) => {
-                        setNewModuleTitle(title);
-                        setShowAddModuleInput(true); // Show input when typing
-                    }}
-                    onCancelAddModule={() => {
-                        setNewModuleTitle('');
-                        setShowAddModuleInput(false);
-                    }}
-                    onReorderModules={handleReorderModules}
-                    onReorderLessons={handleReorderLessons}
-                />
-            </div>
-        </>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-orange-500"></div>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Course</h2>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-16 w-16 text-yellow-500 mb-4" />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Course Not Found</h2>
+        <p className="text-gray-600 mb-4">The course you are looking for does not exist or you do not have access.</p>
+        <Link href="/dashboard/instructor/courses"><Button>Back to My Courses</Button></Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <SiteHeader />
+      <div className="flex-1 container py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Course Details Column */}
+        <div className="md:col-span-2 space-y-8">
+          <Card className="p-6">
+            <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
+            <p className="text-gray-700 mb-6">{course.description}</p>
+
+            {course.thumbnail_url && (
+              <div className="mb-6">
+                <img src={course.thumbnail_url} alt="Course Thumbnail" className="w-full h-64 object-cover rounded-lg" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Category:</p>
+                <p className="font-medium text-gray-800">{course.category}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Level:</p>
+                <p className="font-medium text-gray-800">{course.level}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Price:</p>
+                <p className="font-medium text-gray-800">{course.price === 0 ? 'Free' : `$${course.price}`}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Status:</p>
+                <p className={`font-medium ${course.is_published ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {course.is_published ? 'Published' : 'Draft'}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Course Curriculum Preview */}
+          <Card className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Course Curriculum</h2>
+            {modules.length === 0 ? (
+              <p className="text-muted-foreground">No modules or lessons found yet.</p>
+            ) : (
+              <nav className="space-y-4">
+                {modules.map(module => (
+                  <div key={module.id}>
+                    <h3 className="font-semibold text-lg mb-2">{module.title}</h3>
+                    <ul className="space-y-2">
+                      {module.lessons.map(lesson => (
+                        <li
+                          key={lesson.id}
+                          className={`flex items-center gap-2 p-2 rounded-md transition-colors 
+                            ${lesson.is_published ? 'cursor-pointer hover:bg-gray-100' : 'bg-gray-50 text-gray-400 opacity-80'}
+                            ${selectedLesson?.id === lesson.id ? 'bg-brand-orange-100 text-brand-orange-700 font-medium' : ''}
+                          `}
+                          onClick={() => lesson.is_published && setSelectedLesson(lesson)} // Make only published lessons clickable
+                        >
+                          {lesson.is_published ? (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <Lock className="h-5 w-5 text-gray-400" />
+                          )}
+                          <span>{lesson.title}</span>
+                          {!lesson.is_published && (
+                            <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">Draft</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </nav>
+            )}
+          </Card>
+        </div>
+
+        {/* Lesson Content Column */}
+        <div className="md:col-span-1">
+          {selectedLesson ? (
+            <Card className="sticky top-20 p-6 shadow-md">
+              <h2 className="text-2xl font-bold mb-4">{selectedLesson.title}</h2>
+              {/* Placeholder for lesson content */}
+              <p className="text-gray-700">Lesson content would be displayed here.</p>
+              <Button className="mt-4">Start Lesson</Button>
+            </Card>
+          ) : (
+            <Card className="sticky top-20 p-6 shadow-md text-center text-gray-600">
+              <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+              <p>Select a published lesson from the curriculum to preview its content.</p>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
