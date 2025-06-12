@@ -1,134 +1,99 @@
-import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { courseCreationSchema } from '@/lib/validations/course';
 
-interface LessonData {
-  id: number; // Client-side ID, will be ignored by DB insert but useful for mapping
-  title: string;
-}
-
-interface ModuleData {
-  id: number; // Client-side ID, will be ignored by DB insert but useful for mapping
-  title: string;
-  lessons: LessonData[];
-}
-
-interface CourseCreationData {
-  title: string;
-  description: string;
-  category: string;
-  level: "beginner" | "intermediate" | "advanced";
-  tags: string[];
-  price: number;
-  thumbnailUrl: string;
-  promoVideoUrl: string;
-  modules: ModuleData[];
-}
-
-export async function POST(request: Request) {
-  console.log('--- API Call: /api/instructor/courses/create ---');
-  const supabase = createRouteHandlerClient({ cookies });
-
+export async function POST(req: Request) {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    // Get session
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    if (userError) {
-      console.error('Error getting user session:', userError);
-      return NextResponse.json({ error: userError.message }, { status: 500 });
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    if (!user) {
-      console.log('Authentication failed: No user found for course creation API.');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Parse and validate request body
+    const body = await req.json();
+    const validatedData = courseCreationSchema.parse(body);
 
-    const courseData: CourseCreationData = await request.json();
-    console.log('Received course data:', courseData.title);
-
-    // Fetch the category ID
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('categories')
-      .select('id')
-      .eq('name', courseData.category)
-      .single();
-
-    if (categoryError || !categoryData) {
-      console.error('Error fetching category ID or category not found:', categoryError?.message || 'Category not found');
-      return NextResponse.json({ error: 'Invalid category selected.' }, { status: 400 });
-    }
-
-    // 1. Insert into courses table
-    const { data: newCourse, error: courseError } = await supabase
+    // Start a transaction
+    const { data: course, error: courseError } = await supabase
       .from('courses')
       .insert({
-        title: courseData.title,
-        description: courseData.description,
-        level: courseData.level,
-        price: courseData.price,
-        thumbnail_url: courseData.thumbnailUrl,
-        promo_video_url: courseData.promoVideoUrl,
-        instructor_id: user.id, // Link to the current instructor
-        is_published: false, // Default to draft
-        tags: courseData.tags, // Assuming tags column is of type JSONB or text[]
+        title: validatedData.title,
+        description: validatedData.description,
+        category: validatedData.category,
+        level: validatedData.level,
+        tags: validatedData.tags,
+        price: validatedData.price,
+        thumbnail_url: validatedData.thumbnailUrl,
+        promo_video_url: validatedData.promoVideoUrl,
+        instructor_id: session.user.id,
+        status: 'pending_review',
       })
       .select()
       .single();
 
     if (courseError) {
-      console.error('Error inserting course:', courseError);
-      return NextResponse.json({ error: courseError.message }, { status: 500 });
+      throw courseError;
     }
 
-    // 2. Insert into course_categories table
-    const { error: courseCategoryError } = await supabase
-      .from('course_categories')
-      .insert({
-        course_id: newCourse.id,
-        category_id: categoryData.id,
-      });
-
-    if (courseCategoryError) {
-      console.error('Error inserting course category:', courseCategoryError);
-      return NextResponse.json({ error: courseCategoryError.message }, { status: 500 });
-    }
-
-    // 2. Insert modules and lessons
-    for (const moduleData of courseData.modules) {
-      const { data: newModule, error: moduleError } = await supabase
-        .from('course_modules')
+    // Insert modules
+    const modulePromises = validatedData.modules.map(async (module, index) => {
+      const { data: moduleData, error: moduleError } = await supabase
+        .from('modules')
         .insert({
-          course_id: newCourse.id,
-          title: moduleData.title,
+          course_id: course.id,
+          title: module.title,
+          description: module.description,
+          order: index,
         })
         .select()
         .single();
 
       if (moduleError) {
-        console.error('Error inserting module:', moduleError);
-        return NextResponse.json({ error: moduleError.message }, { status: 500 });
+        throw moduleError;
       }
 
-      for (const lessonData of moduleData.lessons) {
+      // Insert lessons
+      const lessonPromises = module.lessons.map(async (lesson, lessonIndex) => {
         const { error: lessonError } = await supabase
-          .from('module_lessons')
+          .from('lessons')
           .insert({
-            module_id: newModule.id,
-            title: lessonData.title,
-            is_published: false, // Lessons also default to draft
+            module_id: moduleData.id,
+            title: lesson.title,
+            type: lesson.type,
+            duration: lesson.duration,
+            order: lessonIndex,
           });
 
         if (lessonError) {
-          console.error('Error inserting lesson:', lessonError);
-          return NextResponse.json({ error: lessonError.message }, { status: 500 });
+          throw lessonError;
         }
-      }
-    }
+      });
 
-    console.log('Course and content saved successfully!');
-    return NextResponse.json({ message: 'Course created successfully', courseId: newCourse.id }, { status: 201 });
+      await Promise.all(lessonPromises);
+      return moduleData;
+    });
 
-  } catch (err: any) {
-    console.error('Unexpected error in course creation API:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    await Promise.all(modulePromises);
+
+    return NextResponse.json({
+      courseId: course.id,
+      message: 'Course created successfully',
+    });
+  } catch (error: any) {
+    console.error('Error creating course:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to create course' },
+      { status: 500 }
+    );
   }
 } 

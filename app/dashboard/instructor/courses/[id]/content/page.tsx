@@ -321,6 +321,11 @@ export default function CourseContentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Dnd-kit hooks - MUST be called at the top level of the component
+  const pointerSensor = useSensor(PointerSensor);
+  const keyboardSensor = useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates });
+  const sensors = useSensors(pointerSensor, keyboardSensor);
+
   useEffect(() => {
     if (!courseId) return;
 
@@ -724,7 +729,7 @@ export default function CourseContentPage() {
             <CardTitle className="text-[#2C3E50] flex items-center gap-2">🏗️ Course Structure</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <DndContext sensors={useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))} collisionDetection={closestCenter} onDragEnd={handleReorderModules}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleReorderModules}>
               <SortableContext items={courseData.modules.map(m => `module-${m.id}`)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-4">
                   {courseData.modules.map(module => (

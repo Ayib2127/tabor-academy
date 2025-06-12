@@ -30,6 +30,9 @@ interface Course {
   description: string;
   thumbnail_url: string;
   price: number;
+  category: string;
+  level: string;
+  is_published: boolean;
   modules: Module[]; // Add modules to the Course interface
 }
 
