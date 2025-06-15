@@ -1,4 +1,5 @@
-import { calculateProgress, getCompletionStatus } from '@/lib/utils'
+import { calculateProgress, getCompletionStatus } from '@/lib/utils/progress-calculator'
+import { expect, describe, it } from '@jest/globals'
 
 describe('Progress Calculator Utils', () => {
   describe('calculateProgress', () => {

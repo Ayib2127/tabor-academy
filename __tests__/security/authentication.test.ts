@@ -1,4 +1,5 @@
-import { validateSession, generateToken, verifyToken } from '@/lib/utils/auth';
+import { validateSession, generateToken, verifyToken, Session } from '../../lib/utils/auth';
+import { jest, describe, it, expect } from '@jest/globals';
 
 describe('Authentication', () => {
   describe('Session Validation', () => {
@@ -24,8 +25,8 @@ describe('Authentication', () => {
 
     it('rejects invalid session formats', () => {
       expect(validateSession(null)).toBe(false);
-      expect(validateSession({})).toBe(false);
-      expect(validateSession({ token: 'only-token' })).toBe(false);
+      expect(validateSession({} as Session)).toBe(false);
+      expect(validateSession({ token: 'only-token' } as Session)).toBe(false);
     });
 
     it('handles session timeout', () => {

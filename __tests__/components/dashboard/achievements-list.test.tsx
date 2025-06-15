@@ -1,48 +1,22 @@
+import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
-import { Card } from '@/components/ui/card'
-import { Zap, Star } from 'lucide-react'
-
-// Mock achievements list component
-const AchievementsList = ({ achievements }) => {
-  return (
-    <Card className="p-6 card-hover gradient-border">
-      <h2 className="text-xl font-bold mb-6">Recent Achievements</h2>
-      <div className="space-y-6">
-        {achievements.map((achievement) => (
-          <div key={achievement.id} className="flex items-start gap-4">
-            <div className="bg-brand-orange-100 rounded-full p-3" data-testid="icon-container">
-              {achievement.icon === 'zap' ? (
-                <Zap className="h-6 w-6 text-brand-orange-500" data-testid="achievement-icon" />
-              ) : (
-                <Star className="h-6 w-6 text-brand-orange-500" data-testid="achievement-icon" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-semibold">{achievement.title}</h3>
-              <p className="text-sm text-muted-foreground">{achievement.description}</p>
-              <p className="text-sm text-brand-orange-500">{achievement.date}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
+import { AchievementsList } from '@/components/dashboard/achievements-list'
+import { describe, it, expect } from '@jest/globals'
 
 describe('AchievementsList', () => {
   const mockAchievements = [
     {
-      id: 1,
+      id: '1',
       title: 'Fast Learner',
       description: 'Completed 3 lessons in one day',
-      icon: 'zap',
+      icon: 'zap' as const,
       date: 'Today'
     },
     {
-      id: 2,
+      id: '2',
       title: 'Perfect Score',
       description: '100% on Marketing Quiz',
-      icon: 'star',
+      icon: 'star' as const,
       date: 'Yesterday'
     }
   ]

@@ -1,4 +1,5 @@
-import { formatDate, getTimeAgo, getDurationString } from '@/lib/utils'
+import { formatDate, getTimeAgo, getDurationString } from '@/lib/utils/date-formatter'
+import { jest, describe, it, expect } from '@jest/globals'
 
 describe('Date Formatting Utils', () => {
   describe('formatDate', () => {

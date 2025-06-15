@@ -1,23 +1,36 @@
+import '@testing-library/jest-dom'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
+
+interface Course {
+  id: number
+  title: string
+  reason: string
+  image: string
+}
+
+interface RecommendationsProps {
+  courses: Course[]
+  onLearnMore: (id: number) => void
+}
 
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props: any) => {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />
+    return <img {...props} style={{ position: 'absolute', height: '100%', width: '100%' }} />
   },
 }))
 
 // Mock recommendations component
-const Recommendations = ({ courses, onLearnMore }) => {
+const Recommendations = ({ courses, onLearnMore }: RecommendationsProps) => {
   return (
     <div className="grid md:grid-cols-2 gap-6">
       {courses.map((course) => (
-        <Card key={course.id} className="card-hover gradient-border">
+        <Card key={course.id} className="card-hover gradient-border" role="article">
           <div className="relative h-40">
             <Image
               src={course.image}

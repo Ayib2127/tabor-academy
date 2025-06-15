@@ -1,0 +1,33 @@
+import type { JestConfigWithTsJest } from 'ts-jest';
+import nextJest from 'next/jest';
+
+const createJestConfig = nextJest({
+  dir: './',
+});
+
+const config: JestConfigWithTsJest = {
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  testEnvironment: 'jest-environment-jsdom',
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+    '^jose$': '<rootDir>/__mocks__/jose.js'
+  },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(jose|@panva|oidc-token-hash|@supabase|@supabase/realtime-js)/)'
+  ],
+  transform: {
+    '^.+\\.(ts|tsx|js|jsx)$': 'babel-jest',
+  },
+  testMatch: [
+    '**/__tests__/**/*.test.ts',
+    '**/__tests__/**/*.test.tsx'
+  ],
+  collectCoverageFrom: [
+    'app/**/*.{ts,tsx}',
+    'lib/**/*.{ts,tsx}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
+  ],
+};
+
+export default createJestConfig(config);

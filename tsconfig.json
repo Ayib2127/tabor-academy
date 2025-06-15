@@ -19,6 +19,7 @@
     "jsx": "preserve",
     "incremental": true,
     "baseUrl": ".",
+    "types": ["node", "jest", "@testing-library/jest-dom"],
     "paths": {
       "@/*": [
         "./*"

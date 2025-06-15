@@ -1,8 +1,11 @@
+import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
 import { Progress } from '@/components/ui/progress'
+import { describe, it, expect } from '@jest/globals'
+import { CourseProgress } from '@/components/dashboard/course-progress'
 
 // Mock course progress component
-const CourseProgress = ({ course }) => {
+/*const CourseProgress = ({ course }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between mb-2">
@@ -23,7 +26,7 @@ const CourseProgress = ({ course }) => {
     </div>
   )
 }
-
+*/
 describe('CourseProgress', () => {
   const mockCourse = {
     title: 'Digital Marketing Mastery',

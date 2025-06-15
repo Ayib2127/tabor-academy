@@ -1,7 +1,8 @@
+import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
 import { Card } from '@/components/ui/card'
 import { Calendar, Users } from 'lucide-react'
-import '@testing-library/jest-dom'
+import { describe, it, expect } from '@jest/globals'
 
 interface Event {
   id: number
@@ -41,18 +42,18 @@ const UpcomingEvents = ({ events }: UpcomingEventsProps) => {
 }
 
 describe('UpcomingEvents', () => {
-  const mockEvents = [
+  const mockEvents: Event[] = [
     {
       id: 1,
       title: "Digital Marketing Workshop",
       date: "Tomorrow, 2 PM",
-      type: "workshop"
+      type: "workshop" as const
     },
     {
       id: 2,
       title: "Mentor Session",
       date: "Friday, 10 AM",
-      type: "mentoring"
+      type: "mentoring" as const
     }
   ]
 

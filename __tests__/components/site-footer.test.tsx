@@ -1,5 +1,7 @@
+import '@testing-library/jest-dom'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SiteFooter } from '@/components/site-footer'
+import { describe, it, expect } from '@jest/globals'
 
 describe('SiteFooter', () => {
   it('renders company information', () => {

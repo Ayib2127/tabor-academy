@@ -1,5 +1,7 @@
+import '@testing-library/jest-dom'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Button } from '@/components/ui/button'
+import { describe, it, expect, jest } from '@jest/globals'
 
 describe('Button', () => {
   it('renders with default variant', () => {

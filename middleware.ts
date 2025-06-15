@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { handleAuthError, handleNoSession, handleMiddlewareError } from './lib/utils/error-handling';
 
 export async function middleware(req: NextRequest) {
   console.log('Middleware: Executing for URL:', req.url);
@@ -14,8 +15,7 @@ export async function middleware(req: NextRequest) {
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (error) {
-      console.error('Middleware: Error getting session:', error.message);
-      // Depending on the error, you might want to redirect to login or show an error page
+      return handleAuthError(error, req);
     }
 
     if (!session) {
@@ -37,8 +37,8 @@ export async function middleware(req: NextRequest) {
     } else {
       console.log('Middleware: Session found for user ID:', session.user.id);
     }
-  } catch (e: any) {
-    console.error('Middleware: Unexpected error during session refresh:', e.message);
+  } catch (e) {
+    return handleMiddlewareError(e, req);
   }
 
   // Ensure that responses from API routes also have the cookie updated

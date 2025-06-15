@@ -73,3 +73,40 @@ export class AuthorizationError extends Error {
     this.name = 'AuthorizationError';
   }
 }
+
+export function validateEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return userSchema.shape.email.safeParse(email).success;
+}
+
+export function validatePassword(password: string): boolean {
+  return userSchema.shape.password.safeParse(password).success;
+}
+
+export function sanitizeInput(input: string | null | undefined): string {
+  if (!input) return '';
+  
+  // Remove script tags but keep their content
+  let sanitized = input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, (match) => {
+    return match.replace(/<[^>]*>/g, '');
+  });
+  
+  // Remove event handlers
+  sanitized = sanitized.replace(/on\w+="[^"]*"/g, '');
+  sanitized = sanitized.replace(/on\w+='[^']*'/g, '');
+  
+  // Remove dangerous protocols
+  sanitized = sanitized.replace(/javascript:/gi, '');
+  sanitized = sanitized.replace(/data:/gi, '');
+  
+  // Handle SQL injection attempts
+  sanitized = sanitized.replace(/';.*?--/g, '');
+  sanitized = sanitized.replace(/';.*?;/g, '');
+  
+  // Remove any remaining potentially dangerous attributes
+  sanitized = sanitized.replace(/<[^>]*(?:on\w+="[^"]*"|on\w+='[^']*')[^>]*>/g, (match) => {
+    return match.replace(/\s+(?:on\w+="[^"]*"|on\w+='[^']*')/g, '');
+  });
+  
+  return sanitized;
+}

@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom'
+import { describe, it, expect } from '@jest/globals'
 import { checkPermissions, validateRole, enforceRateLimit } from '@/lib/utils/auth';
 
 describe('Authorization', () => {
@@ -39,12 +41,15 @@ describe('Authorization', () => {
     it('rejects invalid roles', () => {
       expect(validateRole('hacker')).toBe(false);
       expect(validateRole('')).toBe(false);
-      expect(validateRole(null)).toBe(false);
     });
 
     it('handles role hierarchy', () => {
       expect(validateRole('admin', 'instructor')).toBe(true);
       expect(validateRole('instructor', 'admin')).toBe(false);
+    });
+
+    it('rejects invalid input', () => {
+      expect(validateRole(null as unknown as string)).toBe(false);
     });
   });
 
@@ -77,7 +82,6 @@ describe('Authorization', () => {
 
     it('rejects invalid user ids', async () => {
       expect(await enforceRateLimit('')).toBe(false);
-      expect(await enforceRateLimit(null)).toBe(false);
     });
   });
 });

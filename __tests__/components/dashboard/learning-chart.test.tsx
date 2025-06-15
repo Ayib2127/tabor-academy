@@ -1,6 +1,8 @@
+import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
 import { Line } from 'react-chartjs-2'
 import { Card } from '@/components/ui/card'
+import { describe, it, expect, jest } from '@jest/globals'
 
 // Mock react-chartjs-2
 jest.mock('react-chartjs-2', () => ({

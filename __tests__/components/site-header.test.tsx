@@ -1,5 +1,7 @@
+import '@testing-library/jest-dom'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SiteHeader } from '@/components/site-header'
+import { describe, it, expect, jest } from '@jest/globals'
 
 // Mock next/image
 jest.mock('next/image', () => ({

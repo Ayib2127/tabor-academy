@@ -1,9 +1,26 @@
+import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
 import { Card } from '@/components/ui/card'
 import { Brain, Trophy, Star, Target } from 'lucide-react'
+import { describe, it, expect } from '@jest/globals'
+
+interface Stats {
+  learningHours: number
+  learningTrend: string
+  coursesCompleted: number
+  coursesTrend: string
+  achievementPoints: number
+  achievementTrend: string
+  nextMilestone: string
+  milestoneDue: string
+}
+
+interface QuickStatsProps {
+  stats: Stats
+}
 
 // Mock stats component that represents the quick stats section
-const QuickStats = ({ stats }) => {
+const QuickStats = ({ stats }: QuickStatsProps) => {
   return (
     <div className="grid md:grid-cols-4 gap-6">
       <Card className="p-6">
