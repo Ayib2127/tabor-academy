@@ -1,3 +1,5 @@
+'use client'
+
 import { FC, useState } from 'react';
 import { Course, Module, Lesson } from '@/types/course';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';
@@ -127,10 +129,10 @@ const CourseEditor: FC<CourseEditorProps> = ({ course: initialCourse }) => {
           <ModuleEditor
             key={module.id}
             module={module}
-            onUpdate={(updatedModule) => handleModuleUpdate(module.id, updatedModule)}
+            onUpdate={(updatedModule: Module) => handleModuleUpdate(module.id, updatedModule)}
             onDelete={() => handleModuleDelete(module.id)}
             onAddLesson={() => handleAddLesson(module.id)}
-            onReorderLessons={(startIndex, endIndex) =>
+            onReorderLessons={(startIndex: number, endIndex: number) =>
               handleReorderLessons(module.id, startIndex, endIndex)
             }
           />

@@ -12,7 +12,7 @@ import {
   Clock,
   FileText,
   Image as ImageIcon,
-  Link,
+  Link as LinkIcon,
   MessageSquare,
   Phone,
   Send,
@@ -263,7 +263,7 @@ export default function LiveChatPage() {
                         <ImageIcon className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon">
-                        <Link className="h-4 w-4" />
+                        <LinkIcon className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon">
                         <SmilePlus className="h-4 w-4" />

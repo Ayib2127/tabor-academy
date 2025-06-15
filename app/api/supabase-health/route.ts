@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
-    const supabase = createServerClient();
+    const supabase = createClient();
     
     // Test the Supabase connection
     const { data, error } = await supabase.from('users').select('count').single();

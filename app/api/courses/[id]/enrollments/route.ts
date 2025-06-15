@@ -4,9 +4,9 @@ import { cookies } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const courseId = params.id;
+  const courseId = context.params.id;
   const supabase = createRouteHandlerClient({ cookies });
 
   try {

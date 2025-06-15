@@ -86,24 +86,29 @@ ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE progress ENABLE ROW LEVEL SECURITY;
 
 -- User Policies
+DROP POLICY IF EXISTS "Users can view their own data" ON users;
 CREATE POLICY "Users can view their own data" 
   ON users FOR SELECT 
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own data" ON users;
 CREATE POLICY "Users can update their own data" 
   ON users FOR UPDATE 
   USING (auth.uid() = id);
 
 -- Course Policies
+DROP POLICY IF EXISTS "Anyone can view published courses" ON courses;
 CREATE POLICY "Anyone can view published courses" 
   ON courses FOR SELECT 
   USING (is_published = true);
 
+DROP POLICY IF EXISTS "Instructors can manage their own courses" ON courses;
 CREATE POLICY "Instructors can manage their own courses" 
   ON courses FOR ALL 
   USING (auth.uid() = instructor_id);
 
 -- Lesson Policies
+DROP POLICY IF EXISTS "Anyone can view published lessons" ON lessons;
 CREATE POLICY "Anyone can view published lessons" 
   ON lessons FOR SELECT 
   USING (
@@ -114,6 +119,7 @@ CREATE POLICY "Anyone can view published lessons"
     )
   );
 
+DROP POLICY IF EXISTS "Instructors can manage their own lessons" ON lessons;
 CREATE POLICY "Instructors can manage their own lessons" 
   ON lessons FOR ALL 
   USING (
@@ -124,23 +130,28 @@ CREATE POLICY "Instructors can manage their own lessons"
   );
 
 -- Enrollment Policies
+DROP POLICY IF EXISTS "Users can view their own enrollments" ON enrollments;
 CREATE POLICY "Users can view their own enrollments" 
   ON enrollments FOR SELECT 
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can enroll themselves" ON enrollments;
 CREATE POLICY "Users can enroll themselves" 
   ON enrollments FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 -- Progress Policies
+DROP POLICY IF EXISTS "Users can view their own progress" ON progress;
 CREATE POLICY "Users can view their own progress" 
   ON progress FOR SELECT 
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own progress" ON progress;
 CREATE POLICY "Users can insert their own progress" 
   ON progress FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own progress" ON progress;
 CREATE POLICY "Users can update their own progress" 
   ON progress FOR UPDATE 
   USING (auth.uid() = user_id);

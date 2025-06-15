@@ -552,16 +552,28 @@ export default function CourseContentPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-orange-500"></div>
+  // Refactored conditional rendering
+  let content;
+
+  if (!courseId) {
+    content = (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Invalid Course ID</h2>
+        <p className="text-gray-600 mb-4">Please provide a valid course ID to view this page.</p>
+        <Link href="/dashboard/instructor/courses"><Button>Back to My Courses</Button></Link>
       </div>
     );
-  }
-
-  if (error) {
-    return (
+  } else if (loading) {
+    content = (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
+        <Clock className="h-16 w-16 text-blue-500 mb-4 animate-spin" />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Loading Course Content...</h2>
+        <p className="text-gray-600">Please wait while we fetch the course details.</p>
+      </div>
+    );
+  } else if (error) {
+    content = (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
         <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
         <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Course</h2>
@@ -569,10 +581,8 @@ export default function CourseContentPage() {
         <Button onClick={() => window.location.reload()}>Try Again</Button>
       </div>
     );
-  }
-
-  if (!courseData) {
-    return (
+  } else if (!courseData) {
+    content = (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
         <AlertCircle className="h-16 w-16 text-yellow-500 mb-4" />
         <h2 className="text-xl font-bold text-gray-800 mb-2">Course Not Found</h2>
@@ -580,11 +590,8 @@ export default function CourseContentPage() {
         <Link href="/dashboard/instructor/courses"><Button>Back to My Courses</Button></Link>
       </div>
     );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-white">
-      <SiteHeader />
+  } else {
+    content = (
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-[#2C3E50]">Edit Course: {courseData.title}</h1>
@@ -753,6 +760,13 @@ export default function CourseContentPage() {
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-white">
+      <SiteHeader />
+      {content}
     </div>
   );
 } 

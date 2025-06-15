@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, CheckCircle, BookOpen, Settings, ImageIcon, Eye 
 import { CourseBasicsStep } from "@/components/instructor/course-builder/course-basics-step"
 import { CourseStructureStep } from "@/components/instructor/course-builder/course-structure-step"
 import { CourseMediaStep } from "@/components/instructor/course-builder/course-media-step"
-import { CourseReviewStep } from "@/components/instructor/course-builder/course-review-step"
+import CourseReviewStep from "@/components/instructor/course-builder/course-review-step"
 import { toast } from "@/components/ui/use-toast"
 import { SiteHeader } from "@/components/site-header"
 import { useRouter } from "next/navigation"
