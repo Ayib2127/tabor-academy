@@ -24,33 +24,39 @@ jest.mock('next/navigation', () => ({
 // Mock Request and Response
 global.Request = jest.fn().mockImplementation((...args) => {
   const [input, init] = args;
+  const typedInit = init as RequestInit;
+  const inputObj = typeof input === 'string' ? { url: input } : (input as object);
   return {
-    ...(typeof input === 'string' ? { url: input } : input),
-    ...init,
+    ...inputObj,
+    ...typedInit,
   };
 }) as unknown as typeof Request;
 
 global.Response = jest.fn().mockImplementation((...args) => {
   const [body, init] = args;
+  const typedInit = init as ResponseInit;
   return {
-    status: init?.status || 200,
-    statusText: init?.statusText || 'OK',
-    headers: new Headers(init?.headers),
-    ok: (init?.status || 200) >= 200 && (init?.status || 200) < 300,
+    status: typedInit?.status || 200,
+    statusText: typedInit?.statusText || 'OK',
+    headers: new Headers(typedInit?.headers),
+    ok: (typedInit?.status || 200) >= 200 && (typedInit?.status || 200) < 300,
     json: () => Promise.resolve(JSON.parse(body as string)),
     text: () => Promise.resolve(body as string),
-    ...init,
+    ...typedInit,
   };
 }) as unknown as typeof Response;
 
 // Mock NextResponse
 jest.mock('next/server', () => ({
   NextResponse: {
-    json: jest.fn().mockImplementation((body, init) => ({
-      status: init?.status || 200,
-      headers: new Headers(init?.headers),
-      json: () => Promise.resolve(body),
-    })),
+    json: jest.fn().mockImplementation((body, init) => {
+      const typedInit = init as ResponseInit;
+      return {
+        status: typedInit?.status || 200,
+        headers: new Headers(typedInit?.headers),
+        json: () => Promise.resolve(body),
+      };
+    }),
   },
 }));
 
@@ -67,21 +73,21 @@ jest.mock('@sentry/nextjs', () => ({
   setUser: jest.fn(),
   setTag: jest.fn(),
   setExtra: jest.fn(),
-  withScope: jest.fn((callback) =>
+  withScope: jest.fn((callback: (scope: { setTag: jest.Mock; setExtra: jest.Mock }) => void) =>
     callback({ setTag: jest.fn(), setExtra: jest.fn() })),
 }));
 
 // Mock performance API
 global.performance = {
   ...global.performance,
-  now: jest.fn(),
-  mark: jest.fn(),
-  measure: jest.fn(),
+  now: jest.fn().mockReturnValue(0) as unknown as () => number,
+  mark: jest.fn().mockReturnValue({} as PerformanceMark) as unknown as (markName: string, markOptions?: PerformanceMarkOptions) => PerformanceMark,
+  measure: jest.fn().mockReturnValue({} as PerformanceMeasure) as unknown as (measureName: string, startOrMeasureOptions?: string | PerformanceMeasureOptions, endMark?: string) => PerformanceMeasure,
   clearMarks: jest.fn(),
   clearMeasures: jest.fn(),
-  getEntriesByType: jest.fn().mockReturnValue([]),
-  getEntriesByName: jest.fn().mockReturnValue([]),
-  getEntries: jest.fn().mockReturnValue([]),
+  getEntriesByType: jest.fn().mockReturnValue([]) as unknown as (type: string) => PerformanceEntryList,
+  getEntriesByName: jest.fn().mockReturnValue([]) as unknown as (name: string, type?: string) => PerformanceEntryList,
+  getEntries: jest.fn().mockReturnValue([]) as unknown as () => PerformanceEntryList,
   clearResourceTimings: jest.fn(),
   setResourceTimingBufferSize: jest.fn(),
   timeOrigin: Date.now(),
