@@ -15,9 +15,6 @@ const config: JestConfigWithTsJest = {
   transformIgnorePatterns: [
     '/node_modules/(?!(jose|@panva|oidc-token-hash|@supabase|@supabase/realtime-js)/)'
   ],
-  transform: {
-    '^.+\\.(ts|tsx|js|jsx)$': 'babel-jest',
-  },
   testMatch: [
     '**/__tests__/**/*.test.ts',
     '**/__tests__/**/*.test.tsx'
