@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
 import {
   ChevronRight,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { SiteHeader } from '@/components/site-header';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ interface Student {
   courses_enrolled: StudentCourseEnrollment[];
 }
 
-export default function StudentManagementPage() {
+function StudentManagementPageInner() {
   const [search, setSearch] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,5 +181,13 @@ export default function StudentManagementPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function StudentManagementPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <StudentManagementPageInner />
+    </Suspense>
   );
 } 
