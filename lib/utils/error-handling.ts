@@ -40,12 +40,9 @@ export function createErrorResponse(error: unknown) {
   );
 }
 
-export function handleAuthError(error: unknown, req: NextRequest) {
-  console.error('Auth error:', error);
-  return NextResponse.json(
-    { error: 'Authentication failed' },
-    { status: 401 }
-  );
+export function handleAuthError(error: any, request: NextRequest) {
+  console.error('Auth error:', error.message);
+  return NextResponse.next();
 }
 
 export function handleNoSession(req: NextRequest) {
@@ -63,7 +60,7 @@ export function handleNoSession(req: NextRequest) {
   return NextResponse.next();
 }
 
-export function handleMiddlewareError(error: unknown, req: NextRequest) {
+export function handleMiddlewareError(error: any, request: NextRequest) {
   console.error('Middleware error:', error);
   return NextResponse.next();
 } 

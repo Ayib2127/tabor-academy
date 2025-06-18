@@ -1,3 +1,4 @@
+// app/api/courses/[id]/enrollments/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
@@ -6,26 +7,42 @@ import { trackPerformance } from '@/lib/utils/performance';
 import { validateEnv } from '@/lib/utils/env-validation';
 import * as Sentry from '@sentry/nextjs';
 
+// Explicit type definition for route context
+type RouteContext = {
+  params: { 
+    id: string 
+  };
+};
+
+type Enrollment = {
+  user_id: string;
+  enrolled_at: string;
+  users: {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url: string;
+  };
+};
+
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+  _: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
   // Validate environment variables
   validateEnv();
   
-  const courseId = context.params.id;
+  const courseId = context.params.id;  // Access via context.params
   const supabase = createRouteHandlerClient({ cookies });
 
   return trackPerformance('GET /api/courses/[id]/enrollments', async () => {
     try {
-      // Verify that the user is authenticated and is the instructor of this course
+      // Verify authentication
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
       if (userError || !user) {
-        return createErrorResponse(userError || new Error('User not found'), 401);
+        return createErrorResponse(userError || new Error('User not found'));
       }
 
       // Verify course ownership
@@ -36,13 +53,12 @@ export async function GET(
         .single();
 
       if (courseError || !courseData) {
-        return createErrorResponse(courseError || new Error('Course not found'), 404);
+        return createErrorResponse(courseError || new Error('Course not found'));
       }
 
       if (courseData.instructor_id !== user.id) {
         return createErrorResponse(
-          new Error('Forbidden: You are not the instructor of this course'),
-          403
+          new Error('Forbidden: You are not the instructor of this course')
         );
       }
 
@@ -64,30 +80,31 @@ export async function GET(
       if (enrollmentsError) {
         console.error('Error fetching course enrollments:', enrollmentsError);
         Sentry.captureException(enrollmentsError);
-        return createErrorResponse(enrollmentsError, 500);
+        return createErrorResponse(enrollmentsError);
       }
 
-      // Get all published lessons for this course
+      // Get published lessons
       const { data: lessons, error: lessonsError } = await supabase
         .from('lessons')
         .select('id, is_published')
         .eq('course_id', courseId);
 
       if (lessonsError) {
-        console.error('Error fetching lessons for progress calculation:', lessonsError);
+        console.error('Error fetching lessons:', lessonsError);
         Sentry.captureException(lessonsError);
-        return createErrorResponse(lessonsError, 500);
+        return createErrorResponse(lessonsError);
       }
 
-      const publishedLessons = lessons.filter(l => l.is_published);
+      const lessonsTyped = (lessons ?? []) as Lesson[];
+      const publishedLessons = lessonsTyped.filter(l => l.is_published);
       const totalLessons = publishedLessons.length;
 
-      // Calculate progress for each student
+      const enrollmentsTyped = (enrollments ?? []) as Enrollment[];
       const studentsWithProgress = await Promise.all(
-        enrollments.map(async (enrollment) => {
+        enrollmentsTyped.map(async (enrollment) => {
           const studentId = enrollment.user_id;
 
-          // Get completed lessons for this student
+          // Get completed lessons
           const { data: progressRecords, error: progressError } = await supabase
             .from('progress')
             .select('lesson_id, completed')
@@ -95,14 +112,14 @@ export async function GET(
             .in('lesson_id', publishedLessons.map(l => l.id));
 
           if (progressError) {
-            console.error('Error fetching progress records:', progressError);
+            console.error('Error fetching progress:', progressError);
             Sentry.captureException(progressError);
             return {
               ...enrollment,
               progress: 0,
               completed_lessons: 0,
               total_lessons: totalLessons,
-              error: 'Failed to fetch progress'
+              error: 'Progress fetch failed'
             };
           }
 
@@ -123,9 +140,9 @@ export async function GET(
       return NextResponse.json(studentsWithProgress);
 
     } catch (error) {
-      console.error('Unexpected error in enrollments route:', error);
+      console.error('Unexpected error:', error);
       Sentry.captureException(error);
-      return createErrorResponse(error, 500);
+      return createErrorResponse(error);
     }
   });
 }

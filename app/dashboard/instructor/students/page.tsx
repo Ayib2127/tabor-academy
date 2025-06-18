@@ -125,7 +125,7 @@ export default function StudentManagementPage() {
                         <td className="py-2 px-4">
                           <div className="flex items-center gap-3">
                             <Image
-                              src="/default-avatar.png"
+                              src="/logo.jpg"
                               alt={student.full_name}
                               width={40}
                               height={40}

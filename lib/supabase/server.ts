@@ -1,34 +1,32 @@
-import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import { Database } from './types';
 
-export function createClient() {
-  const cookieStore = cookies();
+// Create a safe global object
+const globalObject = typeof window !== 'undefined' ? window : global;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Create a single instance of the server client
+export const createServerClient = async () => {
+  const cookieStore = await cookies();
+  const cookieString = cookieStore.toString();
+  
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      },
+      global: {
+        headers: {
+          cookie: cookieString,
+          'x-application-name': 'tabor-academy'
+        },
+      },
+    }
+  );
+};
 
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name: string, value: string, options: any) {
-        try {
-          cookieStore.set({ name, value, ...options });
-        } catch (error) {
-          // This will throw in middleware, but we can safely ignore it
-          console.error('Error setting cookie:', error);
-        }
-      },
-      remove(name: string, options: any) {
-        try {
-          cookieStore.set({ name, value: '', ...options });
-        } catch (error) {
-          // This will throw in middleware, but we can safely ignore it
-          console.error('Error removing cookie:', error);
-        }
-      },
-    },
-  });
-}
+// Export both functions
+export const createClient = createServerClient;

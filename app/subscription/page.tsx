@@ -16,6 +16,7 @@ import {
   FileText,
   Settings,
   Users,
+  Smartphone,
   Wallet,
   Bell,
   Clock,

@@ -9,12 +9,11 @@ import { GA_MEASUREMENT_ID } from '@/lib/analytics';
 import { AuthProvider } from '@/components/auth-provider';
 import { Toaster } from "@/components/ui/toaster";
 
-// Optimize font loading
+// Load Inter font locally
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
-  preload: true,
-  fallback: ['system-ui', 'sans-serif']
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -79,24 +78,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={inter?.className ?? ''}>
       <head>
-        <link 
-          rel="preconnect" 
-          href="https://fonts.googleapis.com" 
-          crossOrigin="anonymous" 
-        />
-        <link 
-          rel="preconnect" 
-          href="https://fonts.gstatic.com" 
-          crossOrigin="anonymous" 
-        />
+        {/* Preload local fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* Preload logo */}
         <link
           rel="preload"
-          href="/TaborAcademy Logo.png"
+          href="/logo.jpg"
           as="image"
           type="image/png"
         />
+        
+        {/* Favicon */}
+        <link rel="icon" href="/logo.jpg" sizes="any" />
+
         {/* Google Analytics */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
@@ -111,7 +109,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={inter.className}>
+      <body className="font-sans">
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="light">
               {children}

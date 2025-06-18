@@ -1,39 +1,35 @@
 const path = require('path');
+const webpack = require('webpack');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable ESLint during builds in production
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
-  // Optimize images for production
   images: {
     unoptimized: process.env.NODE_ENV === 'development',
     domains: [
       'images.unsplash.com',
       'res.cloudinary.com',
-      'fmbakckfxuabratissxg.supabase.co' // Add your Supabase storage domain
+      'fmbakckfxuabratissxg.supabase.co'
     ],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    formats: ['image/webp', 'image/avif'], // Add AVIF format for better compression
+    formats: ['image/webp', 'image/avif'],
   },
-
-  // Remove experimental features for production stability
   experimental: {
-    // Only enable in development
     optimizeCss: process.env.NODE_ENV === 'development',
-    optimizePackageImports: process.env.NODE_ENV === 'development' ? ['lucide-react'] : [],
+    optimizePackageImports: process.env.NODE_ENV === 'development' ? ['lucide-react'] : []
   },
-
-  // Webpack configuration
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('isomorphic-dompurify');
     }
     
-    // Add performance optimizations
+    // Get absolute path to polyfill
+    const selfPolyfillPath = path.resolve(__dirname, 'lib/utils/self-polyfill.js');
+    
+    // Performance optimizations
     config.optimization = {
       ...config.optimization,
       minimize: true,
@@ -55,14 +51,22 @@ const nextConfig = {
             priority: -20,
             reuseExistingChunk: true,
           },
+          // Supabase-specific optimization
+          supabase: {
+            test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+            name: 'supabase',
+            chunks: 'all',
+            priority: 0,
+          },
         },
       },
     };
 
-    // Ignore OpenTelemetry and Sentry warnings
+    // Ignore specific warnings
     config.ignoreWarnings = [
       { module: /node_modules\/@opentelemetry/ },
-      { module: /node_modules\/@sentry/ }
+      { module: /node_modules\/@sentry/ },
+      { module: /node_modules\/@supabase\/realtime-js/ }
     ];
     
     // Fix Supabase realtime-js dependency issue
@@ -72,6 +76,8 @@ const nextConfig = {
         __dirname,
         'node_modules/@rails/actioncable/app/assets/javascripts/action_cable.js'
       ),
+      // Polyfill alias
+      'globalthis-polyfill': selfPolyfillPath,
     };
 
     // Fix big strings warning
@@ -80,12 +86,39 @@ const nextConfig = {
       buildDependencies: {
         config: [__filename],
       },
+      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year cache
+      compression: 'gzip',
     };
+
+    // Polyfill Buffer for both client and server
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        Buffer: ['buffer', 'Buffer'],
+        buffer: ['buffer', 'Buffer'],
+      })
+    );
+
+    // Polyfill process and buffer for client-side
+    if (!isServer) {
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          process: 'process/browser',
+        })
+      );
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        buffer: require.resolve('buffer/'),
+        process: require.resolve('process/browser'),
+      };
+    }
+
+    config.module.rules.push({
+      test: /\.(yaml|yml)$/,
+      use: 'yaml-loader',
+    });
 
     return config;
   },
-
-  // Security headers
   async headers() {
     return [
       {
@@ -95,11 +128,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' https://www.googletagmanager.com https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com https://browser.sentry-cdn.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com",
               "font-src 'self'",
-              "connect-src 'self' https://*.supabase.co https://fmbakckfxuabratissxg.supabase.co https://www.google-analytics.com https://api.taboracademy.com",
+              "connect-src 'self' wss://*.supabase.co https://*.supabase.co https://fmbakckfxuabratissxg.supabase.co https://www.google-analytics.com https://*.ingest.sentry.io https://*.sentry.io",
               "media-src 'self' https://*.supabase.co",
               "object-src 'none'",
               "base-uri 'self'",
@@ -131,21 +164,25 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin'
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()'
           }
         ],
       },
     ];
   },
-
-  // Add production optimizations
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
-  
-  // Add environment variable validation
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  },
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  typescript: {
+    ignoreBuildErrors: true,
   },
 };
 

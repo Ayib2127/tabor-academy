@@ -150,14 +150,14 @@ async function updateModulesAndLessons(
     }
 
     // Insert new modules and lessons
-    for (const module of modules) {
+    for (const courseModule of modules) {
       const { data: moduleData, error: moduleError } = await supabase
         .from('modules')
         .insert({
           course_id: courseId,
-          title: module.title,
-          description: module.description,
-          order: module.order,
+          title: courseModule.title,
+          description: courseModule.description,
+          order: courseModule.order,
         })
         .select()
         .single();
@@ -171,7 +171,7 @@ async function updateModulesAndLessons(
         const { error: lessonsError } = await supabase
           .from('lessons')
           .insert(
-            module.lessons.map((lesson: any) => ({
+            courseModule.lessons.map((lesson: any) => ({
               module_id: moduleData.id,
               title: lesson.title,
               type: lesson.type,

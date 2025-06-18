@@ -19,9 +19,18 @@
     "jsx": "preserve",
     "incremental": true,
     "baseUrl": ".",
-    "types": ["next/types", "next/types/global"],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ],
+    "types": [
+      "node"
+    ],
     "paths": {
       "@/*": [
+        "./*"
+      ],
+      "~/*": [
         "./*"
       ]
     },
@@ -29,16 +38,25 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "types/**/*.d.ts"
+    "types/**/*.d.ts",
+    "app/**/*",
+    "lib/**/*",
+    "utils/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    "out"
   ]
 }

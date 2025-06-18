@@ -41,7 +41,7 @@ import { format } from "date-fns"
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [profileImage, setProfileImage] = useState("/TaborAcademy Logo.png")
+  const [profileImage, setProfileImage] = useState("/logo.jpg")
 
   // Enhanced mock user data
   const userData = {

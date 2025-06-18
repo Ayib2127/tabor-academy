@@ -27,9 +27,6 @@ export function SiteHeader() {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user || null)
       setLoading(false)
-      // ADDED LOG: Check user data on initial load
-      console.log("SiteHeader: Initial user data:", session?.user)
-      console.log("SiteHeader: Initial user role:", session?.user?.user_metadata?.role)
     }
     
     checkAuth()
@@ -37,9 +34,6 @@ export function SiteHeader() {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
-      // ADDED LOG: Check user data on auth state change
-      console.log("SiteHeader: Auth state changed. New user data:", session?.user)
-      console.log("SiteHeader: Auth state changed. New user role:", session?.user?.user_metadata?.role)
     })
 
     return () => {
@@ -55,12 +49,11 @@ export function SiteHeader() {
   // Helper function to get the correct dashboard path based on user role
   const getDashboardPath = () => {
     if (!user) {
-      console.log("SiteHeader: getDashboardPath - No user, defaulting to /dashboard")
       return '/dashboard'
     }
 
     const role = user.user_metadata?.role
-    console.log("SiteHeader: getDashboardPath - User role detected:", role)
+
     switch (role) {
       case 'admin':
         return '/dashboard/admin'
@@ -80,7 +73,7 @@ export function SiteHeader() {
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2">
             <Image
-              src="/TaborAcademy Logo.png"
+              src="/logo.jpg"
               alt="Tabor Digital Academy"
               width={40}
               height={40}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 type AuthState = "loading" | "linking" | "completing" | "success" | "error"
 
-export default function SocialAuthCallback() {
+function SocialAuthCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [authState, setAuthState] = useState<AuthState>("loading")
@@ -272,5 +272,13 @@ export default function SocialAuthCallback() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function SocialAuthCallback() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <SocialAuthCallbackInner />
+    </Suspense>
   )
 }

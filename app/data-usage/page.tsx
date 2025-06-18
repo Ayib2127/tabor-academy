@@ -18,6 +18,7 @@ import {
   Video,
   Image as ImageIcon,
   Music,
+  MessageSquare,
   AlertCircle,
   CheckCircle,
   Database,

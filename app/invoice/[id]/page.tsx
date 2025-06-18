@@ -102,7 +102,7 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
             <div className="flex justify-between items-start mb-8">
               <div className="flex items-center gap-4">
                 <Image
-                  src="/TaborAcademy Logo.png"
+                  src="/logo.jpg"
                   alt="Tabor Digital Academy"
                   width={80}
                   height={80}

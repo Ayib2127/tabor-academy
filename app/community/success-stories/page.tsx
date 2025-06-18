@@ -13,6 +13,7 @@ import {
   Share2,
   ThumbsUp,
   MessageSquare,
+  Users,
   Filter,
   TrendingUp,
   BarChart3,

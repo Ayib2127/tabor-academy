@@ -138,7 +138,7 @@ export default function CertificateVerificationPage({ params }: { params: { id: 
                   <div className="p-6 border rounded-lg">
                     <div className="flex justify-between mb-4">
                       <Image
-                        src="/TaborAcademy Logo.png"
+                        src="/logo.jpg"
                         alt="Tabor Digital Academy"
                         width={100}
                         height={100}

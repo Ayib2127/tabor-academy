@@ -454,7 +454,7 @@ export default function InstructorDashboardPage() {
                     <Card key={course.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
                       <div className="relative h-48 w-full">
                         <Image
-                          src={course.thumbnail_url || '/placeholder.png'}
+                          src={course.thumbnail_url || '/logo.jpg'}
                           alt={course.title}
                           fill
                           className="object-cover"

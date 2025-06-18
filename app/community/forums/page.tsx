@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -134,6 +134,56 @@ export default function ForumsPage() {
   const [activeTab, setActiveTab] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Simulate data loading
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        // Here you would typically fetch data from your API
+        // For now, we're using mock data
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setIsLoading(false)
+      } catch (err) {
+        setError('Failed to load forum data')
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 py-8">
+          <div className="container px-4 md:px-6">
+            <Card className="p-6">
+              <p className="text-red-500">{error}</p>
+            </Card>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 py-8">
+          <div className="container px-4 md:px-6">
+            <Card className="p-6">
+              <p>Loading forum data...</p>
+            </Card>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col">

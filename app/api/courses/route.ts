@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { v4 as uuidv4 } from 'uuid';
 import * as Sentry from '@sentry/nextjs';
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic'; // Force dynamic rendering for this API route
 
@@ -128,5 +128,34 @@ export async function POST(request: NextRequest) {
     console.error('Error creating course:', error);
     Sentry.captureException(error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function GET_BY_ID(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createClient();
+    
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('id', params.id)
+      .single();
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
+      { status: 500 }
+    );
   }
 }

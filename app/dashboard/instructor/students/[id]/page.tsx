@@ -111,7 +111,7 @@ export default function StudentDetailPage() {
           <Card className="p-6 mb-6">
             <div className="flex items-center gap-6">
               <Image
-                src={student.avatar_url || '/default-avatar.png'}
+                src={student.avatar_url || '/logo.jpg'}
                 alt={student.full_name || 'Student'}
                 width={100}
                 height={100}
