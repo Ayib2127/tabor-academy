@@ -9,25 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   ChevronRight,
-  Wifi,
-  WifiOff,
-  BarChart,
-  Settings,
   Download,
-  Upload,
-  Video,
-  Image as ImageIcon,
-  Music,
   MessageSquare,
   AlertCircle,
-  CheckCircle,
   Database,
   Signal,
-  Gauge,
-  Clock,
-  Smartphone,
   HardDrive,
-  ArrowRight,
   HelpCircle
 } from "lucide-react"
 import Link from "next/link"
@@ -35,7 +22,6 @@ import Link from "next/link"
 export default function DataUsagePage() {
   const [dataSaverMode, setDataSaverMode] = useState(false)
   const [videoQuality, setVideoQuality] = useState("auto")
-  const [wifiOnly, setWifiOnly] = useState(false)
 
   // Mock data usage statistics
   const usageStats = {

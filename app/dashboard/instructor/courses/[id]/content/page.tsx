@@ -224,6 +224,7 @@ interface DraggableLessonProps {
   lesson: Lesson;
   onDeleteLesson: (moduleId: string, lessonId: string) => void;
   onLessonTitleChange: (moduleId: string, lessonId: string, newTitle: string) => void;
+  setSelectedLesson: (val: { moduleId: string, lesson: Lesson }) => void;
 }
 
 function DraggableLesson({
@@ -231,6 +232,7 @@ function DraggableLesson({
   lesson,
   onDeleteLesson,
   onLessonTitleChange,
+  setSelectedLesson,
 }: DraggableLessonProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `lesson-${module_id}-${lesson.id}`,
@@ -283,14 +285,24 @@ function DraggableLesson({
           </span>
         )}
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onDeleteLesson(module_id, lesson.id)}
-        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
-      >
-        <Trash2 className="h-3 w-3" />
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-2"
+          onClick={() => setSelectedLesson({ moduleId: module_id, lesson })}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDeleteLesson(module_id, lesson.id)}
+          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -320,6 +332,7 @@ export default function CourseContentPage() {
   const [courseData, setCourseData] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<{ moduleId: string, lesson: Lesson } | null>(null);
 
   // Dnd-kit hooks - MUST be called at the top level of the component
   const pointerSensor = useSensor(PointerSensor);
@@ -748,11 +761,61 @@ export default function CourseContentPage() {
                       onDeleteLesson={deleteLesson}
                       onLessonTitleChange={handleLessonTitleChange}
                       onModuleTitleChange={handleModuleTitleChange}
+                      setSelectedLesson={setSelectedLesson}
                     />
                   ))}
                 </div>
               </SortableContext>
             </DndContext>
+            {selectedLesson && (
+              <Card className="border-[#4ECDC4] shadow-lg my-8 max-w-3xl mx-auto">
+                <CardHeader>
+                  <CardTitle>Edit Lesson: {selectedLesson.lesson.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <LessonEditor
+                    lesson={selectedLesson.lesson}
+                    onUpdate={updatedLesson => {
+                      setCourseData(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              modules: prev.modules.map(m =>
+                                m.id === selectedLesson.moduleId
+                                  ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
+                                  : m
+                              ),
+                            }
+                          : prev
+                      );
+                      setSelectedLesson(null);
+                    }}
+                    onDelete={() => {
+                      setCourseData(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              modules: prev.modules.map(m =>
+                                m.id === selectedLesson.moduleId
+                                  ? { ...m, lessons: m.lessons.filter(l => l.id !== selectedLesson.lesson.id) }
+                                  : m
+                              ),
+                            }
+                          : prev
+                      );
+                      setSelectedLesson(null);
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    className="mt-4 text-[#FF6B35]"
+                    onClick={() => setSelectedLesson(null)}
+                  >
+                    Cancel
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             <Button onClick={addModule} className="w-full mt-4 bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">
               <PlusCircle className="h-4 w-4 mr-2" />
               Add New Module

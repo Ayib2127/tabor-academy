@@ -1,12 +1,16 @@
 import { FC, useState } from 'react';
 import { Lesson } from '@/types/course';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import VideoUploader from './VideoUploader';
 import VideoPlayer from '@/components/course-player/VideoPlayer';
-import RichTextEditor from './RichTextEditor';
+import { useEffect, useRef, useState } from 'react';
+import { BlockNoteView, useBlockNote } from '@blocknote/react';
+import '@blocknote/core/style.css';
+import { debounce } from 'lodash-es';
+import { toast } from '@/components/ui/use-toast';
 import QuizBuilder from './QuizBuilder';
 
 interface LessonEditorProps {
@@ -52,9 +56,14 @@ const LessonEditor: FC<LessonEditorProps> = ({
               onUpdate({ ...lesson, type: value })
             }
           >
-            <option value="video">Video Lesson</option>
-            <option value="text">Text Lesson</option>
-            <option value="quiz">Quiz</option>
+            <SelectTrigger>
+              <SelectValue placeholder="Lesson Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="video">Video Lesson</SelectItem>
+              <SelectItem value="text">Text Lesson</SelectItem>
+              <SelectItem value="quiz">Quiz</SelectItem>
+            </SelectContent>
           </Select>
 
           {lesson.type === 'video' && (
@@ -80,11 +89,10 @@ const LessonEditor: FC<LessonEditorProps> = ({
           )}
 
           {lesson.type === 'text' && (
-            <div className="space-y-4">
-              <RichTextEditor
-                content={lesson.content || ''}
-                onChange={(content) => onUpdate({ ...lesson, content })}
-                placeholder="Write your lesson content here..."
+            <div>
+              <BlockNoteTextEditor
+                lesson={lesson}
+                onUpdate={onUpdate}
               />
             </div>
           )}
@@ -123,4 +131,60 @@ const LessonEditor: FC<LessonEditorProps> = ({
   );
 };
 
-export default LessonEditor; 
+// --- BlockNoteTextEditor: Handles rich content editing and autosave for text lessons ---
+interface BlockNoteTextEditorProps {
+  lesson: Lesson;
+  onUpdate: (updatedLesson: Lesson) => void;
+}
+
+const BlockNoteTextEditor: FC<BlockNoteTextEditorProps> = ({ lesson, onUpdate }) => {
+  const [saving, setSaving] = useState(false);
+  const initialContent = lesson.content ? JSON.parse(lesson.content) : null;
+  const editor = useBlockNote({ initialContent });
+
+  // debounce save
+  const saveRef = useRef<(content: any) => void>();
+  saveRef.current = async (content: any) => {
+    try {
+      setSaving(true);
+      // Update parent state for instant UI feedback
+      onUpdate({ ...lesson, content: JSON.stringify(content) });
+      // Save to backend
+      const res = await fetch(`/api/instructor/lessons/${lesson.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content_json: content }),
+      });
+      if (!res.ok) {
+        throw new Error('Save failed');
+      }
+    } catch (e: any) {
+      toast({ title: 'Error saving', description: e.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const debouncedSave = useRef(
+    debounce((content) => saveRef.current?.(content), 1000)
+  ).current;
+
+  useEffect(() => {
+    return () => debouncedSave.cancel();
+  }, [debouncedSave]);
+
+  return (
+    <div>
+      <BlockNoteView
+        editor={editor}
+        onEditorContentChange={() => {
+          const json = editor.document;
+          debouncedSave(json);
+        }}
+      />
+      {saving && <p className="text-sm text-gray-500 mt-2">Saving…</p>}
+    </div>
+  );
+};
+
+export default LessonEditor;

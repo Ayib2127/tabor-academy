@@ -32,10 +32,18 @@ import {
   WifiOff
 } from "lucide-react"
 import Image from "next/image"
+import { useParams } from "next/navigation"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import Link from "next/link"
 
-// Mock lesson data
-const lesson = {
+
+
+import LessonContentDisplay from '@/components/student/lesson-content';
+import Skeleton from '@/components/ui/skeleton';
+/*
+
+
+
   id: 1,
   title: "Understanding the African Digital Landscape",
   course: "Digital Marketing Mastery",
@@ -90,10 +98,54 @@ const lesson = {
       content: "Important statistics about mobile usage in Africa",
       type: "highlight"
     }
-  ]
-}
+
+*/
 
 export default function LessonPlayerPage() {
+  const { id } = useParams<{ id: string }>();
+  const supabase = createClientComponentClient();
+  const [lessonData, setLessonData] = useState<any | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!id) return;
+      const { data, error } = await supabase
+        .from('module_lessons')
+        .select('id, title, video_url, content_json')
+        .eq('id', id)
+        .single();
+      if (!error) setLessonData(data);
+    })();
+  }, [id]);
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center bg-background">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-destructive mb-2">Could not load lesson</h2>
+            <p className="text-muted-foreground">{error.message || 'An unexpected error occurred.'}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!lessonData) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 container py-8 space-y-6">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-6 w-1/2" />
+        </main>
+      </div>
+    );
+  }
+
+  const lesson = lessonData;
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -142,8 +194,8 @@ export default function LessonPlayerPage() {
       setCurrentTime(videoRef.current.currentTime)
       
       // Update current chapter
-      const currentChapterIndex = lesson.chapters.findIndex((chapter, index) => {
-        const nextChapter = lesson.chapters[index + 1]
+      const currentChapterIndex = (lesson.chapters ?? []).findIndex((chapter, index) => {
+        const nextChapter = (lesson.chapters ?? [])[index + 1]
         return chapter.time <= currentTime && (!nextChapter || nextChapter.time > currentTime)
       })
       
@@ -213,22 +265,18 @@ export default function LessonPlayerPage() {
         content: noteInput,
         type: "note"
       }
-      lesson.notes.push(newNote)
+      (lesson.notes ?? []).push(newNote)
       setNoteInput("")
     }
   }
 
   const downloadForOffline = () => {
-    // Simulate download progress
-    let progress = 0
-    const interval = setInterval(() => {
-      progress += 10
-      setDownloadProgress(progress)
-      if (progress >= 100) {
-        clearInterval(interval)
-        // Implementation would handle actual video download
-      }
-    }, 500)
+    if (lesson.progress !== undefined) {
+      setDownloadProgress(lesson.progress)
+    } else {
+      setDownloadProgress(0)
+    }
+    // Implementation would handle actual video download
   }
 
   return (
@@ -241,15 +289,24 @@ export default function LessonPlayerPage() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link href="/courses" className="hover:text-foreground">Courses</Link>
             <ChevronRight className="h-4 w-4" />
-            <Link href={`/courses/${lesson.course}`} className="hover:text-foreground">{lesson.course}</Link>
+            {/* Course breadcrumb could be added here when joined */}
             <ChevronRight className="h-4 w-4" />
-            <span>{lesson.module}</span>
+            <span>{lesson.module ?? ''}</span>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Video Player Column */}
             <div className="md:col-span-2">
-              {/* Video Player */}
+              {/* show BlockNote content if present */}
+              {lesson.content_json && (
+                <LessonContentDisplay content={lesson.content_json} />
+              )}
+              {/* Legacy content fallback: render plain HTML if no content_json */}
+              {(!lesson.content_json && lesson.content) && (
+                <div className="prose max-w-none mt-6" dangerouslySetInnerHTML={{ __html: lesson.content }} />
+              )}
+
+              {/* show video if present */}
               <div ref={playerRef} className="relative bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
@@ -257,7 +314,7 @@ export default function LessonPlayerPage() {
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
                 >
-                  <source src={lesson.videoUrl} type="video/mp4" />
+                  <source src={lesson.video_url} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
 
@@ -275,7 +332,7 @@ export default function LessonPlayerPage() {
                       }}
                     />
                     {/* Chapter Markers */}
-                    {lesson.chapters.map((chapter, index) => (
+                    {(lesson.chapters ?? []).map((chapter, index) => (
                       <div
                         key={index}
                         className="absolute top-1/2 -translate-y-1/2 w-1 h-4 bg-white/50 cursor-pointer hover:bg-white"
@@ -373,7 +430,7 @@ export default function LessonPlayerPage() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span>{lesson.duration}</span>
+                        <span>{lesson.duration ?? ''}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4" />
@@ -395,7 +452,7 @@ export default function LessonPlayerPage() {
                 <Card className="p-6">
                   <h2 className="text-lg font-semibold mb-4">Lesson Resources</h2>
                   <div className="space-y-4">
-                    {lesson.resources.map((resource, index) => (
+                    {(lesson.resources ?? []).map((resource, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <FileText className="h-5 w-5 text-muted-foreground" />
@@ -436,7 +493,7 @@ export default function LessonPlayerPage() {
                       </div>
 
                       <div className="space-y-4">
-                        {lesson.notes.map((note) => (
+                        {(lesson.notes ?? []).map((note) => (
                           <div key={note.id} className="flex items-start gap-3">
                             <Button
                               variant="ghost"
@@ -475,7 +532,7 @@ export default function LessonPlayerPage() {
               <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Chapters</h2>
                 <div className="space-y-2">
-                  {lesson.chapters.map((chapter, index) => (
+                  {(lesson.chapters ?? []).map((chapter, index) => (
                     <Button
                       key={index}
                       variant="ghost"

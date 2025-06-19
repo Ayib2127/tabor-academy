@@ -56,79 +56,47 @@ export default function LoginPage() {
   })
 
   const onSubmitEmail = async (data: any) => {
-    setIsLoading(true)
-    setError("")
-    console.log('--- onSubmitEmail triggered ---')
-    console.log('Data received in onSubmitEmail:', data)
     try {
-      console.log('Attempting Supabase sign in with password...')
-      const { data: authData, error: supabaseError } = await supabase.auth.signInWithPassword({
+      setIsLoading(true)
+      setError("")
+
+      // Sign in with credentials
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       })
 
-      console.log('Supabase sign in call finished.')
-      console.log('Auth Data:', authData)
-      console.log('Error from Supabase:', supabaseError)
-
-      if (supabaseError) {
-        console.error('Sign in error detected:', supabaseError.message)
-        throw supabaseError
+      if (signInError) {
+        console.error('Sign in error:', signInError)
+        throw new Error(signInError.message)
       }
 
-      console.log('Sign in successful, attempting toast and redirect.')
-      toast.success("Logged in successfully!")
+      // Get user data
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', authData.user?.id)
+        .single()
 
-      // Fetch user role and redirect based on role
-      if (authData.user) {
-        console.log('Fetching profile for user ID:', authData.user.id)
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', authData.user.id)
-          .single()
+      if (userError) {
+        console.error('Error fetching user data:', userError)
+        throw new Error('Failed to fetch user data')
+      }
 
-        if (userError) {
-           console.error('Error fetching user data after successful login:', userError)
-           // Optionally redirect to a default page or show an error if user fetch fails
-           router.push('/dashboard')
-           return
-        }
-
-        if (userData) {
-          console.log('User data fetched, user role:', userData.role)
-          // Redirect based on role
-          if (userData.role === 'admin') {
-            console.log('Redirecting to admin dashboard')
-            router.push('/dashboard/admin')
-          } else if (userData.role === 'mentor') {
-            console.log('Redirecting to mentor dashboard')
-            router.push('/dashboard/mentor')
-          } else if (userData.role === 'instructor') {
-            console.log('Redirecting to instructor dashboard')
-            router.push('/dashboard/instructor')
-          } else {
-            console.log('Redirecting to default dashboard')
-            // Default to student dashboard for other roles or if role is null/undefined
-            router.push('/dashboard')
-          }
-        } else {
-          // If no user data found after successful login (shouldn't happen with trigger),
-          // redirect to default or show error
-          console.log('No user data found for user after login:', authData.user.id)
-          router.push('/dashboard')
-        }
-
+      // Redirect based on role
+      if (userData?.role === 'instructor') {
+        router.push('/dashboard/instructor')
+      } else if (userData?.role === 'student') {
+        router.push('/dashboard/student')
       } else {
-         // If authData.user is null after successful sign-in (shouldn't happen)
-         console.log('User object is null after successful sign-in, redirecting to dashboard.')
-         router.push('/dashboard')
+        router.push('/dashboard')
       }
 
-    } catch (err: any) {
-      console.error('Login error caught in catch block:', err)
-      setError(err.message || "An error occurred during login.")
-      toast.error(err.message || "Failed to log in.")
+      toast.success("Logged in successfully!")
+    } catch (error) {
+      console.error('Login error:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred')
+      toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setIsLoading(false)
       console.log('Login process finished (finally block).')
