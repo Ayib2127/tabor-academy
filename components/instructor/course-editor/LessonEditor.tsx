@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import { Lesson } from '@/types/course';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import VideoUploader from './VideoUploader';
 import VideoPlayer from '@/components/course-player/VideoPlayer';
-import { useEffect, useRef, useState } from 'react';
-import { BlockNoteView, useBlockNote } from '@blocknote/react';
-import '@blocknote/core/style.css';
+
+import RichTextEditor from './RichTextEditor';
+
 import { debounce } from 'lodash-es';
 import { toast } from '@/components/ui/use-toast';
 import QuizBuilder from './QuizBuilder';
@@ -90,10 +90,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
           {lesson.type === 'text' && (
             <div>
-              <BlockNoteTextEditor
-                lesson={lesson}
-                onUpdate={onUpdate}
-              />
+              <RichTextWrapper lesson={lesson} onUpdate={onUpdate} />
             </div>
           )}
 
@@ -131,16 +128,16 @@ const LessonEditor: FC<LessonEditorProps> = ({
   );
 };
 
-// --- BlockNoteTextEditor: Handles rich content editing and autosave for text lessons ---
-interface BlockNoteTextEditorProps {
+// --- RichTextEditor wrapper: handles text lesson editing and autosave ---
+interface RichTextWrapperProps {
   lesson: Lesson;
   onUpdate: (updatedLesson: Lesson) => void;
 }
 
-const BlockNoteTextEditor: FC<BlockNoteTextEditorProps> = ({ lesson, onUpdate }) => {
+const RichTextWrapper: FC<RichTextWrapperProps> = ({ lesson, onUpdate }) => {
   const [saving, setSaving] = useState(false);
-  const initialContent = lesson.content ? JSON.parse(lesson.content) : null;
-  const editor = useBlockNote({ initialContent });
+  const initialContent = lesson.content || '';
+  
 
   // debounce save
   const saveRef = useRef<(content: any) => void>();
@@ -148,15 +145,17 @@ const BlockNoteTextEditor: FC<BlockNoteTextEditorProps> = ({ lesson, onUpdate })
     try {
       setSaving(true);
       // Update parent state for instant UI feedback
-      onUpdate({ ...lesson, content: JSON.stringify(content) });
-      // Save to backend
-      const res = await fetch(`/api/instructor/lessons/${lesson.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_json: content }),
-      });
-      if (!res.ok) {
-        throw new Error('Save failed');
+      onUpdate({ ...lesson, content });
+      // If lesson has a permanent UUID, save to backend; otherwise defer until course save
+      if (!lesson.id.startsWith('temp-')) {
+        const res = await fetch(`/api/instructor/lessons/${lesson.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, type: lesson.type ?? 'text' }),
+        });
+        if (!res.ok) {
+          throw new Error('Save failed');
+        }
       }
     } catch (e: any) {
       toast({ title: 'Error saving', description: e.message, variant: 'destructive' });
@@ -175,11 +174,10 @@ const BlockNoteTextEditor: FC<BlockNoteTextEditorProps> = ({ lesson, onUpdate })
 
   return (
     <div>
-      <BlockNoteView
-        editor={editor}
-        onEditorContentChange={() => {
-          const json = editor.document;
-          debouncedSave(json);
+      <RichTextEditor
+        content={initialContent}
+        onChange={(html) => {
+          debouncedSave(html);
         }}
       />
       {saving && <p className="text-sm text-gray-500 mt-2">Saving…</p>}

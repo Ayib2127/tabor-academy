@@ -4,11 +4,15 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 const bodySchema = z.object({
-  content_json: z.any(), // BlockNote JSON schema, leave as any
+  content: z.string(),
+  type: z.string().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const supabase = createRouteHandlerClient({ cookies });
+export async function PATCH(req: Request, context: Promise<{ params: { id: string } }>) {
+  const { params } = await context;
+  const lessonId = params.id;
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   const {
     data: { session },
@@ -24,11 +28,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const lessonId = params.id;
   // Ensure user owns the lesson via join
   const { error } = await supabase
     .from('module_lessons')
-    .update({ content_json: parse.data.content_json, updated_at: new Date().toISOString() })
+    .update({ content: parse.data.content, type: parse.data.type ?? 'text', updated_at: new Date().toISOString() })
     .eq('id', lessonId)
     .eq('instructor_id', session.user.id); // assumes column exists or RLS enforces
 

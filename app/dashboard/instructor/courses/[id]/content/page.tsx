@@ -31,6 +31,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import dynamic from "next/dynamic"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
@@ -76,6 +77,7 @@ interface DraggableModuleProps {
   onDeleteLesson: (moduleId: string, lessonId: string) => void;
   onLessonTitleChange: (moduleId: string, lessonId: string, newTitle: string) => void;
   onModuleTitleChange: (moduleId: string, newTitle: string) => void;
+  setSelectedLesson: (val: { moduleId: string; lesson: Lesson }) => void;
 }
 
 function DraggableModule({
@@ -84,7 +86,8 @@ function DraggableModule({
   onAddLesson,
   onDeleteLesson,
   onLessonTitleChange,
-  onModuleTitleChange
+  onModuleTitleChange,
+  setSelectedLesson,
 }: DraggableModuleProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `module-${module.id}`,
@@ -168,6 +171,7 @@ function DraggableModule({
                 lesson={lesson}
                 onDeleteLesson={onDeleteLesson}
                 onLessonTitleChange={onLessonTitleChange}
+                setSelectedLesson={setSelectedLesson}
               />
             ))}
           </SortableContext>
@@ -317,6 +321,9 @@ const categories = [
   "Entrepreneurship",
   "Freelancing",
 ];
+
+// Dynamically import LessonEditor client-side to avoid SSR hydration issues
+const LessonEditor = dynamic(() => import("@/components/instructor/course-editor/LessonEditor"), { ssr: false });
 
 const levelOptions = [
   { value: "beginner", label: "🌱 Beginner" },
@@ -541,15 +548,18 @@ export default function CourseContentPage() {
           throw new Error(moduleInsertError.message);
         }
 
-        for (const lessonData of moduleData.lessons) {
+        // insert lessons for this module
+        for (const [lessonIndex, lessonData] of moduleData.lessons.entries()) {
           const { error: lessonInsertError } = await supabase
             .from('module_lessons')
             .insert({
               module_id: newModule.id,
               title: lessonData.title,
               is_published: lessonData.is_published,
+              type: lessonData.type ?? 'text',
+              content: lessonData.content ?? '',
+
             });
-          
           if (lessonInsertError) {
             throw new Error(lessonInsertError.message);
           }
@@ -788,7 +798,7 @@ export default function CourseContentPage() {
                             }
                           : prev
                       );
-                      setSelectedLesson(null);
+                      setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
                     }}
                     onDelete={() => {
                       setCourseData(prev =>

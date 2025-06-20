@@ -109,7 +109,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className="font-sans">
+      <body className="font-sans" suppressHydrationWarning={true}>
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="light">
               {children}
