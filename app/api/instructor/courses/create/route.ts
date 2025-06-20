@@ -36,6 +36,12 @@ export async function POST(req: Request) {
         thumbnail_url: validatedData.thumbnailUrl,
         promo_video_url: validatedData.promoVideoUrl,
         instructor_id: session.user.id,
+        delivery_type: validatedData.deliveryType,
+        start_date: validatedData.startDate ?? null,
+        end_date: validatedData.endDate ?? null,
+        registration_deadline: validatedData.registrationDeadline ?? null,
+        is_published: false,
+
         status: 'pending_review',
       })
       .select()

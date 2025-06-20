@@ -16,6 +16,10 @@ interface CourseData {
   category: string
   level: "beginner" | "intermediate" | "advanced"
   tags: string[]
+  deliveryType: "self_paced" | "cohort"
+  startDate?: string
+  endDate?: string
+  registrationDeadline?: string
 }
 
 interface CourseBasicsStepProps {
@@ -76,6 +80,22 @@ export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsS
             </p>
           </div>
 
+          {/* Course Type */}
+          <div className="space-y-2">
+            <Label className="text-[#2C3E50] font-semibold">Course Delivery Type *</Label>
+            <div className="flex gap-4">
+              {(['self_paced','cohort'] as const).map((type) => (
+                <Button
+                  key={type}
+                  variant={courseData.deliveryType === type ? 'default' : 'outline'}
+                  onClick={() => updateCourseData({ deliveryType: type })}
+                >
+                  {type === 'self_paced' ? 'Self-Paced' : 'Cohort-Based'}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Course Description */}
           <div className="space-y-2">
             <Label htmlFor="description" className="text-[#2C3E50] font-semibold">
@@ -93,6 +113,36 @@ export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsS
               Write a detailed description that highlights the value and practical outcomes
             </p>
           </div>
+
+          {/* Conditional Cohort Dates */}
+          {courseData.deliveryType === 'cohort' && (
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label className="font-semibold">Start Date *</Label>
+                <Input
+                  type="date"
+                  value={courseData.startDate || ''}
+                  onChange={(e) => updateCourseData({ startDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold">End Date *</Label>
+                <Input
+                  type="date"
+                  value={courseData.endDate || ''}
+                  onChange={(e) => updateCourseData({ endDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold">Registration Deadline *</Label>
+                <Input
+                  type="date"
+                  value={courseData.registrationDeadline || ''}
+                  onChange={(e) => updateCourseData({ registrationDeadline: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Category and Level */}
           <div className="grid md:grid-cols-2 gap-6">

@@ -15,6 +15,10 @@ export const moduleSchema = z.object({
 });
 
 export const courseCreationSchema = z.object({
+  deliveryType: z.enum(['self_paced','cohort']),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  registrationDeadline: z.string().optional(),
   title: z.string().min(1, 'Course title is required').max(100),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   category: z.string().min(1, 'Category is required'),

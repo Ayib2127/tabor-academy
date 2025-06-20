@@ -19,6 +19,10 @@ interface CourseData {
   category: string
   level: "beginner" | "intermediate" | "advanced"
   tags: string[]
+  deliveryType: "self_paced" | "cohort"
+  startDate?: string
+  endDate?: string
+  registrationDeadline?: string
   price: number
   thumbnailUrl: string
   promoVideoUrl: string
@@ -46,6 +50,11 @@ export default function CourseWizardPage() {
     description: "",
     category: "",
     level: "beginner",
+    deliveryType: "self_paced",
+    startDate: undefined,
+    endDate: undefined,
+    registrationDeadline: undefined,
+
     tags: [],
     price: 0,
     thumbnailUrl: "",
@@ -94,7 +103,11 @@ export default function CourseWizardPage() {
           courseData.title.trim() &&
           courseData.description.trim() &&
           courseData.category &&
-          courseData.level
+          courseData.level &&
+          courseData.deliveryType &&
+          (courseData.deliveryType === 'self_paced' || (
+            courseData.startDate && courseData.endDate && courseData.registrationDeadline
+          ))
         )
       case 2:
         return (
