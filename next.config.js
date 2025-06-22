@@ -78,6 +78,7 @@ const nextConfig = {
       ),
       // Polyfill alias
       'globalthis-polyfill': selfPolyfillPath,
+      '@': path.resolve(__dirname),
     };
 
     // Fix big strings warning

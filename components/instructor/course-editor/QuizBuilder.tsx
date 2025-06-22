@@ -25,8 +25,11 @@ import {
   GripVertical,
   Settings,
   HelpCircle,
+  Sparkles,
+  Wand2,
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { toast } from 'sonner';
 
 interface QuizBuilderProps {
   quiz: Quiz;
@@ -35,6 +38,7 @@ interface QuizBuilderProps {
 
 const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
   const handleQuestionAdd = (type: QuestionType) => {
     const newQuestion: QuizQuestion = {
@@ -89,7 +93,7 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
   const handleOptionUpdate = (
     questionId: string,
     optionId: string,
-    updates: Partial<QuizOption>
+    updates: Partial<{ id: string; text: string; isCorrect: boolean }>
   ) => {
     onChange({
       ...quiz,
@@ -103,6 +107,59 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
         };
       }),
     });
+  };
+
+  // AI-powered question generation
+  const handleAIQuestionGeneration = async (questionType: QuestionType) => {
+    if (!quiz.title && !quiz.description) {
+      toast.error('Please add a quiz title or description first to generate AI questions');
+      return;
+    }
+
+    setIsGeneratingQuestions(true);
+
+    try {
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'quiz',
+          input: `Quiz Title: ${quiz.title}\nDescription: ${quiz.description || ''}`,
+          questionCount: 3,
+          questionType: questionType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate questions');
+      }
+
+      const result = await response.json();
+      
+      if (result.content && result.content.questions) {
+        // Add the generated questions to the existing quiz
+        const newQuestions = result.content.questions.map((q: any) => ({
+          ...q,
+          id: `ai-${Date.now()}-${Math.random()}`,
+        }));
+
+        onChange({
+          ...quiz,
+          questions: [...quiz.questions, ...newQuestions],
+        });
+
+        toast.success(`${newQuestions.length} AI questions added successfully!`);
+      }
+      
+    } catch (error: any) {
+      console.error('AI question generation error:', error);
+      toast.error(error.message || 'Failed to generate questions. Please try again.');
+    } finally {
+      setIsGeneratingQuestions(false);
+    }
   };
 
   return (
@@ -222,6 +279,24 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-[#2C3E50]">Questions</h3>
           <div className="flex items-center space-x-2">
+            {/* AI Question Generation */}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => handleAIQuestionGeneration('multiple_choice')}
+                disabled={isGeneratingQuestions}
+                variant="outline"
+                size="sm"
+                className="border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                {isGeneratingQuestions ? (
+                  <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-2" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-2" />
+                )}
+                AI Questions
+              </Button>
+            </div>
+            
             <Select
               value=""
               onValueChange={(value: QuestionType) => handleQuestionAdd(value)}
@@ -472,4 +547,4 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
   );
 };
 
-export default QuizBuilder; 
+export default QuizBuilder;
