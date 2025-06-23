@@ -1423,7 +1423,7 @@ export default function CourseContentPage() {
           onModeChange={setPreviewMode}
         />
 
-        {selectedLesson && (
+        {selectedLesson && showVersionHistory && (
           <VersionHistory
             lessonId={selectedLesson.lesson.id}
             currentContent={selectedLesson.lesson.content}

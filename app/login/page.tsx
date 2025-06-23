@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { SocialIcons } from '@/components/ui/social-icons'
 
 const emailLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -117,6 +118,25 @@ export default function LoginPage() {
     }
   }
 
+  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'linkedin') => {
+    setIsLoading(true)
+    setError("")
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      })
+      if (error) throw error
+    } catch (error: any) {
+      setError(error.message || "Failed to login with social provider")
+      toast.error(error.message || "Failed to login with social provider")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -140,9 +160,8 @@ export default function LoginPage() {
             )}
 
             <Tabs defaultValue="email" className="mb-8">
-              <TabsList className="grid grid-cols-3 mb-6">
+              <TabsList className="grid grid-cols-2 mb-6">
                 <TabsTrigger value="email">Email</TabsTrigger>
-                <TabsTrigger value="phone">Phone</TabsTrigger>
                 <TabsTrigger value="social">Social</TabsTrigger>
               </TabsList>
 
@@ -225,66 +244,18 @@ export default function LoginPage() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="phone">
-                <form onSubmit={handleSubmitPhone(onSubmitPhone)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
-                    <select
-                      id="country"
-                      className="w-full p-2 border rounded-md"
-                      {...registerPhone("country")}
-                    >
-                      <option value="">Select Country</option>
-                      {countries.map((country) => (
-                        <option key={country} value={country}>
-                          {country} (+{getCountryCallingCode(country)})
-                        </option>
-                      ))}
-                    </select>
-                    {phoneErrors.country && (
-                      <p className="text-sm text-red-500">{phoneErrors.country.message as string}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      {...registerPhone("phone")}
-                      className={phoneErrors.phone ? "border-red-500" : ""}
-                    />
-                    {phoneErrors.phone && (
-                      <p className="text-sm text-red-500">{phoneErrors.phone.message as string}</p>
-                    )}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending Code...
-                      </>
-                    ) : (
-                      "Send Login Code"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-
               <TabsContent value="social">
                 <div className="space-y-4">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full flex items-center gap-2" onClick={() => handleSocialLogin('google')} disabled={isLoading}>
+                    <SocialIcons.Google className="mr-2" />
                     Continue with Google
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full flex items-center gap-2" onClick={() => handleSocialLogin('facebook')} disabled={isLoading}>
+                    <SocialIcons.Facebook className="mr-2" />
                     Continue with Facebook
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full flex items-center gap-2" onClick={() => handleSocialLogin('linkedin')} disabled={isLoading}>
+                    <SocialIcons.LinkedIn className="mr-2" />
                     Continue with LinkedIn
                   </Button>
                 </div>
