@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -102,7 +102,19 @@ const fallbackData: DashboardData = {
   recommendedCourses: [],
   allRecommendations: [],
   recentAchievements: [],
-  nextStepCourse: null,
+  nextStepCourse: {
+    title: 'Validate Your Idea',
+    description: 'Learn proven methods to validate your business idea before investing heavily.',
+    action: 'Start Course',
+    course: {
+      id: 'idea-validation-101',
+      title: 'Idea Validation 101',
+      description: 'Step-by-step guide to evaluating market demand and customer needs.',
+      level: 'Beginner',
+      price: 0,
+      content_type: 'tabor_original'
+    }
+  },
   completedStages: ['Awareness']
 };
 
@@ -180,37 +192,6 @@ export default function DashboardPage() {
     return null;
   }
 
-  // We intentionally ignore network errors and rely on fallbackData, so error screen is unused
-
-
-    return (
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
-        <main className="flex-1 py-8">
-          <div className="container px-4 md:px-6">
-            <Card className="p-8 text-center">
-              <div className="space-y-4">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                  <AlertCircle className="w-8 h-8 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-[#2C3E50] mb-2">
-                    Unable to Load Dashboard
-                  </h3>
-                  <p className="text-[#2C3E50]/60 mb-4">
-                    {error}
-                  </p>
-                  <Button onClick={fetchDashboardData} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">
-                    Try Again
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </main>
-      </div>
-    )
-  }
 
   if (!dashboardData) {
     return null
