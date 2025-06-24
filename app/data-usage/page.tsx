@@ -15,6 +15,7 @@ import {
   Database,
   Signal,
   HardDrive,
+  WifiOff,
   HelpCircle
 } from "lucide-react"
 import Link from "next/link"

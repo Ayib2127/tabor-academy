@@ -1,12 +1,26 @@
 import OpenAI from 'openai';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY is not set in environment variables');
+let openaiInstance: any;
+
+if (process.env.OPENAI_API_KEY) {
+  openaiInstance = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+} else {
+  // eslint-disable-next-line no-console
+  console.warn('OPENAI_API_KEY is not set — AI routes will be disabled.');
+
+  // Minimal stub that throws at runtime if used, but keeps the build from failing.
+  openaiInstance = {
+    chat: {
+      completions: {
+        create: () => {
+          throw new Error('OpenAI is not configured (OPENAI_API_KEY missing)');
+        },
+      },
+    },
+  };
 }
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const openai = openaiInstance;
 
 export const AI_MODEL = 'gpt-4o-mini';
 
