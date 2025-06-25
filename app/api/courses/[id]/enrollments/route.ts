@@ -57,9 +57,11 @@ export async function GET(
       }
 
       if (courseData.instructor_id !== user.id) {
-        return createErrorResponse(
-          new Error('Forbidden: You are not the instructor of this course')
-        );
+        return NextResponse.json({
+          error: 'Forbidden: You are not the instructor of this course'
+        }, {
+          status: 403
+        });
       }
 
       // Fetch enrollments with user details
