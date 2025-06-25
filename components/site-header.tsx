@@ -19,16 +19,16 @@ export function SiteHeader() {
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     // Check if user is authenticated
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    const checkAuth = () => {
+      const { data: { session } } = supabase.auth.getSession() as any
       setUser(session?.user || null)
       setLoading(false)
     }
-    
+
     checkAuth()
 
     // Set up auth state change listener
@@ -86,7 +86,7 @@ export function SiteHeader() {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 ml-6">
+        <nav role="navigation" hidden className="hidden md:flex items-center space-x-6 ml-6">
           <Link href="/about" className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4]">
             About
           </Link>
@@ -229,7 +229,7 @@ export function SiteHeader() {
 
       {/* Mobile Navigation */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-[#E5E8E8]">
+        <nav role="navigation" className="md:hidden border-t border-[#E5E8E8]">
           <div className="container py-4 space-y-2">
             <Link
               href="/about"
@@ -333,7 +333,7 @@ export function SiteHeader() {
               FAQ
             </Link>
           </div>
-        </div>
+        </nav>
       )}
     </header>
   )

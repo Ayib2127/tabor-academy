@@ -21,9 +21,9 @@ export function getTimeAgo(date: Date | null | undefined | string): string {
   if (diff < 0) {
     // Future date
     const futureDiff = Math.abs(diff);
-    const futureMinutes = Math.floor(futureDiff / 60000);
-    const futureHours = Math.floor(futureMinutes / 60);
-    const futureDays = Math.floor(futureHours / 24);
+    const futureMinutes = Math.round(futureDiff / 60000);
+    const futureHours = Math.round(futureMinutes / 60);
+    const futureDays = Math.round(futureHours / 24);
 
     if (futureDays > 0) return `in ${futureDays} day${futureDays === 1 ? '' : 's'}`;
     if (futureHours > 0) return `in ${futureHours} hour${futureHours === 1 ? '' : 's'}`;

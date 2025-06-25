@@ -1,3 +1,4 @@
+// @ts-nocheck
 import '@testing-library/jest-dom';
 import { jest } from '@jest/globals';
 
@@ -46,18 +47,91 @@ global.Response = jest.fn().mockImplementation((...args) => {
   };
 }) as unknown as typeof Response;
 
-// Mock NextResponse
-jest.mock('next/server', () => ({
-  NextResponse: {
-    json: jest.fn().mockImplementation((body, init) => {
-      const typedInit = init as ResponseInit;
-      return {
-        status: typedInit?.status || 200,
-        headers: new Headers(typedInit?.headers),
-        json: () => Promise.resolve(body),
-      };
+// Mock NextResponse and NextRequest
+jest.mock('next/server', () => {
+  class NextResponse {
+    status: number;
+    headers: Headers;
+    constructor(body?: any, init: ResponseInit = {}) {
+      this.status = init.status || 200;
+      this.headers = new Headers(init.headers);
+      Object.assign(this, body);
+    }
+    static json(body: any, init: ResponseInit = {}) {
+      return new NextResponse(body, init);
+    }
+  }
+  class NextRequest extends Request {
+    constructor(url: string, init: RequestInit = {}) {
+      super(url, init);
+    }
+  }
+  return { __esModule: true, NextResponse, NextRequest, default: { NextResponse, NextRequest } };
+});
+
+// Canvas stub for Chart.js
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  value: () => null,
+});
+
+// Mock @supabase/auth-helpers-nextjs to provide a controllable client
+jest.mock('@supabase/auth-helpers-nextjs', () => {
+  const mockClient = {
+    auth: {
+      getUser: jest.fn().mockResolvedValue({ data: { user: null, session: null }, error: null }),
+      getSession: jest.fn().mockImplementation(() => ({ data: { session: null }, error: null })),
+      // keep async version alias for code that awaits it
+      getSessionAsync: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      onAuthStateChange: jest.fn().mockImplementation((cb) => {
+        const subscription = { unsubscribe: jest.fn() };
+        cb('INITIAL_SESSION', null);
+        return { data: { subscription }, error: null };
+      }),
+      signOut: jest.fn(),
+    },
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+    })),
+  };
+
+  return {
+    __esModule: true,
+    createRouteHandlerClient: jest.fn(() => mockClient),
+    createServerComponentClient: jest.fn(() => mockClient),
+    createClientComponentClient: jest.fn(() => mockClient),
+  };
+});
+
+// Mock Supabase client to avoid ESM parsing issues
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({
+    auth: {
+      user: () => null,
+      getSession: jest.fn().mockImplementation(() => ({ data: { session: null }, error: null })),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null, session: null }, error: null }),
+      onAuthStateChange: jest.fn().mockImplementation((cb) => {
+        const subscription = { unsubscribe: jest.fn() };
+        cb('INITIAL_SESSION', null);
+        return { data: { subscription }, error: null };
+      }),
+      signOut: jest.fn().mockResolvedValue({ error: null }),
+    },
+    from: () => ({
+      select: () => ({ data: [], error: null }),
+      insert: () => ({ data: null, error: null }),
+      update: () => ({ data: null, error: null }),
+      delete: () => ({ data: null, error: null }),
     }),
-  },
+    storage: {
+      from: () => ({ upload: () => ({ data: null, error: null }) }),
+    },
+  }),
 }));
 
 // Mock environment variables
@@ -76,6 +150,15 @@ jest.mock('@sentry/nextjs', () => ({
   withScope: jest.fn((callback: (scope: { setTag: jest.Mock; setExtra: jest.Mock }) => void) =>
     callback({ setTag: jest.fn(), setExtra: jest.fn() })),
 }));
+
+// Expose sanitizeInput globally for tests that rely on it
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { sanitizeInput } = require('./lib/utils/security');
+  (global as any).sanitizeInput = sanitizeInput;
+} catch (e) {
+  // ignore if path not resolvable at compile time
+}
 
 // Mock performance API
 global.performance = {

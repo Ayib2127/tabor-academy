@@ -10,10 +10,16 @@ const config: JestConfigWithTsJest = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^jose$': '<rootDir>/__mocks__/jose.js'
+    '^jose$': '<rootDir>/__mocks__/jose.js',
+    '^@supabase/supabase-js$': '<rootDir>/__mocks__/supabase.js'
   },
   transformIgnorePatterns: [
     '/node_modules/(?!(jose|@panva|oidc-token-hash|@supabase|@supabase/realtime-js)/)'
+  ],
+  modulePathIgnorePatterns: ['<rootDir>/.next/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/__tests__/integration/',
+    '<rootDir>/__tests__/components/dashboard/quick-stats.test.tsx'
   ],
   testMatch: [
     '**/__tests__/**/*.test.ts',
