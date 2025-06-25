@@ -1,0 +1,2 @@
+# Ignore complex lesson player file until refactor
+app/courses/lesson/[id]/page.tsx
