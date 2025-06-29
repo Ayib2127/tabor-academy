@@ -7,12 +7,7 @@ import { trackPerformance } from '@/lib/utils/performance';
 import { validateEnv } from '@/lib/utils/env-validation';
 import * as Sentry from '@sentry/nextjs';
 
-// Explicit type definition for route context
-type RouteContext = {
-  params: { 
-    id: string 
-  };
-};
+
 
 type Enrollment = {
   user_id: string;
@@ -25,16 +20,23 @@ type Enrollment = {
   };
 };
 
+type Lesson = {
+  id: string;
+  is_published: boolean;
+};
+
+// End of type definitions
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   _: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   // Validate environment variables
   validateEnv();
   
-  const courseId = context.params.id;  // Access via context.params
+  const courseId = params.id;
   const supabase = createRouteHandlerClient({ cookies });
 
   return trackPerformance('GET /api/courses/[id]/enrollments', async () => {

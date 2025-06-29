@@ -48,6 +48,9 @@ export default function LessonPlayerPage() {
   const [lessonData, setLessonData] = useState<any | null>(null);
   const [error, setError] = useState<any | null>(null);
 
+  // Alias for easier reference in JSX and handlers
+  const lesson = (lessonData as any) ?? {};
+
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -59,6 +62,7 @@ export default function LessonPlayerPage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showNotes, setShowNotes] = useState(true)
   const [noteInput, setNoteInput] = useState("")
+  const [notes, setNotes] = useState<any[]>([])
   const [isOffline, setIsOffline] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [currentChapter, setCurrentChapter] = useState(0)
@@ -92,6 +96,13 @@ export default function LessonPlayerPage() {
       window.removeEventListener('offline', handleOffline)
     }
   }, [])
+
+  useEffect(() => {
+    // When lessonData loads, initialize notes from lesson.notes if present
+    if (lessonData && lessonData.notes) {
+      setNotes(lessonData.notes)
+    }
+  }, [lessonData])
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -180,7 +191,7 @@ export default function LessonPlayerPage() {
         content: noteInput,
         type: "note"
       }
-      (lesson.notes ?? []).push(newNote)
+      setNotes(prev => [...prev, newNote])
       setNoteInput("")
     }
   }
@@ -408,7 +419,7 @@ export default function LessonPlayerPage() {
                       </div>
 
                       <div className="space-y-4">
-                        {(lesson.notes ?? []).map((note) => (
+                        {(notes).map((note) => (
                           <div key={note.id} className="flex items-start gap-3">
                             <Button
                               variant="ghost"

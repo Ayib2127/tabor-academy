@@ -1,0 +1,27 @@
+# Dashboard Merge Step Log
+
+## 1. Backed up current files before replacing:
+app/dashboard/page.tsx → app/dashboard/page.tsx.bak
+components/dashboard/achievements-list.tsx → components/dashboard/achievements-list.tsx.bak
+components/dashboard/course-card.tsx → components/dashboard/course-card.tsx.bak
+components/dashboard/course-progress.tsx → components/dashboard/course-progress.tsx.bak
+components/dashboard/quick-stats.tsx → components/dashboard/quick-stats.tsx.bak
+components/dashboard/recommendations.tsx → components/dashboard/recommendations.tsx.bak
+app/api/dashboard/route.ts → app/api/dashboard/route.ts.bak
+
+## 2. Files to be replaced/copied from StudentFinal:
+- app/dashboard/page.tsx
+- components/dashboard/achievements-list.tsx
+- components/dashboard/course-card.tsx
+- components/dashboard/course-progress.tsx
+- components/dashboard/quick-stats.tsx
+- components/dashboard/recommendations.tsx
+- app/api/dashboard/route.ts
+
+## 3. Identical files, skipped:
+- components/dashboard/enrolled-courses-carousel.tsx
+- components/dashboard/success-funnel-card.tsx
+
+## 4. Next Steps:
+- Stage, test, and commit after copying.
+- Review any other relevant files in StudentFinal for future cautious merging.
