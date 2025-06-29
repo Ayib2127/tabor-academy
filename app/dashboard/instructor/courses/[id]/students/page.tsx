@@ -82,6 +82,12 @@ export default function CourseStudentsPage() {
             <span>Enrolled Students</span>
           </div>
 
+          <Link href={`/dashboard/instructor/courses/${courseId}`}>
+            <Button variant="outline" className="mb-4">
+              ← Back to Course Dashboard
+            </Button>
+          </Link>
+
           <h1 className="text-3xl font-bold mb-6">Students in "{courseTitle}"</h1>
           <Card className="p-6 mb-6">
             <Input

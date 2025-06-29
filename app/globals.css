@@ -31,24 +31,24 @@
 }
 
 .dark {
-  --background: 0 0% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 3.9%;
-  --popover-foreground: 0 0% 98%;
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
   --primary: 24 96% 62%;
   --primary-foreground: 0 0% 9%;
   --secondary: 172 66% 50%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
-  --accent: 0 0% 14.9%;
-  --accent-foreground: 0 0% 98%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
   --ring: 24 96% 62%;
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
@@ -64,15 +64,26 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 @layer utilities {
   .animate-fade-up {
-    animation: fade-up 0.5s ease-out;
+    animation: fade-up 0.8s ease-out;
   }
 
   .animate-fade-in {
-    animation: fade-in 0.5s ease-out;
+    animation: fade-in 0.6s ease-out;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-scroll-left {
+    animation: scroll-left 30s linear infinite;
   }
 
   .hover-scale {
@@ -80,11 +91,11 @@
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-orange-500 to-brand-teal-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4];
   }
 
   .gradient-border {
-    @apply relative before:absolute before:-inset-1 before:rounded-lg before:bg-gradient-to-r before:from-brand-orange-500 before:to-brand-teal-500 before:opacity-20 before:blur-sm hover:before:opacity-30 before:transition-opacity;
+    @apply relative before:absolute before:-inset-1 before:rounded-lg before:bg-gradient-to-r before:from-[#FF6B35] before:to-[#4ECDC4] before:opacity-20 before:blur-sm hover:before:opacity-30 before:transition-opacity;
   }
 
   .card-hover {
@@ -94,12 +105,146 @@
   .stat-card {
     @apply bg-white/50 backdrop-blur-sm rounded-lg p-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:bg-white/60;
   }
+
+  /* Hero Section Specific Animations */
+  .hero-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .hero-pulse {
+    animation: hero-pulse 4s ease-in-out infinite;
+  }
+
+  .hero-glow {
+    animation: glow 3s ease-in-out infinite alternate;
+  }
+
+  /* 3D Card Flip Utilities */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .transform-style-preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
+  /* Text Clamp Utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Course Catalog Specific Utilities */
+  .course-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .course-list {
+    @apply space-y-4;
+  }
+
+  .filter-sidebar {
+    @apply w-80 bg-white border-r border-[#E5E8E8] overflow-y-auto;
+  }
+
+  .search-highlight {
+    @apply bg-[#FF6B35]/20 text-[#FF6B35] font-medium;
+  }
+
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse bg-[#E5E8E8] rounded;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full mb-2;
+  }
+
+  .skeleton-title {
+    @apply skeleton h-6 w-3/4 mb-4;
+  }
+
+  .skeleton-image {
+    @apply skeleton h-48 w-full mb-4;
+  }
+
+  /* Course Card Enhancements */
+  .course-card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-[#4ECDC4]/40;
+  }
+
+  .course-tag {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#4ECDC4]/10 text-[#4ECDC4] border border-[#4ECDC4]/20;
+  }
+
+  .instructor-badge {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]/20;
+  }
+
+  /* Filter Animations */
+  .filter-slide-in {
+    animation: slide-in-right 0.3s ease-out;
+  }
+
+  .filter-slide-out {
+    animation: slide-out-right 0.3s ease-in;
+  }
+
+  /* Search Results */
+  .search-result-highlight {
+    @apply bg-[#4ECDC4]/20 px-1 rounded;
+  }
+
+  .no-results {
+    @apply text-center py-16 text-[#2C3E50]/60;
+  }
+
+  /* Responsive Grid Utilities */
+  .responsive-grid-1 {
+    @apply grid grid-cols-1;
+  }
+
+  .responsive-grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2;
+  }
+
+  .responsive-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .responsive-grid-4 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
 }
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -113,6 +258,84 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes hero-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(78, 205, 196, 0.4);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
   }
 }
 

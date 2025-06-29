@@ -1,7 +1,17 @@
+import { z } from 'zod';
+
 const requiredEnvVars = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'GOOGLE_API_KEY',
 ] as const;
+
+export const serverSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.string(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string(),
+  GOOGLE_API_KEY: z.string(),
+  OPENAI_API_KEY: z.string().optional(),
+});
 
 // Add Supabase environment validation
 export function validateEnv() {
@@ -9,10 +19,5 @@ export function validateEnv() {
   if (process.env.NODE_ENV === 'test') {
     return;
   }
-
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      throw new Error(`${envVar} is not defined`);
-    }
-  }
+  serverSchema.parse(process.env);
 }

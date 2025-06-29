@@ -1,6 +1,6 @@
 // This is a simple script to make certain files executable
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Add any files that need to be made executable here
 const files = [

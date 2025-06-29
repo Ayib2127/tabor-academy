@@ -1,27 +1,37 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useInView } from "react-intersection-observer"
+import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Search,
   Star,
   Play,
   LayoutGrid,
-  List
+  List,
+  Filter,
+  X,
+  Users,
+  Shield,
+  Clock,
+  TrendingUp,
+  Loader2,
+  ChevronDown,
+  SlidersHorizontal
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useDebounce } from "@/lib/supabase/hooks" // Assuming you have a debounce hook
+import { useDebounce } from "@/lib/supabase/hooks"
 
-// Define the structure of a Course object based on our API response
-// Note: The 'users' property is an object now, not just a string.
+// Enhanced Course interface with social proof
 interface Course {
   id: string;
   title: string;
@@ -29,132 +39,176 @@ interface Course {
   thumbnail_url: string;
   price: number;
   level: string;
-  users: {
-    full_name: string;
-    avatar_url: string;
-  } | null;
-  rating?: number;
-  reviews?: number;
-  lessons?: number;
-  duration?: string;
-}
-
-
-interface Category {
-  id: string;
-  name: string;
+  category: string;
+  content_type: string;
+  delivery_type: string;
+  tags: string[];
+  instructor_name: string;
+  instructor_avatar?: string;
+  enrollment_count: number;
+  rating: number;
+  review_count: number;
+  is_tabor_original: boolean;
+  created_at: string;
 }
 
 interface CourseFilters {
   levels: string[];
   categories: string[];
+  skills: string[];
+  contentTypes: string[];
+  deliveryTypes: string[];
+  priceRange: string;
 }
 
+// Predefined filter options
+const FILTER_OPTIONS = {
+  levels: ["beginner", "intermediate", "advanced"],
+  categories: [
+    "Business & Entrepreneurship",
+    "Digital Marketing", 
+    "Technology & Development",
+    "Financial Literacy",
+    "Creative Skills",
+    "Personal Development"
+  ],
+  skills: [
+    "Business Validation",
+    "Market Research", 
+    "Financial Modeling",
+    "Digital Marketing",
+    "Social Media Marketing",
+    "Content Creation",
+    "No-Code Development",
+    "Product Development",
+    "Project Management",
+    "Leadership",
+    "Communication",
+    "Data Analysis"
+  ],
+  contentTypes: ["tabor_original", "community"],
+  deliveryTypes: ["self_paced", "cohort_based"],
+  priceRanges: [
+    { value: "all", label: "All Courses" },
+    { value: "free", label: "Free Only" },
+    { value: "paid", label: "Paid Only" }
+  ]
+};
+
 export default function CoursesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [courses, setCourses] = useState<Course[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy] = useState("created_at");
-  const [previewCourse, setPreviewCourse] = useState<Course | null>(null)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const { inView } = useInView()
+  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || "created_at");
+  const [sortOrder, setSortOrder] = useState(searchParams.get('sortOrder') || "desc");
+  const [previewCourse, setPreviewCourse] = useState<Course | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 12,
+    pages: 0
+  });
+
   const [filters, setFilters] = useState<CourseFilters>({
-    levels: [],
-    categories: [],
-  })
-  const debouncedSearchQuery = useDebounce(searchQuery, 300); // Debounce search input
+    levels: searchParams.getAll('level'),
+    categories: searchParams.getAll('category'),
+    skills: searchParams.getAll('skill'),
+    contentTypes: searchParams.getAll('content_type'),
+    deliveryTypes: searchParams.getAll('delivery_type'),
+    priceRange: searchParams.get('price_range') || 'all',
+  });
 
-  const LEVELS = ["beginner", "intermediate", "advanced"];
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  
-  // Fetch courses from the API when the component mounts
+  // Fetch courses when filters change
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams();
-
-        // Add filters to query params
-        filters.levels.forEach(level => params.append('level', level));
-        filters.categories.forEach(cat => params.append('category', cat));
-        
-        // Add sorting to query params
-        const [sortField, sortOrder] = sortBy.split('-');
-        params.append('sortBy', sortField);
-        if(sortOrder) {
-          params.append('sortOrder', sortOrder);
-        }
-        
-        // Add search query
-        if (debouncedSearchQuery) {
-          params.append('search', debouncedSearchQuery);
-        }
-        
-        const response = await fetch(`/api/courses?${params.toString()}`);
-        if (!response.ok) {
-          // Check for NEXT_NOT_FOUND or other errors
-          if (response.status === 404) {
-             throw new Error('API route not found. Please check the file path and restart the server.');
-          }
-          throw new Error(`Failed to fetch courses: ${response.statusText}`);
-        }
-        const data = await response.json();
-        setCourses(data.courses);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message);
-        setCourses([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCourses();
-  }, [filters, sortBy, debouncedSearchQuery]);
+  }, [filters, sortBy, sortOrder, debouncedSearchQuery, pagination.page]);
 
-  // Fetch categories on mount
+  // Update URL when filters change
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const res = await fetch('/api/categories');
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch categories', err);
-      }
-    };
-    loadCategories();
-  }, []);
+    updateURL();
+  }, [filters, sortBy, sortOrder, debouncedSearchQuery]);
 
-  useEffect(() => {
-    if (inView && hasMore) {
-      // Simulate loading more courses
-      setPage(prev => prev + 1)
-      if (page >= 3) setHasMore(false) // For demo purposes
-    }
-  }, [inView, hasMore, page])
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
 
-  const handleFilterChange = (type: keyof CourseFilters, value: string) => {
-    setFilters(prev => {
-      const currentValues = prev[type] as string[];
-      const newValues = currentValues.includes(value)
-        ? currentValues.filter(item => item !== value)
-        : [...currentValues, value];
+      // Add all filters to query params
+      filters.levels.forEach(level => params.append('level', level));
+      filters.categories.forEach(cat => params.append('category', cat));
+      filters.skills.forEach(skill => params.append('skill', skill));
+      filters.contentTypes.forEach(type => params.append('content_type', type));
+      filters.deliveryTypes.forEach(type => params.append('delivery_type', type));
       
-      return { ...prev, [type]: newValues };
-    });
-  }
+      if (filters.priceRange !== 'all') {
+        params.append('price_range', filters.priceRange);
+      }
+      
+      if (debouncedSearchQuery) {
+        params.append('search', debouncedSearchQuery);
+      }
+      
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', sortOrder);
+      params.append('page', pagination.page.toString());
+      params.append('limit', pagination.limit.toString());
+      
+      const response = await fetch(`/api/courses?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch courses: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setCourses(data.courses);
+      setPagination(data.pagination);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleClearFilters = () => {
-    setFilters({ levels: [], categories: [] });
-    setSearchQuery("");
-  }
+  const updateURL = () => {
+    const params = new URLSearchParams();
+    
+    filters.levels.forEach(level => params.append('level', level));
+    filters.categories.forEach(cat => params.append('category', cat));
+    filters.skills.forEach(skill => params.append('skill', skill));
+    filters.contentTypes.forEach(type => params.append('content_type', type));
+    filters.deliveryTypes.forEach(type => params.append('delivery_type', type));
+    
+    if (filters.priceRange !== 'all') {
+      params.append('price_range', filters.priceRange);
+    }
+    
+    if (debouncedSearchQuery) {
+      params.append('search', debouncedSearchQuery);
+    }
+    
+    if (sortBy !== 'created_at') {
+      params.append('sortBy', sortBy);
+    }
+    if (sortOrder !== 'desc') {
+      params.append('sortOrder', sortOrder);
+    }
+    if (pagination.page !== 1) {
+      params.append('page', pagination.page.toString());
+    }
+    if (pagination.limit !== 12) {
+      params.append('limit', pagination.limit.toString());
+    }
+    router.replace(`/courses?${params.toString()}`);
+  };
 
   // Client-side filtering and sorting for now
   const getFilteredAndSortedCourses = () => {
@@ -188,13 +242,13 @@ export default function CoursesPage() {
           <h3 className="font-semibold text-lg mb-2 line-clamp-2">{course.title}</h3>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Image
-              src={course.users?.avatar_url || '/logo.jpg'}
-              alt={course.users?.full_name || 'Instructor'}
+              src={course.instructor_avatar || '/logo.jpg'}
+              alt={course.instructor_name}
               width={24}
               height={24}
               className="rounded-full"
             />
-            <span>{course.users?.full_name || 'Tabor Academy'}</span>
+            <span>{course.instructor_name}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold gradient-text">
@@ -226,21 +280,21 @@ export default function CoursesPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Image
-                src={course.users?.avatar_url || '/logo.jpg'}
-                alt={course.users?.full_name || 'Instructor'}
+                src={course.instructor_avatar || '/logo.jpg'}
+                alt={course.instructor_name}
                 width={40}
                 height={40}
                 className="rounded-full"
               />
               <div>
-                <p className="font-medium">{course.users?.full_name || 'Instructor'}</p>
+                <p className="font-medium">{course.instructor_name}</p>
                 <p className="text-sm text-muted-foreground">Instructor</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-yellow-400 fill-current" />
               <span>{course.rating}</span>
-              <span className="text-muted-foreground">({course.reviews} reviews)</span>
+              <span className="text-muted-foreground">({course.review_count} reviews)</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -250,7 +304,7 @@ export default function CoursesPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Lessons</p>
-              <p className="font-medium">{course.lessons}</p>
+              <p className="font-medium">{course.lesson_count}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Level</p>
@@ -321,11 +375,11 @@ export default function CoursesPage() {
               <div>
                 <h3 className="font-medium mb-2">Level</h3>
                 <div className="space-y-2">
-                  {LEVELS.map(level => (
+                  {FILTER_OPTIONS.levels.map(level => (
                     <Label key={level} className="flex items-center gap-2 cursor-pointer">
                       <Checkbox
                         checked={filters.levels.includes(level)}
-                        onCheckedChange={() => handleFilterChange('levels', level)}
+                        onCheckedChange={() => setFilters(prev => ({ ...prev, levels: prev.levels.includes(level) ? prev.levels.filter(item => item !== level) : [...prev.levels, level] }))}
                       />
                       <span className="capitalize">{level}</span>
                     </Label>
@@ -337,22 +391,83 @@ export default function CoursesPage() {
               <div>
                 <h3 className="font-medium mb-2">Category</h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                  {categories.map(cat => (
-                    <Label key={cat.id} className="flex items-center gap-2 cursor-pointer">
+                  {FILTER_OPTIONS.categories.map(cat => (
+                    <Label key={cat} className="flex items-center gap-2 cursor-pointer">
                       <Checkbox
-                        checked={filters.categories.includes(cat.id)}
-                        onCheckedChange={() => handleFilterChange('categories', cat.id)}
+                        checked={filters.categories.includes(cat)}
+                        onCheckedChange={() => setFilters(prev => ({ ...prev, categories: prev.categories.includes(cat) ? prev.categories.filter(item => item !== cat) : [...prev.categories, cat] }))}
                       />
-                      <span>{cat.name}</span>
+                      <span>{cat}</span>
                     </Label>
                   ))}
-                  {categories.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Loading...</p>
-                  )}
                 </div>
               </div>
 
-              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+              {/* Skill Filters */}
+              <div>
+                <h3 className="font-medium mb-2">Skill</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  {FILTER_OPTIONS.skills.map(skill => (
+                    <Label key={skill} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={filters.skills.includes(skill)}
+                        onCheckedChange={() => setFilters(prev => ({ ...prev, skills: prev.skills.includes(skill) ? prev.skills.filter(item => item !== skill) : [...prev.skills, skill] }))}
+                      />
+                      <span>{skill}</span>
+                    </Label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content Type Filters */}
+              <div>
+                <h3 className="font-medium mb-2">Content Type</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  {FILTER_OPTIONS.contentTypes.map(type => (
+                    <Label key={type} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={filters.contentTypes.includes(type)}
+                        onCheckedChange={() => setFilters(prev => ({ ...prev, contentTypes: prev.contentTypes.includes(type) ? prev.contentTypes.filter(item => item !== type) : [...prev.contentTypes, type] }))}
+                      />
+                      <span>{type}</span>
+                    </Label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Delivery Type Filters */}
+              <div>
+                <h3 className="font-medium mb-2">Delivery Type</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  {FILTER_OPTIONS.deliveryTypes.map(type => (
+                    <Label key={type} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={filters.deliveryTypes.includes(type)}
+                        onCheckedChange={() => setFilters(prev => ({ ...prev, deliveryTypes: prev.deliveryTypes.includes(type) ? prev.deliveryTypes.filter(item => item !== type) : [...prev.deliveryTypes, type] }))}
+                      />
+                      <span>{type}</span>
+                    </Label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range Filters */}
+              <div>
+                <h3 className="font-medium mb-2">Price Range</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  {FILTER_OPTIONS.priceRanges.map(range => (
+                    <Label key={range.value} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={filters.priceRange === range.value}
+                        onCheckedChange={() => setFilters(prev => ({ ...prev, priceRange: range.value }))}
+                      />
+                      <span>{range.label}</span>
+                    </Label>
+                  ))}
+                </div>
+              </div>
+
+              <Button variant="outline" size="sm" onClick={() => setFilters({ levels: [], categories: [], skills: [], contentTypes: [], deliveryTypes: [], priceRange: 'all' })}>
                 Clear Filters
               </Button>
             </div>

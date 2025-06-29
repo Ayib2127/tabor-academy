@@ -20,4 +20,4 @@ const createClient = jest.fn().mockImplementation(() => ({
     }),
   }));
   
-  export { createClient };
+  module.exports = { createClient };

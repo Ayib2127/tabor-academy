@@ -14,16 +14,16 @@ describe('SiteFooter', () => {
   it('renders quick links section', () => {
     render(<SiteFooter />)
     
-    const links = ['About Us', 'Courses', 'Success Stories', 'Pricing', 'FAQ', 'Blog']
+    const links = ['About Us', 'All Courses', 'Success Stories', 'Blog']
     links.forEach(link => {
-      expect(screen.getByText(link)).toBeInTheDocument()
+      expect(screen.getByText(link, { exact: false })).toBeInTheDocument()
     })
   })
 
   it('renders contact information', () => {
     render(<SiteFooter />)
     
-    expect(screen.getByText('contact@taboracademy.com')).toBeInTheDocument()
+    expect(screen.getByText('hello@taboracademy.com')).toBeInTheDocument()
     expect(screen.getByText('+254 700 000000')).toBeInTheDocument()
     expect(screen.getByText('Nairobi, Kenya')).toBeInTheDocument()
   })

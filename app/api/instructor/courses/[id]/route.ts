@@ -3,6 +3,92 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { courseCreationSchema } from '@/lib/validations/course';
 
+// --- Enhanced GET endpoint for fetching course details ---
+export async function GET(
+  req: Request,
+  context: Promise<{ params: { id: string } }>
+) {
+  const { params } = await context;
+  const courseId = params.id;
+
+  try {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Check authentication
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const instructorId = session.user.id;
+
+    // Verify course ownership
+    const { data: course, error: courseError } = await supabase
+      .from('courses')
+      .select(`
+        id,
+        title,
+        description,
+        status,
+        is_published,
+        created_at,
+        updated_at,
+        thumbnail_url,
+        price,
+        rejection_reason,
+        reviewed_at,
+        reviewed_by,
+        instructor_id
+      `)
+      .eq('id', courseId)
+      .eq('instructor_id', instructorId)
+      .single();
+
+    if (courseError || !course) {
+      return NextResponse.json({ error: 'Course not found or access denied' }, { status: 404 });
+    }
+
+    // Get enrollment count
+    const { count: students_count } = await supabase
+      .from('enrollments')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId);
+
+    // Get average rating
+    const { data: averageRating } = await supabase.rpc(
+      'get_course_average_rating',
+      { p_course_id: courseId }
+    );
+
+    // Get completion rate
+    const { data: completion_rate } = await supabase.rpc(
+      'get_course_average_completion_rate',
+      { p_course_id: courseId }
+    );
+
+    const courseDetails = {
+      ...course,
+      students_count: students_count || 0,
+      rating: averageRating || 0,
+      completion_rate: completion_rate || 0,
+    };
+
+    return NextResponse.json(courseDetails);
+
+  } catch (error: any) {
+    console.error('Course details API error:', error);
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error.message,
+    }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }

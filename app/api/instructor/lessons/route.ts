@@ -13,8 +13,7 @@ const bodySchema = z.object({
 export async function PATCH(req: Request, context: Promise<{ params: { id: string } }>) {
   const { params } = await context;
   const lessonId = params.id;
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ cookies });
 
   const {
     data: { session },

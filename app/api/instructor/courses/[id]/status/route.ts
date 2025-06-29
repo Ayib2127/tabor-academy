@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 export async function GET(req: Request, context: Promise<{ params: { id: string } }>) {
   const { params } = await context;
   const courseId = params.id;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   const {

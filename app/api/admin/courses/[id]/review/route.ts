@@ -11,7 +11,7 @@ const reviewSchema = z.object({
 export async function POST(req: Request, context: Promise<{ params: { id: string } }>) {
   const { params } = await context;
   const courseId = params.id;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   const {

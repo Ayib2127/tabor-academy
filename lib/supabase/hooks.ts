@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from './client';
+import type { Database } from './types';
 
 // Add the useDebounce hook
 export function useDebounce<T>(value: T, delay: number): T {
@@ -54,7 +55,7 @@ export function useSupabaseAuth() {
 
 export function useProfile() {
   const { user } = useSupabaseAuth();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Database['public']['Tables']['users']['Row'] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

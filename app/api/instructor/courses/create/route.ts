@@ -30,8 +30,7 @@ const courseCreationSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ cookies });
 
   const {
     data: { session },

@@ -2,24 +2,80 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PostgrestError } from '@supabase/supabase-js';
 
 export type ApiError = {
+  code: string;
   message: string;
-  status: number;
-  code?: string;
+  details?: any;
 };
 
+export class EnrollmentRequiredError extends Error {
+  code = 'ENROLLMENT_REQUIRED';
+  details?: any;
+  constructor(message: string = 'You must enroll in this course to access its content.', details?: any) {
+    super(message);
+    this.details = details;
+  }
+}
+
+export class ValidationError extends Error {
+  code = 'VALIDATION_ERROR';
+  details?: any;
+  constructor(message: string, details?: any) {
+    super(message);
+    this.details = details;
+  }
+}
+
+export class AuthError extends Error {
+  code = 'AUTH_REQUIRED';
+  constructor(message: string = 'Please log in to continue.') {
+    super(message);
+  }
+}
+
+export class ForbiddenError extends Error {
+  code = 'FORBIDDEN';
+  constructor(message: string = 'You do not have permission to access this resource.') {
+    super(message);
+  }
+}
+
+export class NotFoundError extends Error {
+  code = 'NOT_FOUND';
+  constructor(message: string = 'The requested resource was not found.') {
+    super(message);
+  }
+}
+
 export function handleApiError(error: unknown): ApiError {
+  if (
+    error instanceof EnrollmentRequiredError ||
+    error instanceof ValidationError ||
+    error instanceof AuthError ||
+    error instanceof ForbiddenError ||
+    error instanceof NotFoundError
+  ) {
+    return {
+      code: error.code,
+      message: error.message,
+      details: (error as any).details,
+    };
+  }
+
   if (error instanceof Error) {
-    // Custom status mapping for common error messages used in unit tests
+    // Map common error messages to codes
     if (/not authenticated|user not found/i.test(error.message)) {
-      return { message: error.message, status: 401 };
+      return { code: 'AUTH_REQUIRED', message: 'Please log in to continue.' };
     }
     if (/course not found/i.test(error.message)) {
-      return { message: error.message, status: 404 };
+      return { code: 'NOT_FOUND', message: 'The requested course was not found.' };
     }
-
+    if (/enrollment required|not enrolled/i.test(error.message)) {
+      return { code: 'ENROLLMENT_REQUIRED', message: 'You must enroll in this course to access its content.' };
+    }
+    // ...add more mappings as needed
     return {
-      message: error.message,
-      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'Something went wrong. Please try again or contact support.',
     };
   }
 
@@ -27,24 +83,23 @@ export function handleApiError(error: unknown): ApiError {
     const pgError = error as PostgrestError;
     if ('code' in pgError && 'message' in pgError) {
       return {
-        message: pgError.message,
-        status: 500,
-        code: pgError.code,
+        code: pgError.code || 'DB_ERROR',
+        message: 'A database error occurred. Please try again.',
       };
     }
   }
 
   return {
-    message: 'An unexpected error occurred',
-    status: 500,
+    code: 'INTERNAL_ERROR',
+    message: 'An unexpected error occurred. Please try again.',
   };
 }
 
 export function createErrorResponse(error: unknown) {
   const apiError = handleApiError(error);
   return NextResponse.json(
-    { error: apiError.message, code: apiError.code },
-    { status: apiError.status }
+    { error: apiError.message, code: apiError.code, details: apiError.details },
+    { status: 200 }
   );
 }
 

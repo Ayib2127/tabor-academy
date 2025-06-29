@@ -7,4 +7,4 @@ const RealtimeClient = jest.fn().mockImplementation(() => ({
     }),
   }));
   
-  export default RealtimeClient;
+  module.exports = RealtimeClient;

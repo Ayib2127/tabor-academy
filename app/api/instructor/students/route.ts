@@ -10,7 +10,8 @@ export async function GET(request: Request) {
   const courseIdFilter = searchParams.get('courseId'); // Get courseId from query parameter
   console.log('Course ID Filter:', courseIdFilter);
 
-  console.log('Incoming cookies (Students):', cookies().getAll());
+  const cookieStore = await cookies();
+  console.log('Incoming cookies (Students):', cookieStore.getAll());
   const supabase = createRouteHandlerClient({ cookies });
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
         user_id,
         enrolled_at,
         courses (id, title),
-        users (id, full_name, email, avatar_url) // Added avatar_url here
+        users (id, full_name, email, avatar_url, funnel_stage)
       `)
       .in('course_id', targetCourseIds);
 
@@ -100,20 +101,24 @@ export async function GET(request: Request) {
     enrollments.forEach(enrollment => {
       const studentId = enrollment.user_id;
       // Corrected access for user details
-      const studentFullName = enrollment.users?.full_name || 'N/A';
-      const studentEmail = enrollment.users?.email || 'N/A';
-      const studentAvatarUrl = enrollment.users?.avatar_url || '/default-avatar.png'; // Added avatar_url
+      const userObj = Array.isArray(enrollment.users) ? enrollment.users[0] : enrollment.users;
+      const studentFullName = userObj?.full_name || 'N/A';
+      const studentEmail = userObj?.email || 'N/A';
+      const studentAvatarUrl = userObj?.avatar_url || '/default-avatar.png';
+      const studentFunnelStage = userObj?.funnel_stage || null;
 
       // Corrected access for course details
-      const courseId = enrollment.courses?.id;
-      const courseTitle = enrollment.courses?.title || 'N/A';
+      const courseObj = Array.isArray(enrollment.courses) ? enrollment.courses[0] : enrollment.courses;
+      const courseId = courseObj?.id;
+      const courseTitle = courseObj?.title || 'N/A';
 
       if (!studentsMap.has(studentId)) {
         studentsMap.set(studentId, {
           id: studentId,
           full_name: studentFullName,
           email: studentEmail,
-          avatar_url: studentAvatarUrl, // Added avatar_url
+          avatar_url: studentAvatarUrl,
+          funnel_stage: studentFunnelStage,
           courses_enrolled: []
         });
       }

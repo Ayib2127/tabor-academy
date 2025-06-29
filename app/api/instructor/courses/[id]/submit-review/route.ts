@@ -93,8 +93,18 @@ export async function POST(req: Request, context: Promise<{ params: { id: string
       return NextResponse.json({ error: 'Failed to submit course for review' }, { status: 500 });
     }
 
-    // TODO: Send notification to admins about new course pending review
-    // This could be implemented with email notifications or in-app notifications
+    // Log the activity
+    try {
+      await supabase.rpc('log_activity', {
+        p_type: 'course_submission',
+        p_user_id: session.user.id,
+        p_course_id: courseId,
+        p_action_description: `submitted course "${course.title}" for review`
+      });
+    } catch (logError) {
+      console.error('Error logging activity:', logError);
+      // Don't fail the operation if logging fails
+    }
 
     return NextResponse.json({
       success: true,

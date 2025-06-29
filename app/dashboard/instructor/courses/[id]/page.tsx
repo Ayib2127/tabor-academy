@@ -1,16 +1,45 @@
-"use client"
+'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { SiteHeader } from "@/components/site-header";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import Link from 'next/link';
+import { SiteHeader } from '@/components/site-header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Play, Lock, CheckCircle, FileText } from 'lucide-react';
-import { AlertCircle } from 'lucide-react';
+import {
+  BookOpen,
+  Users,
+  BarChart,
+  Settings,
+  ChevronRight,
+  AlertCircle,
+  Megaphone,
+  CheckCircle,
+  Lock,
+  FileText,
+} from 'lucide-react';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { CourseStatusIndicator } from '@/components/instructor/course-status-indicator';
+import { CourseAnnouncements } from '@/components/instructor/course-announcements';
+
+interface CourseDetails {
+  id: string;
+  title: string;
+  description: string;
+  status: 'draft' | 'pending_review' | 'published' | 'rejected';
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  thumbnail_url?: string;
+  price?: number;
+  rejection_reason?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  students_count: number;
+  completion_rate: number;
+  rating: number;
+}
 
 interface Lesson {
     id: number;
@@ -24,149 +53,397 @@ interface Module {
     lessons: Lesson[];
 }
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail_url: string;
-  price: number;
-  category: string;
-  level: string;
-  is_published: boolean;
-  modules: Module[]; // Add modules to the Course interface
-}
-
-interface CoursePreviewPageProps {
-  params: { id: string };
-}
-
-export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
-  const { id: courseId } = params;
-  const [course, setCourse] = useState<Course | null>(null);
+export default function CoursePage() {
+  const params = useParams();
+  const courseId = params.id as string;
+  const [course, setCourse] = useState<CourseDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isSubmitting, setIsSubmitting] = useState(false);
     const [modules, setModules] = useState<Module[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const supabase = createClientComponentClient();
 
   useEffect(() => {
-        if (!courseId) return;
+    fetchCourseDetails();
+    fetchCurriculum();
+  }, [courseId]);
 
-    const fetchCourseContent = async () => {
+  const fetchCourseDetails = async () => {
         try {
             setLoading(true);
-        // Fetch course details
-        const { data: courseData, error: courseError } = await supabase
-          .from('courses')
-          .select('*, modules:course_modules(*, lessons:module_lessons(*))') // Fetch modules and lessons
-          .eq('id', courseId)
-          .single();
-
-        if (courseError) {
-          throw new Error(courseError.message);
-        }
-
-        if (!courseData) {
-          throw new Error('Course not found.');
-        }
-
-        setCourse(courseData as Course);
-
-        // Organize lessons into modules
-        const organizedModules: Module[] = courseData.modules.map((mod: any) => ({
-          id: mod.id,
-          title: mod.title,
-          lessons: mod.lessons.map((lesson: any) => ({
-            id: lesson.id,
-            title: lesson.title,
-            is_published: lesson.is_published, // Ensure is_published is fetched
-          })),
-        }));
-        setModules(organizedModules);
-
+      const response = await fetch(`/api/instructor/courses/${courseId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch course details');
+      }
+      
+      const data = await response.json();
+      setCourse(data);
         } catch (err: any) {
-        console.error("Error fetching course content:", err);
-        setError(err.message || 'Failed to fetch course content.');
-        toast.error(err.message || 'Failed to load course content.');
+      console.error('Error fetching course details:', err);
+      setError(err.message);
+      toast.error('Failed to load course details');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCourseContent();
-  }, [courseId]);
+  const fetchCurriculum = async () => {
+    if (!courseId) return;
+    try {
+      const response = await fetch(`/api/courses/${courseId}/modules`);
+      if (!response.ok) throw new Error('Failed to fetch curriculum');
+      const data = await response.json();
+      setModules(data.modules || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load curriculum');
+    }
+  };
 
-  const totalLessons = modules.reduce((count, module) => count + module.lessons.length, 0);
+  const handleSubmitForReview = async () => {
+    if (!course) return;
+    
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/instructor/courses/${courseId}/submit-review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit course for review');
+      }
+
+      const result = await response.json();
+      toast.success(result.message);
+      
+      // Update local course state
+      setCourse(prev => prev ? { ...prev, status: 'pending_review' } : null);
+      
+    } catch (error: any) {
+      console.error('Error submitting course for review:', error);
+      toast.error(error.message || 'Failed to submit course for review');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
     if (loading) {
         return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-orange-500"></div>
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 py-8">
+          <div className="container px-4 md:px-6">
+            <div className="animate-pulse space-y-6">
+              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-64 bg-gray-200 rounded"></div>
+            </div>
                 </div>
-        );
-    }
-
-    if (error) {
-        return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
-        <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Course</h2>
-        <p className="text-gray-600 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </main>
       </div>
     );
   }
 
-  if (!course) {
+  if (error || !course) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
-        <AlertCircle className="h-16 w-16 text-yellow-500 mb-4" />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Course Not Found</h2>
-        <p className="text-gray-600 mb-4">The course you are looking for does not exist or you do not have access.</p>
-        <Link href="/dashboard/instructor/courses"><Button>Back to My Courses</Button></Link>
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1 py-8">
+          <div className="container px-4 md:px-6">
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#2C3E50] mb-2">Failed to Load Course</h3>
+              <p className="text-[#2C3E50]/60 mb-4">{error}</p>
+              <Button onClick={fetchCourseDetails} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </main>
       </div>
         );
     }
 
     return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col">
             <SiteHeader />
-      <div className="flex-1 container py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Course Details Column */}
-        <div className="md:col-span-2 space-y-8">
-          <Card className="p-6">
-            <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
-            <p className="text-gray-700 mb-6">{course.description}</p>
+      <main className="flex-1 py-8">
+        <div className="container px-4 md:px-6">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <Link href="/dashboard/instructor" className="hover:text-foreground">Instructor Dashboard</Link>
+            <ChevronRight className="h-4 w-4" />
+            <span>Course Management</span>
+          </div>
 
-            {course.thumbnail_url && (
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">{course.title}</h1>
+            <p className="text-[#2C3E50]/70 mb-4">{course.description}</p>
+            
+            {/* Course Status */}
               <div className="mb-6">
-                <img src={course.thumbnail_url} alt="Course Thumbnail" className="w-full h-64 object-cover rounded-lg" />
+              <CourseStatusIndicator 
+                course={course} 
+                onSubmitForReview={handleSubmitForReview}
+                isSubmitting={isSubmitting}
+              />
               </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Category:</p>
-                <p className="font-medium text-gray-800">{course.category}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Level:</p>
-                <p className="font-medium text-gray-800">{course.level}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Price:</p>
-                <p className="font-medium text-gray-800">{course.price === 0 ? 'Free' : `$${course.price}`}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Status:</p>
-                <p className={`font-medium ${course.is_published ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {course.is_published ? 'Published' : 'Draft'}
-                </p>
-              </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <Link href={`/dashboard/instructor/courses/${courseId}/content`}>
+                <Button className="bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Edit Content
+                </Button>
+              </Link>
+              
+              <Link href={`/dashboard/instructor/courses/${courseId}/students`}>
+                <Button variant="outline" className="border-[#E5E8E8] hover:border-[#4ECDC4]">
+                  <Users className="w-4 h-4 mr-2" />
+                  View Students
+                </Button>
+              </Link>
+              
+              <Link href={`/dashboard/instructor/courses/${courseId}/analytics`}>
+                <Button variant="outline" className="border-[#E5E8E8] hover:border-[#4ECDC4]">
+                  <BarChart className="w-4 h-4 mr-2" />
+                  Analytics
+                </Button>
+              </Link>
+              
+              {course.status === 'published' && (
+                <CourseAnnouncements courseId={courseId} studentCount={course.students_count} />
+              )}
             </div>
-          </Card>
+          </div>
 
-          {/* Course Curriculum Preview */}
+          {/* Course Overview Tabs */}
+          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="students">Students</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview" className="space-y-6">
+              {/* Course Stats */}
+              <div className="grid md:grid-cols-3 gap-6">
+                <Card className="border-[#E5E8E8]">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-[#2C3E50] text-lg">Enrolled Students</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#4ECDC4]/10 p-3 rounded-full">
+                          <Users className="w-5 h-5 text-[#4ECDC4]" />
+              </div>
+              <div>
+                          <p className="text-2xl font-bold text-[#2C3E50]">{course.students_count}</p>
+                          <p className="text-sm text-[#2C3E50]/60">Total students</p>
+                        </div>
+                      </div>
+                      <Link href={`/dashboard/instructor/courses/${courseId}/students`}>
+                        <Button variant="ghost" size="sm" className="text-[#4ECDC4]">
+                          View All
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-[#E5E8E8]">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-[#2C3E50] text-lg">Completion Rate</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#FF6B35]/10 p-3 rounded-full">
+                          <BarChart className="w-5 h-5 text-[#FF6B35]" />
+              </div>
+              <div>
+                          <p className="text-2xl font-bold text-[#2C3E50]">{course.completion_rate}%</p>
+                          <p className="text-sm text-[#2C3E50]/60">Average completion</p>
+                        </div>
+                      </div>
+                      <Link href={`/dashboard/instructor/courses/${courseId}/analytics`}>
+                        <Button variant="ghost" size="sm" className="text-[#4ECDC4]">
+                          Details
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-[#E5E8E8]">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-[#2C3E50] text-lg">Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-3 rounded-full">
+                          <Megaphone className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                          <p className="text-2xl font-bold text-[#2C3E50]">
+                            ${((course.price || 0) * course.students_count).toFixed(2)}
+                          </p>
+                          <p className="text-sm text-[#2C3E50]/60">Total earnings</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Course Details */}
+              <Card className="border-[#E5E8E8]">
+                <CardHeader>
+                  <CardTitle className="text-[#2C3E50]">Course Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-semibold text-[#2C3E50] mb-2">Basic Information</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-[#2C3E50]/60">Price:</span>
+                          <span className="font-medium text-[#2C3E50]">
+                            ${course.price?.toFixed(2) || 'Free'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#2C3E50]/60">Created:</span>
+                          <span className="font-medium text-[#2C3E50]">
+                            {new Date(course.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#2C3E50]/60">Last Updated:</span>
+                          <span className="font-medium text-[#2C3E50]">
+                            {new Date(course.updated_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#2C3E50]/60">Status:</span>
+                          <span className="font-medium text-[#2C3E50] capitalize">
+                            {course.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#2C3E50]/60">Rating:</span>
+                          <span className="font-medium text-[#2C3E50]">
+                            {course.rating ? `${course.rating.toFixed(1)}/5` : 'No ratings yet'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-[#2C3E50] mb-2">Quick Links</h3>
+                      <div className="space-y-2">
+                        <Link href={`/dashboard/instructor/courses/${courseId}/content`} className="flex items-center justify-between p-2 bg-[#F7F9F9] rounded-lg hover:bg-[#4ECDC4]/10 transition-colors">
+                          <span className="text-[#2C3E50]">Edit Course Content</span>
+                          <ChevronRight className="w-4 h-4 text-[#4ECDC4]" />
+                        </Link>
+                        <Link href={`/dashboard/instructor/courses/${courseId}/students`} className="flex items-center justify-between p-2 bg-[#F7F9F9] rounded-lg hover:bg-[#4ECDC4]/10 transition-colors">
+                          <span className="text-[#2C3E50]">Manage Students</span>
+                          <ChevronRight className="w-4 h-4 text-[#4ECDC4]" />
+                        </Link>
+                        <Link href={`/dashboard/instructor/courses/${courseId}/analytics`} className="flex items-center justify-between p-2 bg-[#F7F9F9] rounded-lg hover:bg-[#4ECDC4]/10 transition-colors">
+                          <span className="text-[#2C3E50]">View Analytics</span>
+                          <ChevronRight className="w-4 h-4 text-[#4ECDC4]" />
+                        </Link>
+                        <Link href={`/dashboard/instructor/courses/${courseId}/settings`} className="flex items-center justify-between p-2 bg-[#F7F9F9] rounded-lg hover:bg-[#4ECDC4]/10 transition-colors">
+                          <span className="text-[#2C3E50]">Course Settings</span>
+                          <ChevronRight className="w-4 h-4 text-[#4ECDC4]" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="students">
+              <Card className="border-[#E5E8E8]">
+                <CardHeader>
+                  <CardTitle className="text-[#2C3E50]">Students</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-[#4ECDC4] mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-[#2C3E50] mb-2">Student Management</h3>
+                    <p className="text-[#2C3E50]/60 mb-4">
+                      View and manage students enrolled in this course.
+                    </p>
+                    <Link href={`/dashboard/instructor/courses/${courseId}/students`}>
+                      <Button className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">
+                        View All Students
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="analytics">
+              <Card className="border-[#E5E8E8]">
+                <CardHeader>
+                  <CardTitle className="text-[#2C3E50]">Analytics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <BarChart className="w-12 h-12 text-[#4ECDC4] mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-[#2C3E50] mb-2">Course Analytics</h3>
+                    <p className="text-[#2C3E50]/60 mb-4">
+                      View detailed analytics and insights for this course.
+                    </p>
+                    <Link href={`/dashboard/instructor/courses/${courseId}/analytics`}>
+                      <Button className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">
+                        View Analytics
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="settings">
+              <Card className="border-[#E5E8E8]">
+                <CardHeader>
+                  <CardTitle className="text-[#2C3E50]">Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Settings className="w-12 h-12 text-[#4ECDC4] mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-[#2C3E50] mb-2">Course Settings</h3>
+                    <p className="text-[#2C3E50]/60 mb-4">
+                      Manage course settings and configuration.
+                    </p>
+                    <Link href={`/dashboard/instructor/courses/${courseId}/settings`}>
+                      <Button className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">
+                        Manage Settings
+                      </Button>
+                    </Link>
+            </div>
+                </CardContent>
+          </Card>
+            </TabsContent>
+
+            <TabsContent value="curriculum">
           <Card className="p-6">
             <h2 className="text-2xl font-bold mb-4">Course Curriculum</h2>
             {modules.length === 0 ? (
@@ -184,7 +461,7 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
                             ${lesson.is_published ? 'cursor-pointer hover:bg-gray-100' : 'bg-gray-50 text-gray-400 opacity-80'}
                             ${selectedLesson?.id === lesson.id ? 'bg-brand-orange-100 text-brand-orange-700 font-medium' : ''}
                           `}
-                          onClick={() => lesson.is_published && setSelectedLesson(lesson)} // Make only published lessons clickable
+                              onClick={() => lesson.is_published && setSelectedLesson(lesson)}
                         >
                           {lesson.is_published ? (
                             <CheckCircle className="h-5 w-5 text-green-500" />
@@ -203,10 +480,8 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
               </nav>
             )}
           </Card>
-        </div>
 
-        {/* Lesson Content Column */}
-        <div className="md:col-span-1">
+              {/* Lesson Content Preview */}
           {selectedLesson ? (
             <Card className="sticky top-20 p-6 shadow-md">
               <h2 className="text-2xl font-bold mb-4">{selectedLesson.title}</h2>
@@ -220,8 +495,10 @@ export default function CoursePreviewPage({ params }: CoursePreviewPageProps) {
               <p>Select a published lesson from the curriculum to preview its content.</p>
             </Card>
           )}
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
+      </main>
     </div>
     );
 }

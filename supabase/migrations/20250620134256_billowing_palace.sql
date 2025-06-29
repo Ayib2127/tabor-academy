@@ -138,15 +138,6 @@ CREATE POLICY "Instructors can update their own courses"
   USING (instructor_id = auth.uid())
   WITH CHECK (
     instructor_id = auth.uid() AND
-    -- Prevent instructors from changing status directly (except draft to pending_review)
-    (
-      (OLD.status = 'draft' AND status IN ('draft', 'pending_review')) OR
-      (OLD.status = 'rejected' AND status IN ('draft', 'pending_review')) OR
-      (OLD.status = status) -- No status change
-    ) AND
-    -- Prevent instructors from changing content_type
-    content_type = OLD.content_type AND
-    -- Prevent instructors from setting review fields
     reviewed_by IS NULL AND
     reviewed_at IS NULL AND
     rejection_reason IS NULL
@@ -220,6 +211,22 @@ CREATE TRIGGER trigger_set_course_content_type
 CREATE OR REPLACE FUNCTION handle_course_status_change()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Prevent instructors from changing content_type
+  IF TG_OP = 'UPDATE' AND NEW.instructor_id = auth.uid() AND NEW.content_type <> OLD.content_type THEN
+    RAISE EXCEPTION 'Instructors cannot change content_type';
+  END IF;
+
+  -- Prevent instructors from changing status except allowed transitions
+  IF TG_OP = 'UPDATE' AND NEW.instructor_id = auth.uid() THEN
+    IF NOT (
+      (OLD.status = 'draft' AND NEW.status IN ('draft', 'pending_review')) OR
+      (OLD.status = 'rejected' AND NEW.status IN ('draft', 'pending_review')) OR
+      (OLD.status = NEW.status)
+    ) THEN
+      RAISE EXCEPTION 'Invalid status transition for instructor';
+    END IF;
+  END IF;
+
   -- If status is being changed to published or rejected, set review fields
   IF NEW.status IN ('published', 'rejected') AND OLD.status != NEW.status THEN
     NEW.reviewed_by = auth.uid();

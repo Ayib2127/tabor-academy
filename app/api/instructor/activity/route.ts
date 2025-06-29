@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/activity ---');
   console.log('Request URL:', request.url);
 
-  console.log('Incoming cookies (activity API):', cookies().getAll());
+  console.log('Incoming cookies (activity API):', (await cookies()).getAll());
   const supabase = createRouteHandlerClient({ cookies });
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();

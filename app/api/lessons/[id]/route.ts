@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+import { AuthError, ForbiddenError, createErrorResponse } from '@/lib/utils/error-handling';
+import { withAuth } from '@/lib/middleware/security';
 
 // Helper function to verify instructor ownership of a lesson
 async function verifyLessonOwnership(supabase: any, lessonId: string, userId: string): Promise<boolean> {
@@ -18,28 +20,16 @@ async function verifyLessonOwnership(supabase: any, lessonId: string, userId: st
 }
 
 // --- PUT: Update a specific lesson ---
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const supabase = createClient();
-  const { id: lessonId } = params;
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  return withAuth(request, async (req, user, supabase) => {
+    const { id: lessonId } = params;
     // Security Check: Verify the user owns the lesson before allowing an update
-    const isOwner = await verifyLessonOwnership(supabase, lessonId, session.user.id);
+    const isOwner = await verifyLessonOwnership(supabase, lessonId, user.id);
     if (!isOwner) {
-        return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 });
+      return NextResponse.json({ error: 'You do not have permission to edit this lesson.' }, { status: 403 });
     }
-
     // Get the updated lesson data from the request body
     const { title, content, video_url, duration, is_published } = await request.json();
-
     // Update the lesson in the database
     const { data: updatedLesson, error: updateError } = await supabase
       .from('lessons')
@@ -54,53 +44,30 @@ export async function PUT(
       .eq('id', lessonId)
       .select()
       .single();
-
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
-
     return NextResponse.json(updatedLesson);
-
-  } catch (error) {
-    console.error('An unexpected error occurred:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
-  }
+  });
 }
 
 // --- DELETE: Delete a specific lesson ---
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-    const supabase = createClient();
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  return withAuth(request, async (req, user, supabase) => {
     const { id: lessonId } = params;
-
-    try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Security Check: Verify the user owns the lesson before allowing deletion
-        const isOwner = await verifyLessonOwnership(supabase, lessonId, session.user.id);
-        if (!isOwner) {
-            return NextResponse.json({ error: 'Forbidden: You do not have permission to delete this lesson' }, { status: 403 });
-        }
-
-        // Delete the lesson
-        const { error: deleteError } = await supabase
-            .from('lessons')
-            .delete()
-            .eq('id', lessonId);
-
-        if (deleteError) {
-            return NextResponse.json({ error: deleteError.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ message: 'Lesson deleted successfully' }, { status: 200 });
-
-    } catch (error) {
-        console.error('An unexpected error occurred:', error);
-        return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    // Security Check: Verify the user owns the lesson before allowing deletion
+    const isOwner = await verifyLessonOwnership(supabase, lessonId, user.id);
+    if (!isOwner) {
+      return NextResponse.json({ error: 'You do not have permission to delete this lesson.' }, { status: 403 });
     }
+    // Delete the lesson
+    const { error: deleteError } = await supabase
+      .from('lessons')
+      .delete()
+      .eq('id', lessonId);
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+    return NextResponse.json({ message: 'Lesson deleted successfully' });
+  });
 } 

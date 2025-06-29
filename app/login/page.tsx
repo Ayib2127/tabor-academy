@@ -88,7 +88,7 @@ export default function LoginPage() {
       if (userData?.role === 'instructor') {
         router.push('/dashboard/instructor')
       } else if (userData?.role === 'student') {
-        router.push('/dashboard/student')
+        router.push('/dashboard')
       } else {
         router.push('/dashboard')
       }

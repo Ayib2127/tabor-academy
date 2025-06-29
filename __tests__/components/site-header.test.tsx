@@ -52,7 +52,7 @@ describe('SiteHeader', () => {
     expect(screen.getByText('Courses')).toBeInTheDocument()
     expect(screen.getByText('Pricing')).toBeInTheDocument()
     expect(screen.getByText('Success Stories')).toBeInTheDocument()
-    expect(screen.getByText('FAQ')).toBeInTheDocument()
+    expect(screen.getByText('FAQs')).toBeInTheDocument()
   })
 
   it('toggles mobile menu when menu button is clicked', async () => {
@@ -83,7 +83,7 @@ describe('SiteHeader', () => {
     render(<SiteHeader />)
     
     expect(await screen.findByRole('link', { name: /login/i })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /sign up/i })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /start learning free/i })).toBeInTheDocument()
   })
 
   it('renders language selector dropdown', async () => {
