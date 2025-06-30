@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -10,9 +9,7 @@ export async function GET(request: Request) {
   const courseIdFilter = searchParams.get('courseId'); // Get courseId from query parameter
   console.log('Course ID Filter:', courseIdFilter);
 
-  const cookieStore = await cookies();
-  console.log('Incoming cookies (Students):', cookieStore.getAll());
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 

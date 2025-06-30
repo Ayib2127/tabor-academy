@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { Quiz } from '@/types/quiz';
 
@@ -8,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createApiSupabaseClient();
     
     // Get session
     const {
@@ -47,7 +46,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createApiSupabaseClient();
     
     // Get session
     const {

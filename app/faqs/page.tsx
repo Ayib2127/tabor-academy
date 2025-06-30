@@ -378,7 +378,7 @@ export default function FAQsPage() {
                 <div className="text-sm text-[#2C3E50]/70">AI Support</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#1B4D3E]">< 2h</div>
+                <div className="text-2xl font-bold text-[#1B4D3E]">{'< 2h'}</div>
                 <div className="text-sm text-[#2C3E50]/70">Response Time</div>
               </div>
               <div className="text-center">

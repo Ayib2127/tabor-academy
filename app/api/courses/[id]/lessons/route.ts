@@ -1,6 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 
 // GET function to list all lessons for a course
 export async function GET(
@@ -11,7 +9,7 @@ export async function GET(
     const incomingCookies = request.headers.get('cookie');
     console.log('API Route: Incoming Cookies Header:', incomingCookies); // Log the raw cookie header
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createApiSupabaseClient();
     const courseId = params.id;
 
     try {

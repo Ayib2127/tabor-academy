@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { cookies, type ReadonlyRequestCookies } from 'next/headers';
 import type { Database } from '@/lib/supabase/types';
 
 // Migration flag - set to true when ready to switch
@@ -23,7 +23,7 @@ export async function createSupabaseServerClient() {
   validateEnvironment();
   
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     
     if (USE_NEW_SSR) {
       // New SSR approach (recommended for Next.js 15+)
@@ -66,11 +66,11 @@ export async function createSupabaseServerClient() {
 }
 
 // New SSR client for API routes
-export async function createApiSupabaseClient() {
+export async function createApiSupabaseClient(passedCookies?: ReadonlyRequestCookies) {
   validateEnvironment();
   
   try {
-    const cookieStore = await cookies();
+    const cookieStore = passedCookies ? passedCookies : cookies();
     
     if (USE_NEW_SSR) {
       // New SSR approach for API routes

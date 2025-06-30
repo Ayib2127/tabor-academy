@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import * as Sentry from '@sentry/nextjs';
 import Stripe from 'stripe';
 
@@ -8,14 +7,14 @@ export const dynamic = 'force-dynamic';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-05-28.basil',
 });
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ): Promise<NextResponse<any>> {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   try {
     const courseId = params.id;

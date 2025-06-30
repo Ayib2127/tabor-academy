@@ -1,9 +1,8 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
 

@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -11,7 +10,7 @@ const bodySchema = z.object({
 export async function PATCH(req: Request, context: Promise<{ params: { id: string } }>) {
   const { params } = await context;
   const lessonId = params.id;
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   const {
     data: { session },

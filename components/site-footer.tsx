@@ -41,7 +41,7 @@ export function SiteFooter() {
                 <h3 className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
                   Tabor Digital Academy
                 </h3>
-                <p className="text-white/70 text-sm">Your Launchpad: From Idea to Income</p>
+                <p className="text-white/70 text-sm">The Skills to Build. The Tools to Launch. Your Business Starts Here!</p>
               </div>
             </div>
             

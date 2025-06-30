@@ -116,11 +116,11 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-10" />
                     
               <Image
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1471&q=80"
-                      alt="African entrepreneurs learning and collaborating"
+                src="https://ethiopiangobgnu.com/images/sample-business-opportunity.jpg"
+                alt="Entrepreneurs collaborating globally"
                 width={600}
                 height={400}
-                      className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"
+                className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"
                 priority
               />
                     
@@ -187,7 +187,7 @@ export default function Home() {
             </div>
             
             <h2 className="text-3xl md:text-5xl font-bold text-[#2C3E50] dark:text-white mb-6">
-              Traditional Education Isn't Built for 
+            Why Traditional Learning Fails Entrepreneurs?
               <span className="block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
                 African Entrepreneurs
               </span>
@@ -562,7 +562,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#4ECDC4]" />
-                <span>Join 10,000+ entrepreneurs</span>
+                <span>entrepreneurs</span>
               </div>
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#FF6B35]" />
@@ -601,7 +601,7 @@ export default function Home() {
             
             {/* Sub-headline */}
             <p className="text-xl md:text-2xl text-white/90 mb-12 leading-relaxed max-w-3xl mx-auto">
-              Join thousands of successful African entrepreneurs who have transformed their lives through our platform.
+              Join thousands of successful Ethiopian entrepreneurs who have transformed their lives through our platform.
               Your journey from idea to income starts with a single click.
             </p>
 

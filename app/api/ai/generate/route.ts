@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai, AI_MODEL, AI_PROMPTS, textToTiptapJSON, extractTextFromTiptap } from '@/lib/ai/openai';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 
 export async function POST(req: NextRequest) {
   try {
-    // Check authentication
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies });
-    
+    const supabase = await createApiSupabaseClient();
+
     const {
       data: { session },
     } = await supabase.auth.getSession();

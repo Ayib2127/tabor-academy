@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { cookies } from 'next/headers';
 
 interface DashboardStats {
@@ -56,8 +56,7 @@ interface DashboardData {
 export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/dashboard ---');
   
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = await createApiSupabaseClient(cookies());
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();

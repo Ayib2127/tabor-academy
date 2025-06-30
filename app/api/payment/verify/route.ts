@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import * as Sentry from '@sentry/nextjs';
 import Stripe from 'stripe';
 
@@ -12,7 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse<any>> {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   try {
     const { session_id } = await request.json();

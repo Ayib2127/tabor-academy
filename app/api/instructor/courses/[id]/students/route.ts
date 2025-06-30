@@ -1,13 +1,12 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   const courseId = params.id;
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   const {
     data: { session },

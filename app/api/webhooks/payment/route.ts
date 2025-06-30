@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import * as Sentry from '@sentry/nextjs';
 import Stripe from 'stripe';
 
@@ -123,7 +123,7 @@ async function createEnrollmentFromPayment({
   course_title: string;
   provider: string;
 }): Promise<NextResponse> {
-  const supabase = await createClient();
+  const supabase = createSupabaseServerClient();
 
   try {
     // Check if enrollment already exists (prevent duplicate processing)

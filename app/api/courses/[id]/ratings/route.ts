@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -16,8 +15,7 @@ export async function POST(
   const courseId = params.id;
 
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = await createApiSupabaseClient();
 
     // Check authentication
     const {
@@ -126,8 +124,7 @@ export async function GET(
   const courseId = params.id;
 
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = await createApiSupabaseClient();
 
     // Get all ratings for this course
     const { data: ratings, error: ratingsError } = await supabase

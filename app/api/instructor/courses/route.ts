@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 
 interface CourseData {
   id: string;
@@ -17,8 +16,7 @@ export async function GET(request: Request) {
     console.log('Request URL:', request.url);
 
         // Use Supabase Auth Helpers to read session from cookies
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = await createApiSupabaseClient();
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();

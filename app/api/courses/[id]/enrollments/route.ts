@@ -1,7 +1,5 @@
-// app/api/courses/[id]/enrollments/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { createErrorResponse } from '@/lib/utils/error-handling';
 import { trackPerformance } from '@/lib/utils/performance';
 import { validateEnv } from '@/lib/utils/env-validation';
@@ -35,7 +33,7 @@ export async function GET(
   validateEnv();
   
   const courseId = context.params.id;  // Access via context.params
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createApiSupabaseClient();
 
   return trackPerformance('GET /api/courses/[id]/enrollments', async () => {
     try {

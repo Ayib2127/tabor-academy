@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
@@ -30,7 +30,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const supabase = createClient(); // Call without arguments
+  const supabase = createSupabaseServerClient(); // Call without arguments
 
   try {
     const { data: course, error } = await supabase
@@ -110,7 +110,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient(); // Initialize Supabase client for DELETE
+  const supabase = createSupabaseServerClient(); // Initialize Supabase client for DELETE
   try {
     const id = params.id;
     
