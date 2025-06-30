@@ -23,7 +23,7 @@ export async function createSupabaseServerClient() {
   validateEnvironment();
   
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     
     if (USE_NEW_SSR) {
       // New SSR approach (recommended for Next.js 15+)
@@ -70,7 +70,7 @@ export async function createApiSupabaseClient(passedCookies?: ReadonlyRequestCoo
   validateEnvironment();
   
   try {
-    const cookieStore = passedCookies ? passedCookies : cookies();
+    const cookieStore = passedCookies ? passedCookies : await cookies();
     
     if (USE_NEW_SSR) {
       // New SSR approach for API routes

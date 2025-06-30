@@ -55,8 +55,10 @@ interface DashboardData {
 
 export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/dashboard ---');
+  const cookieStore = await cookies();
+  console.log('API cookies:', cookieStore.getAll());
   
-  const supabase = await createApiSupabaseClient(cookies());
+  const supabase = await createApiSupabaseClient(cookieStore);
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
