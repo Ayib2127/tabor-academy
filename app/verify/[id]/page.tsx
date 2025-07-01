@@ -55,7 +55,7 @@ export default function CertificateVerificationPage({ params }: { params: { id: 
       "SEO Optimization"
     ],
     accreditation: {
-      body: "African Digital Skills Council",
+      body: "Ethiopian Digital Skills Council",
       validUntil: new Date(2027, 1, 15),
       level: "Professional"
     }

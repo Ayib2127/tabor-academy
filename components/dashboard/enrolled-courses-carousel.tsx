@@ -95,7 +95,7 @@ export function EnrolledCoursesCarousel({ courses }: EnrolledCoursesCarouselProp
                 Ready to Start Learning?
               </h3>
               <p className="text-[#2C3E50]/60 mb-6 max-w-md mx-auto">
-                You haven't enrolled in any courses yet. Discover amazing courses tailored for African entrepreneurs and start your learning journey today!
+                You haven't enrolled in any courses yet. Discover amazing courses tailored for Ethiopian entrepreneurs and start your learning journey today!
               </p>
               <Button asChild className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white px-6 py-3">
                 <Link href="/courses">

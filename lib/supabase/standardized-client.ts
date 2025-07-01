@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies, type ReadonlyRequestCookies } from 'next/headers';
+import { cookies } from 'next/headers';
 import type { Database } from '@/lib/supabase/types';
 
 // Migration flag - set to true when ready to switch
@@ -32,20 +32,32 @@ export async function createSupabaseServerClient() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
-            get: (name: string) => {
-              const cookie = cookieStore.get(name);
-              return cookie?.value;
-            },
-            set: (name: string, value: string, options: any) => {
+            get: async (name: string) => {
+              const cookie = await cookieStore.get(name);
+              if (!cookie?.value) return undefined;
               try {
-                cookieStore.set(name, value, options);
+                // Try to parse as JSON array and return the first non-null, non-empty string
+                const arr = JSON.parse(cookie.value);
+                if (Array.isArray(arr)) {
+                  const token = arr.find((v) => typeof v === 'string' && v.length > 0);
+                  if (token) return token;
+                }
+              } catch {
+                // Not a JSON array, return as is
+                return cookie.value;
+              }
+              return cookie.value;
+            },
+            set: async (name: string, value: string, options: any) => {
+              try {
+                await cookieStore.set(name, value, options);
               } catch (error) {
                 console.warn('Failed to set cookie:', name, error);
               }
             },
-            remove: (name: string, options: any) => {
+            remove: async (name: string, options: any) => {
               try {
-                cookieStore.set(name, '', { ...options, maxAge: 0 });
+                await cookieStore.set(name, '', { ...options, maxAge: 0 });
               } catch (error) {
                 console.warn('Failed to remove cookie:', name, error);
               }
@@ -66,11 +78,16 @@ export async function createSupabaseServerClient() {
 }
 
 // New SSR client for API routes
-export async function createApiSupabaseClient(passedCookies?: ReadonlyRequestCookies) {
+export async function createApiSupabaseClient(passedCookies?: any) {
   validateEnvironment();
   
   try {
-    const cookieStore = passedCookies ? passedCookies : await cookies();
+    let cookieStore;
+    if (passedCookies) {
+      cookieStore = typeof passedCookies.then === 'function' ? await passedCookies : passedCookies;
+    } else {
+      cookieStore = await cookies();
+    }
     
     if (USE_NEW_SSR) {
       // New SSR approach for API routes
@@ -79,20 +96,32 @@ export async function createApiSupabaseClient(passedCookies?: ReadonlyRequestCoo
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
-            get: (name: string) => {
-              const cookie = cookieStore.get(name);
-              return cookie?.value;
-            },
-            set: (name: string, value: string, options: any) => {
+            get: async (name: string) => {
+              const cookie = await cookieStore.get(name);
+              if (!cookie?.value) return undefined;
               try {
-                cookieStore.set(name, value, options);
+                // Try to parse as JSON array and return the first non-null, non-empty string
+                const arr = JSON.parse(cookie.value);
+                if (Array.isArray(arr)) {
+                  const token = arr.find((v) => typeof v === 'string' && v.length > 0);
+                  if (token) return token;
+                }
+              } catch {
+                // Not a JSON array, return as is
+                return cookie.value;
+              }
+              return cookie.value;
+            },
+            set: async (name: string, value: string, options: any) => {
+              try {
+                await cookieStore.set(name, value, options);
               } catch (error) {
                 console.warn('Failed to set cookie:', name, error);
               }
             },
-            remove: (name: string, options: any) => {
+            remove: async (name: string, options: any) => {
               try {
-                cookieStore.set(name, '', { ...options, maxAge: 0 });
+                await cookieStore.set(name, '', { ...options, maxAge: 0 });
               } catch (error) {
                 console.warn('Failed to remove cookie:', name, error);
               }

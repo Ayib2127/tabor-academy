@@ -122,7 +122,7 @@ export default function WelcomeWizardPage() {
             </h1>
             <p className="text-2xl font-medium mb-2">Hello, {userName}!</p>
             <p className="text-lg text-muted-foreground">
-              Join thousands of African entrepreneurs transforming their future through digital skills. 
+              Join thousands of Ethiopian entrepreneurs transforming their future through digital skills. 
               Let's personalize your learning experience to help you achieve your goals.
             </p>
           </div>
@@ -167,7 +167,7 @@ export default function WelcomeWizardPage() {
                 {
                   icon: Globe,
                   title: "Community Connection",
-                  description: "Connect with fellow learners and mentors from across Africa"
+                  description: "Connect with fellow learners and mentors from across Ethiopia"
                 }
               ].map((benefit, index) => (
                 <Card key={index} className="p-6 card-hover gradient-border">

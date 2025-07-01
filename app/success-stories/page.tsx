@@ -46,7 +46,7 @@ export default function SuccessStoriesPage() {
                 <Quote className="h-12 w-12 text-teal-600 mb-6" />
                 <h2 className="text-3xl font-bold mb-4">Sarah Mwangi</h2>
                 <p className="text-xl mb-6 text-muted-foreground italic">
-                  "Tabor Digital Academy transformed my life. I went from struggling to find work to running my own successful digital marketing agency serving clients across East Africa."
+                  "Tabor Digital Academy transformed my life. I went from struggling to find work to running my own successful digital marketing agency serving clients across East Ethiopia."
                 </p>
                 <div className="flex items-center gap-2 mb-6">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -125,7 +125,7 @@ export default function SuccessStoriesPage() {
                 name: "Fatima Diallo",
                 location: "Senegal",
                 image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80",
-                story: "Created a successful online fashion brand targeting African diaspora markets.",
+                story: "Created a successful online fashion brand targeting Ethiopian diaspora markets.",
                 achievement: "Global Reach",
                 growth: "7-Figure Revenue"
               }
@@ -164,14 +164,14 @@ export default function SuccessStoriesPage() {
         <div className="absolute inset-0 bg-grid-black/[0.02] -z-10" />
         <div className="container px-4 md:px-6">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 gradient-text">
-            Our Impact Across Africa
+            Our Impact Across Ethiopia
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
                 icon: Globe,
                 stat: "15+",
-                label: "African Countries",
+                label: "Ethiopian Countries",
                 description: "Empowering entrepreneurs across the continent"
               },
               {
@@ -207,7 +207,7 @@ export default function SuccessStoriesPage() {
               Write Your Success Story
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-up">
-              Join our community of successful African entrepreneurs and start your journey today.
+              Join our community of successful Ethiopian entrepreneurs and start your journey today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
               <Button 

@@ -108,7 +108,9 @@ export default function InstructorDashboardPageClient({ user, role }: { user: an
       setError(null);
       
       try {
-        const response = await fetch('/api/instructor/dashboard');
+        const response = await fetch('/api/instructor/dashboard', {
+          credentials: 'include',
+        });
         
         if (!response.ok) {
           const errorData = await response.json();

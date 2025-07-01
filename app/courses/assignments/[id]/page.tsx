@@ -39,7 +39,7 @@ const assignment = {
   dueDate: "2024-03-15T23:59:59",
   timeLeft: "5 days",
   status: "in-progress",
-  description: "Analyze a successful digital marketing campaign from an African brand and create a detailed case study highlighting key strategies, metrics, and learnings.",
+  description: "Analyze a successful digital marketing campaign from an Ethiopian brand and create a detailed case study highlighting key strategies, metrics, and learnings.",
   objectives: [
     "Identify key success factors in the campaign",
     "Analyze target audience and messaging strategy",

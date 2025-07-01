@@ -41,7 +41,7 @@ const successStoriesData = {
         image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb"
       },
       category: "E-commerce",
-      story: "Started with a small local shop and transformed it into a thriving online business serving customers across East Africa.",
+      story: "Started with a small local shop and transformed it into a thriving online business serving customers across East Ethiopia.",
       impact: {
         revenue: "+300%",
         customers: "10,000+",
@@ -202,7 +202,7 @@ export default function SuccessStoriesPage() {
                 Success Stories
               </h1>
               <p className="text-muted-foreground">
-                Inspiring stories from our community of African entrepreneurs
+                Inspiring stories from our community of Ethiopian entrepreneurs
               </p>
             </div>
             <Button className="bg-gradient-to-r from-orange-600 to-orange-500">

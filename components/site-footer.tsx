@@ -47,8 +47,8 @@ export function SiteFooter() {
             
             {/* Mission Statement */}
             <p className="text-white/80 leading-relaxed max-w-md">
-              Empowering African entrepreneurs with mobile-first, project-based education. 
-              We combine cutting-edge technology with deep understanding of African markets 
+              Empowering Ethiopian entrepreneurs with mobile-first, project-based education. 
+              We combine cutting-edge technology with deep understanding of Ethiopian markets 
               to deliver practical, affordable, and accessible entrepreneurial education.
             </p>
             
@@ -223,7 +223,7 @@ export function SiteFooter() {
             <p>© {new Date().getFullYear()} Tabor Digital Academy. All rights reserved.</p>
             <div className="flex items-center gap-2">
               <Heart className="w-4 h-4 text-[#FF6B35]" />
-              <span>Made with love in Africa</span>
+              <span>Made with love in Ethiopia</span>
             </div>
           </div>
 

@@ -53,7 +53,7 @@ const quiz = {
     {
       id: 1,
       type: "multiple-choice",
-      question: "What is the primary advantage of digital marketing over traditional marketing in African markets?",
+      question: "What is the primary advantage of digital marketing over traditional marketing in Ethiopian markets?",
       options: [
         "Lower cost per reach",
         "Better targeting capabilities",
@@ -61,7 +61,7 @@ const quiz = {
         "All of the above"
       ],
       correctAnswer: 3,
-      explanation: "Digital marketing offers all these advantages, making it particularly effective in African markets where mobile penetration is high and traditional media might be costly or limited in reach.",
+      explanation: "Digital marketing offers all these advantages, making it particularly effective in Ethiopian markets where mobile penetration is high and traditional media might be costly or limited in reach.",
       difficulty: "medium",
       points: 5
     },

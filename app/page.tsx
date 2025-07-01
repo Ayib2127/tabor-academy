@@ -37,7 +37,7 @@ export default function Home() {
                   <div className="w-6 h-6 bg-[#FF6B35] rounded-full border-2 border-white dark:border-gray-800"></div>
                   <div className="w-6 h-6 bg-[#1B4D3E] rounded-full border-2 border-white dark:border-gray-800"></div>
                 </div>
-                <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Join 10,000+ African entrepreneurs</span>
+                <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Join 10,000+ Ethiopian entrepreneurs</span>
               </div>
 
               {/* Main Headline with Enhanced Typography */}
@@ -51,7 +51,7 @@ export default function Home() {
               </h1>
                 
                 <p className="text-xl md:text-2xl text-[#2C3E50]/90 dark:text-white/90 leading-relaxed max-w-2xl font-medium">
-                  Tabor Academy provides <span className="font-semibold text-[#4ECDC4]">mobile-first, project-based education</span> tailored for Africa, connecting you with mentors and a community to launch a real business.
+                  Tabor Academy provides <span className="font-semibold text-[#4ECDC4]">mobile-first, project-based education</span> tailored for Ethiopia, connecting you with mentors and a community to launch a real business.
                 </p>
               </div>
 
@@ -189,13 +189,13 @@ export default function Home() {
             <h2 className="text-3xl md:text-5xl font-bold text-[#2C3E50] dark:text-white mb-6">
             Why Traditional Learning Fails Entrepreneurs?
               <span className="block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
-                African Entrepreneurs
+                Ethiopian Entrepreneurs
               </span>
             </h2>
             
             <p className="text-xl text-[#2C3E50]/80 dark:text-white/80 leading-relaxed mb-8">
               You have brilliant business ideas, but existing education platforms are expensive, 
-              require constant internet, and teach generic skills that don't address Africa's unique opportunities and challenges.
+              require constant internet, and teach generic skills that don't address Ethiopia's unique opportunities and challenges.
             </p>
 
             {/* Problem Points */}
@@ -240,14 +240,14 @@ export default function Home() {
             </div>
             
             <h2 className="text-3xl md:text-5xl font-bold text-[#2C3E50] dark:text-white mb-6">
-              Africa-First Education That 
+              Ethiopia-First Education That 
               <span className="block bg-gradient-to-r from-[#4ECDC4] to-[#1B4D3E] bg-clip-text text-transparent">
                 Actually Works
               </span>
           </h2>
             
             <p className="text-xl text-[#2C3E50]/80 dark:text-white/80 leading-relaxed">
-              Tabor Academy combines cutting-edge technology with deep understanding of African markets 
+              Tabor Academy combines cutting-edge technology with deep understanding of Ethiopian markets 
               to deliver practical, affordable, and accessible entrepreneurial education.
             </p>
           </div>
@@ -272,7 +272,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-semibold text-[#2C3E50] dark:text-white mb-2">AI-Powered Mentorship</h3>
               <p className="text-[#2C3E50]/70 dark:text-white/70 text-sm leading-relaxed">
-                Get personalized guidance 24/7 from our AI mentor, trained on successful African business cases.
+                Get personalized guidance 24/7 from our AI mentor, trained on successful Ethiopian business cases.
               </p>
             </div>
 
@@ -334,7 +334,7 @@ export default function Home() {
           </h2>
             
             <p className="text-xl text-[#2C3E50]/80 dark:text-white/80 leading-relaxed">
-              We collaborate with leading organizations across Africa to provide the best learning experience 
+              We collaborate with leading organizations across Ethiopia to provide the best learning experience 
               and career opportunities for our students.
             </p>
           </div>
@@ -399,7 +399,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-semibold text-[#2C3E50] dark:text-white mb-2">Market Expansion</h3>
               <p className="text-[#2C3E50]/70 dark:text-white/70 text-sm">
-                Strategic partnerships to expand your reach across African markets.
+                Strategic partnerships to expand your reach across Ethiopian markets.
               </p>
             </div>
           </div>
@@ -620,7 +620,7 @@ export default function Home() {
                   <Users className="w-8 h-8 text-[#FF6B35]" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Expert Community</h3>
-                <p className="text-white/70 text-sm">Connect with mentors and fellow entrepreneurs across Africa.</p>
+                <p className="text-white/70 text-sm">Connect with mentors and fellow entrepreneurs across Ethiopia.</p>
               </div>
               
               <div className="flex flex-col items-center text-center">

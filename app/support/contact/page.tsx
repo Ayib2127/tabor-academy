@@ -32,17 +32,17 @@ export default function ContactSupportPage() {
 
   // Mock support hours data
   const supportHours = {
-    "East Africa": {
+    "East Ethiopia": {
       timezone: "EAT",
       hours: "8:00 AM - 6:00 PM",
       days: "Monday - Friday"
     },
-    "West Africa": {
+    "West Ethiopia": {
       timezone: "WAT",
       hours: "8:00 AM - 6:00 PM",
       days: "Monday - Friday"
     },
-    "Southern Africa": {
+    "Southern Ethiopia": {
       timezone: "SAST",
       hours: "8:00 AM - 6:00 PM",
       days: "Monday - Friday"

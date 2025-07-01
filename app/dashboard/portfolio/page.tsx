@@ -34,7 +34,7 @@ const portfolioData = {
   profile: {
     name: "Sarah Kimani",
     title: "Digital Marketing & E-commerce Specialist",
-    bio: "Passionate about helping African businesses succeed in the digital space. Experienced in creating and executing successful digital marketing campaigns and e-commerce strategies.",
+    bio: "Passionate about helping Ethiopian businesses succeed in the digital space. Experienced in creating and executing successful digital marketing campaigns and e-commerce strategies.",
     location: "Nairobi, Kenya",
     website: "www.sarahkimani.com",
     social: {
@@ -46,9 +46,9 @@ const portfolioData = {
   projects: [
     {
       id: 1,
-      title: "African Artisans E-commerce Platform",
+      title: "Ethiopian Artisans E-commerce Platform",
       category: "E-commerce",
-      description: "Built and launched an e-commerce platform connecting African artisans with global markets. Implemented mobile money integration and localized shipping solutions.",
+      description: "Built and launched an e-commerce platform connecting Ethiopian artisans with global markets. Implemented mobile money integration and localized shipping solutions.",
       thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
       technologies: ["Shopify", "Mobile Money API", "Digital Marketing"],
       results: {

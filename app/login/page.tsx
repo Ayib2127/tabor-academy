@@ -84,13 +84,18 @@ export default function LoginPage() {
         throw new Error('Failed to fetch user data')
       }
 
-      // Redirect based on role
-      if (userData?.role === 'instructor') {
-        router.push('/dashboard/instructor')
+      console.log('User role:', userData?.role);
+
+      if (userData?.role === 'admin') {
+        router.push('/dashboard/admin');
+      } else if (userData?.role === 'mentor') {
+        router.push('/dashboard/mentor');
+      } else if (userData?.role === 'instructor') {
+        router.push('/dashboard/instructor');
       } else if (userData?.role === 'student') {
-        router.push('/dashboard')
+        router.push('/dashboard');
       } else {
-        router.push('/dashboard')
+        router.push('/dashboard');
       }
 
       toast.success("Logged in successfully!")

@@ -81,7 +81,7 @@ export default function FAQPage() {
                 {[
                   {
                     question: "What courses do you offer?",
-                    answer: "We offer courses in digital marketing, no-code development, financial literacy, and entrepreneurship, all tailored for the African market."
+                    answer: "We offer courses in digital marketing, no-code development, financial literacy, and entrepreneurship, all tailored for the Ethiopian market."
                   },
                   {
                     question: "How long does each course take?",
@@ -250,7 +250,7 @@ export default function FAQPage() {
               Ready to Start Learning?
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-up">
-              Join our community of successful African entrepreneurs and start your journey today.
+              Join our community of successful Ethiopian entrepreneurs and start your journey today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
               <Button 

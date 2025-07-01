@@ -212,7 +212,7 @@ async function initializeStripePayment({
       },
       billing_address_collection: 'auto',
       shipping_address_collection: {
-        allowed_countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'CH', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'LU', 'GR', 'CY', 'MT', 'SI', 'SK', 'EE', 'LV', 'LT', 'PL', 'CZ', 'HU', 'RO', 'BG', 'HR', 'JP', 'SG', 'HK', 'MY', 'TH', 'PH', 'ID', 'VN', 'IN', 'AE', 'SA', 'EG', 'ZA', 'KE', 'NG', 'GH', 'ET'], // Include Ethiopia and other African countries
+        allowed_countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'CH', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'LU', 'GR', 'CY', 'MT', 'SI', 'SK', 'EE', 'LV', 'LT', 'PL', 'CZ', 'HU', 'RO', 'BG', 'HR', 'JP', 'SG', 'HK', 'MY', 'TH', 'PH', 'ID', 'VN', 'IN', 'AE', 'SA', 'EG', 'ZA', 'KE', 'NG', 'GH', 'ET'], // Include Ethiopia and other Ethiopian countries
       },
       expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // 30 minutes expiry
     });

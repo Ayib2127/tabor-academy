@@ -56,12 +56,42 @@ interface DashboardData {
 export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/dashboard ---');
   const cookieStore = await cookies();
-  console.log('API cookies:', cookieStore.getAll());
+  const allCookies = await cookieStore.getAll();
+  console.log('API cookies:', allCookies);
+
+  // Log the session cookie value directly
+  const sessionCookie = await cookieStore.get('sb-fmbakckfxuabratissxg-auth-token');
+  console.log('Session cookie value:', sessionCookie);
+
+  if (!sessionCookie || !sessionCookie.value) {
+    console.error('No Supabase auth cookie found!');
+    return NextResponse.json({ error: 'No Supabase auth cookie found' }, { status: 401 });
+  }
+
+  // Optionally, decode the JWT and log expiry (for debugging)
+  try {
+    const jwt = Array.isArray(sessionCookie.value)
+      ? sessionCookie.value[0]
+      : (sessionCookie.value.startsWith('[')
+          ? JSON.parse(sessionCookie.value)[0]
+          : sessionCookie.value);
+
+    // Only for debugging, do not use in production
+    const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString());
+    console.log('Decoded JWT payload:', payload);
+    if (payload.exp) {
+      const expiry = new Date(payload.exp * 1000);
+      console.log('JWT expiry:', expiry, 'Current time:', new Date());
+    }
+  } catch (e) {
+    console.error('Failed to decode JWT for debugging:', e);
+  }
   
   const supabase = await createApiSupabaseClient(cookieStore);
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log('Supabase user:', user, 'User error:', userError);
 
     if (userError) {
       console.error('Error getting user session:', userError);

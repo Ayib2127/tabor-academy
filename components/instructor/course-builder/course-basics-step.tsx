@@ -72,7 +72,7 @@ export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsS
               id="title"
               value={courseData.title}
               onChange={(e) => updateCourseData({ title: e.target.value })}
-              placeholder="e.g., Master Digital Marketing for African Entrepreneurs"
+              placeholder="e.g., Master Digital Marketing for Ethiopian Entrepreneurs"
               className="border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
             />
             <p className="text-sm text-[#2C3E50]/60">
@@ -246,7 +246,7 @@ export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsS
           <ul className="text-sm text-[#2C3E50]/80 space-y-1">
             <li>• Focus on practical, outcome-driven learning that students can apply immediately</li>
             <li>• Use clear, action-oriented language that speaks to aspiring entrepreneurs</li>
-            <li>• Consider the mobile-first experience for learners across Africa</li>
+            <li>• Consider the mobile-first experience for learners across Ethiopia</li>
             <li>• Highlight real-world applications and business opportunities</li>
           </ul>
         </CardContent>

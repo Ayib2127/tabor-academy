@@ -32,15 +32,15 @@ import Link from "next/link"
 // Mock course data - in production this would come from an API
 const course = {
   id: 1,
-  title: "Digital Marketing Mastery for African Markets",
-  subtitle: "Learn how to create and execute successful digital marketing campaigns specifically tailored for African consumers",
+  title: "Digital Marketing Mastery for Ethiopian Markets",
+  subtitle: "Learn how to create and execute successful digital marketing campaigns specifically tailored for Ethiopian consumers",
   banner: "https://images.unsplash.com/photo-1460925895917-afdab827c52f",
   previewVideo: "https://example.com/preview.mp4",
   instructor: {
     name: "Sarah Kimani",
     photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
     title: "Digital Marketing Expert",
-    bio: "10+ years experience in African digital markets",
+    bio: "10+ years experience in Ethiopian digital markets",
     expertise: ["Social Media Marketing", "Content Strategy", "Market Analysis"],
     rating: 4.9,
     students: 12500,
@@ -64,11 +64,11 @@ const course = {
   price: 99,
   curriculum: [
     {
-      title: "Introduction to African Digital Marketing",
+      title: "Introduction to Ethiopian Digital Marketing",
       duration: "2 hours",
       lessons: [
         {
-          title: "Understanding the African Digital Landscape",
+          title: "Understanding the Ethiopian Digital Landscape",
           duration: "30 mins",
           preview: true
         },
@@ -78,14 +78,14 @@ const course = {
           preview: false
         },
         {
-          title: "Mobile-First Strategy for Africa",
+          title: "Mobile-First Strategy for Ethiopia",
           duration: "45 mins",
           preview: false
         }
       ]
     },
     {
-      title: "Social Media Marketing for African Audiences",
+      title: "Social Media Marketing for Ethiopian Audiences",
       duration: "3 hours",
       lessons: [
         {
@@ -113,10 +113,10 @@ const course = {
   ],
   learningOutcomes: [
     "Develop market-specific digital marketing strategies",
-    "Create engaging content for African audiences",
+    "Create engaging content for Ethiopian audiences",
     "Implement successful social media campaigns",
     "Measure and analyze campaign performance",
-    "Understand mobile marketing dynamics in Africa",
+    "Understand mobile marketing dynamics in Ethiopia",
     "Build and manage online communities"
   ],
   requirements: [

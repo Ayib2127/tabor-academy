@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, ArrowRight, CheckCircle, BookOpen, Settings, ImageIcon, Eye } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle, BookOpen, Settings, ImageIcon, Eye, Loader2, Send } from "lucide-react"
 import { CourseBasicsStep } from "@/components/instructor/course-builder/course-basics-step"
 import { CourseStructureStep } from "@/components/instructor/course-builder/course-structure-step"
 import { CourseMediaStep } from "@/components/instructor/course-builder/course-media-step"
@@ -62,6 +62,7 @@ export default function CourseWizardPage() {
     modules: [],
   })
   const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const updateCourseData = (updates: Partial<CourseData>) => {
     setCourseData((prev) => ({ ...prev, ...updates }))
@@ -125,116 +126,99 @@ export default function CourseWizardPage() {
     }
   }
 
-  const handlePublish = async () => {
+  const handleSubmitForReview = async () => {
+    setIsSubmitting(true)
     try {
-      const response = await fetch('/api/instructor/courses/create', {
+      const response = await fetch(`/api/instructor/courses/${courseId}/submit-review`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(courseData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create course.');
-      }
-
-      const result = await response.json();
-      toast({
-        title: "Course Created!",
-        description: "Your course has been successfully created and saved as a draft.",
-        variant: "default",
-      });
-
-      // Redirect to the instructor dashboard or the newly created course's edit page
-      router.push('/dashboard/instructor');
-
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Failed to submit for review')
+      toast.success(result.message || 'Course submitted for review!')
+      // Optionally redirect or update UI here
     } catch (err: any) {
-      console.error('Error publishing course:', err);
-      toast({
-        title: "Error Creating Course",
-        description: err.message || 'An unexpected error occurred while creating your course.',
-        variant: "destructive",
-      });
+      toast.error(err.message || 'Failed to submit for review')
+    } finally {
+      setIsSubmitting(false)
     }
-  };
+  }
 
-    return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-white">
-            <SiteHeader />
+      <SiteHeader />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-                    {/* Header */}
-                    <div className="mb-8">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
-                    </div>
-                                <div>
+            </div>
+            <div>
               <h1 className="text-3xl font-bold text-[#2C3E50]">Create New Course</h1>
               <p className="text-[#2C3E50]/70">Build an engaging learning experience step by step</p>
             </div>
-                                </div>
+          </div>
 
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-[#2C3E50]">
-                Step {currentStep} of {steps.length}
-              </span>
-              <span className="text-sm text-[#2C3E50]/70">{Math.round(progress)}% Complete</span>
-            </div>
-            <Progress value={progress} className="h-2 bg-[#E5E8E8]" />
-                                </div>
+        {/* Progress Bar */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-[#2C3E50]">
+              Step {currentStep} of {steps.length}
+            </span>
+            <span className="text-sm text-[#2C3E50]/70">{Math.round(progress)}% Complete</span>
+          </div>
+          <Progress value={progress} className="h-2 bg-[#E5E8E8]" />
+        </div>
 
-          {/* Step Navigation */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {steps.map((step, index) => {
-              const isActive = currentStep === step.id
-              const isCompleted = currentStep > step.id
-              const Icon = step.icon
+        {/* Step Navigation */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {steps.map((step, index) => {
+            const isActive = currentStep === step.id
+            const isCompleted = currentStep > step.id
+            const Icon = step.icon
 
-              return (
-                <Card
-                  key={step.id}
-                  className={`relative transition-all duration-200 ${
-                    isActive
-                      ? "ring-2 ring-[#FF6B35] bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5"
-                      : isCompleted
-                        ? "bg-[#1B4D3E]/5 border-[#1B4D3E]/20"
-                        : "bg-white hover:bg-[#F7F9F9]"
-                  }`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          isActive
-                            ? "bg-[#FF6B35] text-white"
-                            : isCompleted
-                              ? "bg-[#1B4D3E] text-white"
-                              : "bg-[#E5E8E8] text-[#2C3E50]/60"
+            return (
+              <Card
+                key={step.id}
+                className={`relative transition-all duration-200 ${
+                  isActive
+                    ? "ring-2 ring-[#FF6B35] bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5"
+                    : isCompleted
+                      ? "bg-[#1B4D3E]/5 border-[#1B4D3E]/20"
+                      : "bg-white hover:bg-[#F7F9F9]"
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        isActive
+                          ? "bg-[#FF6B35] text-white"
+                          : isCompleted
+                            ? "bg-[#1B4D3E] text-white"
+                            : "bg-[#E5E8E8] text-[#2C3E50]/60"
+                      }`}
+                    >
+                      {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className={`font-semibold text-sm ${
+                          isActive ? "text-[#FF6B35]" : isCompleted ? "text-[#1B4D3E]" : "text-[#2C3E50]"
                         }`}
                       >
-                        {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
-                                    </div>
-                      <div className="flex-1 min-w-0">
-                        <h3
-                          className={`font-semibold text-sm ${
-                            isActive ? "text-[#FF6B35]" : isCompleted ? "text-[#1B4D3E]" : "text-[#2C3E50]"
-                          }`}
-                        >
-                          {step.title}
-                        </h3>
-                        <p className="text-xs text-[#2C3E50]/60 truncate">{step.description}</p>
-                                    </div>
-                                </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-                                </div>
-                                </div>
+                        {step.title}
+                      </h3>
+                      <p className="text-xs text-[#2C3E50]/60 truncate">{step.description}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+        </div>
 
         {/* Step Content */}
         <div className="mb-8">{renderStepContent()}</div>
@@ -248,24 +232,34 @@ export default function CourseWizardPage() {
 
           <div className="flex gap-3">
             {currentStep < steps.length ? (
-                                    <Button 
+              <Button 
                 onClick={nextStep}
                 disabled={!canProceed()}
                 className="flex items-center gap-2 bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white"
               >
                 Next Step
                 <ArrowRight className="w-4 h-4" />
-                                    </Button>
+              </Button>
             ) : (
-                                    <Button 
-                onClick={handlePublish}
-                className="flex items-center gap-2 bg-gradient-to-r from-[#1B4D3E] to-[#4ECDC4] hover:from-[#1B4D3E]/90 hover:to-[#4ECDC4]/90 text-white"
-                                    >
-                <CheckCircle className="w-4 h-4" />
-                Publish Course
-                                    </Button>
+              <Button
+                onClick={handleSubmitForReview}
+                className="flex items-center gap-2 bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Submit for Review
+                  </>
+                )}
+              </Button>
             )}
-                </div>
+          </div>
         </div>
       </div>
     </div>

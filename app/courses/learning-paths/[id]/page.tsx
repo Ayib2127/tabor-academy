@@ -29,7 +29,7 @@ import Link from "next/link"
 const learningPath = {
   id: "digital-marketing-expert",
   title: "Digital Marketing Expert Path",
-  description: "Master digital marketing skills specifically tailored for African markets. From basics to advanced strategies, this comprehensive path will transform you into a digital marketing professional.",
+  description: "Master digital marketing skills specifically tailored for Ethiopian markets. From basics to advanced strategies, this comprehensive path will transform you into a digital marketing professional.",
   duration: "6 months",
   courseCount: 5,
   difficulty: "Beginner to Advanced",
@@ -37,7 +37,7 @@ const learningPath = {
   progress: 35,
   outcomes: [
     "Create comprehensive digital marketing strategies",
-    "Master social media marketing for African markets",
+    "Master social media marketing for Ethiopian markets",
     "Develop successful email marketing campaigns",
     "Implement SEO best practices",
     "Analyze and optimize marketing performance",
@@ -68,7 +68,7 @@ const learningPath = {
     {
       id: 2,
       title: "Social Media Marketing Mastery",
-      description: "Deep dive into social media marketing strategies for African markets.",
+      description: "Deep dive into social media marketing strategies for Ethiopian markets.",
       thumbnail: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0",
       duration: "6 weeks",
       lessons: 36,

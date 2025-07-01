@@ -93,7 +93,7 @@ export default function ScholarshipApplicationPage() {
                   Available Scholarships
                 </h1>
                 <p className="text-muted-foreground">
-                  Choose from our available scholarship programs designed to support aspiring learners in Africa.
+                  Choose from our available scholarship programs designed to support aspiring learners in Ethiopia.
                 </p>
               </div>
 
@@ -175,7 +175,7 @@ export default function ScholarshipApplicationPage() {
                       <option value="KE">Kenya</option>
                       <option value="NG">Nigeria</option>
                       <option value="GH">Ghana</option>
-                      <option value="ZA">South Africa</option>
+                      <option value="ZA">South Ethiopia</option>
                     </select>
                   </div>
 

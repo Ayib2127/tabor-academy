@@ -144,7 +144,7 @@ export default function SignUpPage() {
                   Join Tabor Digital Academy
                 </h1>
                 <p className="text-xl text-muted-foreground">
-                  Start your journey to digital success in Africa
+                  Start your journey to digital success in Ethiopia
                 </p>
               </div>
 

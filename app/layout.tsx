@@ -19,11 +19,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL('https://taboracademy.com'),
   title: {
-    default: 'Tabor Digital Academy - Empowering African Entrepreneurs',
+    default: 'Tabor Digital Academy - Empowering Ethiopian Entrepreneurs',
     template: '%s | Tabor Digital Academy'
   },
-  description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Africa\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
-  keywords: ['digital skills', 'african entrepreneurs', 'online learning', 'digital marketing', 'e-commerce', 'entrepreneurship'],
+  description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
+  keywords: ['digital skills', 'Ethiopian entrepreneurs', 'online learning', 'digital marketing', 'e-commerce', 'entrepreneurship'],
   authors: [{ name: 'Tabor Digital Academy' }],
   creator: 'Tabor Digital Academy',
   publisher: 'Tabor Digital Academy',
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://taboracademy.com',
     siteName: 'Tabor Digital Academy',
-    title: 'Tabor Digital Academy - Empowering African Entrepreneurs',
-    description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Africa\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
+    title: 'Tabor Digital Academy - Empowering Ethiopian Entrepreneurs',
+    description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
     images: [
       {
         url: 'https://taboracademy.com/og-image.jpg',
@@ -50,8 +50,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tabor Digital Academy - Empowering African Entrepreneurs',
-    description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Africa\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
+    title: 'Tabor Digital Academy - Empowering Ethiopian Entrepreneurs',
+    description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
     images: ['https://taboracademy.com/twitter-image.jpg'],
     creator: '@taboracademy'
   },

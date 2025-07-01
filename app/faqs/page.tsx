@@ -77,19 +77,19 @@ const faqs = [
     id: 1,
     category: 'general',
     question: 'What is Tabor Academy?',
-    answer: 'Tabor Academy is a mobile-first, project-based education platform designed specifically for African entrepreneurs. We provide practical courses in digital marketing, no-code development, e-commerce, AI tools, and more, combined with mentorship and community support to help you launch real businesses.'
+    answer: 'Tabor Academy is a mobile-first, project-based education platform designed specifically for Ethiopian entrepreneurs. We provide practical courses in digital marketing, no-code development, e-commerce, AI tools, and more, combined with mentorship and community support to help you launch real businesses.'
   },
   {
     id: 2,
     category: 'general',
     question: 'Who can join Tabor Academy?',
-    answer: 'Tabor Academy is open to anyone interested in entrepreneurship and digital skills, with a special focus on African entrepreneurs. Whether you\'re a complete beginner or looking to expand your existing business, our courses are designed to meet you where you are.'
+    answer: 'Tabor Academy is open to anyone interested in entrepreneurship and digital skills, with a special focus on Ethiopian entrepreneurs. Whether you\'re a complete beginner or looking to expand your existing business, our courses are designed to meet you where you are.'
   },
   {
     id: 3,
     category: 'general',
     question: 'What makes Tabor Academy different from other online learning platforms?',
-    answer: 'We\'re specifically designed for African markets with mobile-first learning, offline capabilities, AI-powered mentorship, and real-world project-based learning. Our content addresses unique African business challenges and opportunities, and we provide ongoing community support.'
+    answer: 'We\'re specifically designed for Ethiopian markets with mobile-first learning, offline capabilities, AI-powered mentorship, and real-world project-based learning. Our content addresses unique Ethiopian business challenges and opportunities, and we provide ongoing community support.'
   },
   {
     id: 4,
@@ -101,7 +101,7 @@ const faqs = [
     id: 5,
     category: 'general',
     question: 'What languages are courses available in?',
-    answer: 'Currently, our courses are primarily available in English, with plans to expand to French, Swahili, and other African languages based on demand.'
+    answer: 'Currently, our courses are primarily available in English, with plans to expand to French, Swahili, and other Ethiopian languages based on demand.'
   },
   {
     id: 6,
@@ -174,8 +174,8 @@ const faqs = [
   {
     id: 17,
     category: 'courses',
-    question: 'Do you offer courses in local African languages?',
-    answer: 'We\'re working on expanding to local languages. Currently, courses are in English with plans for French and Swahili versions. We also provide cultural context and examples relevant to different African markets.'
+    question: 'Do you offer courses in local Ethiopian languages?',
+    answer: 'We\'re working on expanding to local languages. Currently, courses are in English with plans for French and Swahili versions. We also provide cultural context and examples relevant to different Ethiopian markets.'
   },
   {
     id: 18,
@@ -231,7 +231,7 @@ const faqs = [
     id: 26,
     category: 'pricing',
     question: 'What payment methods do you accept?',
-    answer: 'We accept major credit cards, PayPal, and mobile money payments (M-Pesa, Airtel Money, etc.) to make payments accessible across Africa.'
+    answer: 'We accept major credit cards, PayPal, and mobile money payments (M-Pesa, Airtel Money, etc.) to make payments accessible across Ethiopia.'
   },
 
   // Technical Support FAQs

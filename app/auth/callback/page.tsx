@@ -209,7 +209,7 @@ function SocialAuthCallbackInner() {
                       <option value="KE">Kenya</option>
                       <option value="NG">Nigeria</option>
                       <option value="GH">Ghana</option>
-                      <option value="ZA">South Africa</option>
+                      <option value="ZA">South Ethiopia</option>
                     </select>
                   </div>
 

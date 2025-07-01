@@ -157,7 +157,7 @@ export default function ProfileCompletionPage() {
                       <option value="KE">Kenya</option>
                       <option value="NG">Nigeria</option>
                       <option value="GH">Ghana</option>
-                      <option value="ZA">South Africa</option>
+                      <option value="ZA">South Ethiopia</option>
                       <option value="ET">Ethiopia</option>
                     </select>
                   </div>

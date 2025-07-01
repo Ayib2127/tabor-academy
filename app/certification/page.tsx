@@ -95,7 +95,7 @@ export default function CertificationPage() {
 
   const partners = [
     {
-      name: "African Development Bank",
+      name: "Ethiopian Development Bank",
       logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623",
       type: "Financial Institution"
     },

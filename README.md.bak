@@ -1,6 +1,6 @@
 # Tabor Digital Academy
 
-A modern, interactive e-learning platform designed to rapidly equip individuals from Africa's emerging markets with entrepreneurial, digital, and freelancing skills.
+A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia's emerging markets with entrepreneurial, digital, and freelancing skills.
 
 ## Features
 

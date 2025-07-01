@@ -50,7 +50,7 @@ const challengesData = {
       ],
       image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f",
       sponsor: {
-        name: "African Digital Marketing Association",
+        name: "Ethiopian Digital Marketing Association",
         logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623"
       },
       status: "upcoming",
@@ -72,7 +72,7 @@ const challengesData = {
       ],
       image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
       sponsor: {
-        name: "African E-commerce Alliance",
+        name: "Ethiopian E-commerce Alliance",
         logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623"
       },
       status: "active",

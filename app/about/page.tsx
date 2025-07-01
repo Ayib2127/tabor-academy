@@ -19,7 +19,7 @@ export default function AboutPage() {
               About Tabor Digital Academy
             </h1>
             <p className="text-xl text-muted-foreground">
-              Building Africa's digital future through accessible, quality education
+              Building Ethiopia's digital future through accessible, quality education
             </p>
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function AboutPage() {
             <div className="animate-fade-up">
               <h2 className="text-3xl font-bold mb-6 gradient-text">Our Mission</h2>
               <p className="text-lg text-muted-foreground mb-6">
-                To empower African entrepreneurs with the digital skills and knowledge needed to build
+                To empower Ethiopian entrepreneurs with the digital skills and knowledge needed to build
                 successful businesses and contribute to the continent's economic growth.
               </p>
               <div className="grid gap-4">
@@ -65,24 +65,24 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* African Focus Section */}
+      {/* Ethiopian Focus Section */}
       <section className="py-20 bg-gray-50/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-black/[0.02] -z-10" />
         <div className="container px-4 md:px-6">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 gradient-text">
-            Built for Africa, by Africans
+            Built for Ethiopia, by Ethiopians
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
                 icon: Globe,
                 title: "Local Understanding",
-                description: "Content tailored to African markets and business environments"
+                description: "Content tailored to Ethiopian markets and business environments"
               },
               {
                 icon: Smartphone,
                 title: "Mobile-First",
-                description: "Optimized for the devices most Africans use daily"
+                description: "Optimized for the devices most Ethiopians use daily"
               },
               {
                 icon: BookOpen,
@@ -115,7 +115,7 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-4 gap-8">
             {[
               { number: "10K+", label: "Active Students" },
-              { number: "15+", label: "African Countries" },
+              { number: "15+", label: "Ethiopian Countries" },
               { number: "85%", label: "Completion Rate" },
               { number: "90%", label: "Employment Rate" }
             ].map((stat, index) => (
@@ -178,7 +178,7 @@ export default function AboutPage() {
               Join Our Mission
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-up">
-              Be part of the digital transformation reshaping Africa's future.
+              Be part of the digital transformation reshaping Ethiopia's future.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
               <Button 

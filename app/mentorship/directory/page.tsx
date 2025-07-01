@@ -172,7 +172,7 @@ export default function MentorDirectoryPage() {
               <TabsTrigger value="all">All Mentors</TabsTrigger>
               <TabsTrigger value="available">Available Now</TabsTrigger>
               <TabsTrigger value="rated">Highly Rated</TabsTrigger>
-              <TabsTrigger value="african">African Experts</TabsTrigger>
+              <TabsTrigger value="Ethiopian">Ethiopian Experts</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -302,7 +302,7 @@ export default function MentorDirectoryPage() {
               <div>
                 <h2 className="text-2xl font-bold mb-2">Share Your Expertise</h2>
                 <p className="text-muted-foreground">
-                  Join our community of mentors and help shape the next generation of African entrepreneurs
+                  Join our community of mentors and help shape the next generation of Ethiopian entrepreneurs
                 </p>
               </div>
               <Button size="lg" className="min-w-[200px]">

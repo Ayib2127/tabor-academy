@@ -17,9 +17,9 @@ export async function POST(request: NextRequest) {
     // For demo purposes, we'll use predefined responses based on keywords
     // In production, this would integrate with OpenAI or similar AI service
     const responses = {
-      'food': 'Consider focusing on a specific cuisine or dietary need. For example: "A mobile food delivery service specializing in healthy, locally-sourced African fusion meals for busy professionals in urban areas."',
+      'food': 'Consider focusing on a specific cuisine or dietary need. For example: "A mobile food delivery service specializing in healthy, locally-sourced Ethiopian fusion meals for busy professionals in urban areas."',
       'tech': 'Narrow down your tech focus to solve a specific problem. For example: "A mobile app that connects rural farmers with urban buyers, featuring real-time pricing and logistics coordination."',
-      'fashion': 'Define your target market and unique value proposition. For example: "An online marketplace for sustainable, locally-made African fashion accessories targeting eco-conscious millennials."',
+      'fashion': 'Define your target market and unique value proposition. For example: "An online marketplace for sustainable, locally-made Ethiopian fashion accessories targeting eco-conscious millennials."',
       'education': 'Specify your educational niche and delivery method. For example: "A mobile-first platform teaching digital marketing skills to small business owners in emerging markets through bite-sized video lessons."',
       'agriculture': 'Focus on a specific agricultural challenge. For example: "A subscription service providing organic farming consultation and supplies to small-scale farmers, delivered via WhatsApp and local distribution networks."',
       'health': 'Target a specific health need in your community. For example: "A telemedicine platform connecting rural communities with healthcare professionals, featuring local language support and mobile payment integration."',

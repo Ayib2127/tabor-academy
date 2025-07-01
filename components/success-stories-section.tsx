@@ -184,7 +184,7 @@ export function SuccessStoriesSection() {
           
           <p className="text-xl text-[#2C3E50]/80 leading-relaxed">
             Meet the entrepreneurs who transformed their lives through Tabor Academy. 
-            Their journeys from learning to launching inspire thousands across Africa.
+            Their journeys from learning to launching inspire thousands across Ethiopia.
           </p>
         </div>
 
@@ -287,7 +287,7 @@ export function SuccessStoriesSection() {
               Ready to Write Your Success Story?
             </h3>
             <p className="text-[#2C3E50]/70 mb-6">
-              Join thousands of African entrepreneurs who have transformed their lives through our platform.
+              Join thousands of Ethiopian entrepreneurs who have transformed their lives through our platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -540,13 +540,13 @@ const mockSuccessStories: SuccessStory[] = [
     location: 'Nairobi',
     country: 'Kenya',
     image_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-    business_name: 'Digital Reach Africa',
+    business_name: 'Digital Reach Ethiopia',
     business_type: 'Digital Marketing Agency',
     course_taken: 'Digital Marketing Mastery',
     time_to_launch: '3 months',
     monthly_revenue: '$4,200',
     employees_hired: 5,
-    quote: "Tabor Academy didn't just teach me digital marketing - it gave me the confidence to build a business that serves clients across East Africa. The mentorship was invaluable.",
+    quote: "Tabor Academy didn't just teach me digital marketing - it gave me the confidence to build a business that serves clients across East Ethiopia. The mentorship was invaluable.",
     achievement: 'Scaled to 15+ clients in 6 months',
     rating: 5,
     video_url: '#',
@@ -592,7 +592,7 @@ const mockSuccessStories: SuccessStory[] = [
     time_to_launch: '4 months',
     monthly_revenue: '$2,900',
     employees_hired: 4,
-    quote: "The mentorship program gave me the confidence to start my e-commerce business. My sales grow every month, and I'm now expanding to other West African countries.",
+    quote: "The mentorship program gave me the confidence to start my e-commerce business. My sales grow every month, and I'm now expanding to other West Ethiopian countries.",
     achievement: 'Expanded to 3 countries in first year',
     rating: 5,
     video_url: '#',

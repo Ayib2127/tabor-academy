@@ -8,7 +8,7 @@ describe('SiteFooter', () => {
     render(<SiteFooter />)
     
     expect(screen.getByText('Tabor Digital Academy')).toBeInTheDocument()
-    expect(screen.getByText(/empowering african entrepreneurs/i)).toBeInTheDocument()
+    expect(screen.getByText(/empowering Ethiopian entrepreneurs/i)).toBeInTheDocument()
   })
 
   it('renders quick links section', () => {

@@ -98,7 +98,7 @@ export default function MobileSettingsPage() {
     language: {
       primary: "English",
       secondary: ["French", "Swahili"],
-      region: "East Africa",
+      region: "East Ethiopia",
       dateFormat: "DD/MM/YYYY"
     },
     storage: {

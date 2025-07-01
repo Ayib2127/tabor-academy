@@ -29,7 +29,7 @@ const steps: Step[] = [
   {
     number: 1,
     title: "Discover & Learn",
-    description: "Choose from our curated courses designed specifically for African entrepreneurs. Learn at your own pace with mobile-first, offline-capable content.",
+    description: "Choose from our curated courses designed specifically for Ethiopian entrepreneurs. Learn at your own pace with mobile-first, offline-capable content.",
     icon: BookOpen,
     features: [
       "Mobile-optimized lessons",
@@ -43,7 +43,7 @@ const steps: Step[] = [
   {
     number: 2,
     title: "Connect & Build",
-    description: "Join our vibrant community of entrepreneurs. Get mentorship, collaborate on projects, and build your network across Africa.",
+    description: "Join our vibrant community of entrepreneurs. Get mentorship, collaborate on projects, and build your network across Ethiopia.",
     icon: Users,
     features: [
       "1-on-1 mentorship",
@@ -147,7 +147,7 @@ export function HowItWorksSection() {
           </h2>
           
           <p className="text-xl text-[#2C3E50]/80 leading-relaxed">
-            Our proven 3-step process has helped thousands of African entrepreneurs 
+            Our proven 3-step process has helped thousands of Ethiopian entrepreneurs 
             turn their ideas into successful businesses.
           </p>
         </div>
@@ -259,7 +259,7 @@ export function HowItWorksSection() {
             </Link>
           </Button>
           <p className="text-sm text-[#2C3E50]/60 mt-3">
-            Join thousands of successful African entrepreneurs
+            Join thousands of successful Ethiopian entrepreneurs
           </p>
         </div>
       </div>

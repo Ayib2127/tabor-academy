@@ -312,7 +312,7 @@ function getNextStepCourse(funnelStage: string, recommendedCourses: any[]) {
     },
     'Growth': {
       title: "Scale Your Business! 📈",
-      description: "Your product is ready - now it's time to grow! Learn advanced marketing strategies, customer acquisition techniques, and scaling frameworks used by successful African entrepreneurs.",
+      description: "Your product is ready - now it's time to grow! Learn advanced marketing strategies, customer acquisition techniques, and scaling frameworks used by successful Ethiopian entrepreneurs.",
       action: "Start Growth Course"
     }
   };

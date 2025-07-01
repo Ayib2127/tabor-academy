@@ -37,7 +37,7 @@ const studyGroups = {
     {
       id: 1,
       name: "Digital Marketing Masters",
-      description: "Weekly discussions on digital marketing strategies for African markets",
+      description: "Weekly discussions on digital marketing strategies for Ethiopian markets",
       category: "Digital Marketing",
       members: 12,
       maxMembers: 15,
@@ -55,7 +55,7 @@ const studyGroups = {
     {
       id: 2,
       name: "E-commerce Entrepreneurs",
-      description: "Building and scaling online businesses in Africa",
+      description: "Building and scaling online businesses in Ethiopia",
       category: "E-commerce",
       members: 8,
       maxMembers: 10,
@@ -125,7 +125,7 @@ const studyGroups = {
     {
       id: 4,
       name: "Mobile Money Integration",
-      description: "Implementing payment solutions for African markets",
+      description: "Implementing payment solutions for Ethiopian markets",
       category: "Finance",
       members: 15,
       maxMembers: 15,

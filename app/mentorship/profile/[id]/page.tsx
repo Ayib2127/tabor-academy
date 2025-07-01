@@ -87,7 +87,7 @@ export default function MentorProfilePage({ params }: { params: { id: string } }
       "Built 3 successful e-commerce businesses",
       "Helped 50+ startups scale their digital presence",
       "Published author on digital marketing strategies",
-      "Speaker at major African tech conferences"
+      "Speaker at major Ethiopian tech conferences"
     ],
     mentorshipApproach: {
       style: "Collaborative and goal-oriented",

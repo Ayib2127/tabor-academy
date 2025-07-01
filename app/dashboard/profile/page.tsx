@@ -92,9 +92,9 @@ export default function ProfilePage() {
       medium: "medium.com/@sarahkimani",
       website: "sarahkimani.com"
     },
-    bio: "Digital marketing professional with a passion for helping African businesses succeed online. Experienced in creating and executing successful digital marketing campaigns.",
-    professionalSummary: "Over 5 years of experience in digital marketing, specializing in social media strategy and content creation for African markets.",
-    learningJourneyStory: "Started my journey in traditional marketing before discovering the power of digital platforms. Now helping other African entrepreneurs make the same transition."
+    bio: "Digital marketing professional with a passion for helping Ethiopian businesses succeed online. Experienced in creating and executing successful digital marketing campaigns.",
+    professionalSummary: "Over 5 years of experience in digital marketing, specializing in social media strategy and content creation for Ethiopian markets.",
+    learningJourneyStory: "Started my journey in traditional marketing before discovering the power of digital platforms. Now helping other Ethiopian entrepreneurs make the same transition."
   }
 
   const handleProfileUpdate = () => {

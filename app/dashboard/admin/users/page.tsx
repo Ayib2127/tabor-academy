@@ -148,11 +148,15 @@ export default function AdminUsersPage() {
 
   const getFilteredUsers = () => {
     return users.filter(user => {
-      const matchesSearch = user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      // Safely handle null/undefined values for full_name and email
+      const fullName = user.full_name || '';
+      const email = user.email || '';
+      const matchesSearch =
+        fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        email.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-      
+
       return matchesSearch && matchesRole && matchesStatus;
     });
   };

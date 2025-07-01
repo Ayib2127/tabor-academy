@@ -66,7 +66,7 @@ export default function LearningPreferencesPage() {
       preferredTime: "morning",
       weeklyGoal: 10,
       reminderFrequency: "daily",
-      timezone: "Africa/Nairobi"
+      timezone: "Ethiopia/Nairobi"
     },
     notifications: {
       studyReminders: true,
@@ -466,9 +466,9 @@ export default function LearningPreferencesPage() {
                         defaultValue={preferences.schedule.timezone}
                         disabled={!isEditing}
                       >
-                        <option value="Africa/Nairobi">East Africa Time (Nairobi)</option>
-                        <option value="Africa/Lagos">West Africa Time (Lagos)</option>
-                        <option value="Africa/Cairo">Eastern European Time (Cairo)</option>
+                        <option value="Ethiopia/Nairobi">East Ethiopia Time (Nairobi)</option>
+                        <option value="Ethiopia/Lagos">West Ethiopia Time (Lagos)</option>
+                        <option value="Ethiopia/Cairo">Eastern European Time (Cairo)</option>
                       </select>
                     </div>
                   </div>

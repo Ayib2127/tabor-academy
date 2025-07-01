@@ -78,20 +78,20 @@ const forumData = {
   discussions: [
     {
       id: 1,
-      title: "How to increase social media engagement in African markets?",
+      title: "How to increase social media engagement in Ethiopian markets?",
       author: {
         name: "Sarah Kimani",
         image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
         reputation: 1250
       },
       category: "digital-marketing",
-      tags: ["social-media", "engagement", "africa"],
+      tags: ["social-media", "engagement", "Ethiopia"],
       replies: 24,
       views: 1560,
       upvotes: 45,
       solved: true,
       lastActivity: "2024-02-29T10:30:00",
-      preview: "I'm looking for strategies specifically tailored for African audiences..."
+      preview: "I'm looking for strategies specifically tailored for Ethiopian audiences..."
     },
     {
       id: 2,
@@ -198,7 +198,7 @@ export default function ForumsPage() {
                 Community Forums
               </h1>
               <p className="text-muted-foreground">
-                Connect, learn, and share with fellow entrepreneurs across Africa
+                Connect, learn, and share with fellow entrepreneurs across Ethiopia
               </p>
             </div>
             <Button className="bg-gradient-to-r from-orange-600 to-orange-500">
