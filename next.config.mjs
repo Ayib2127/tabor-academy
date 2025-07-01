@@ -1,5 +1,4 @@
 import path from 'path';
-import webpack from 'webpack';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +25,9 @@ const nextConfig = {
     optimizePackageImports: process.env.NODE_ENV === 'development' ? ['lucide-react'] : []
   },
   webpack: (config, { isServer }) => {
+    // Use require for webpack only inside this function
+    const webpack = require('webpack');
+
     if (isServer) {
       config.externals.push('isomorphic-dompurify');
     }
