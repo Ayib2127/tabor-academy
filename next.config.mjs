@@ -24,10 +24,7 @@ const nextConfig = {
     optimizeCss: process.env.NODE_ENV === 'development',
     optimizePackageImports: process.env.NODE_ENV === 'development' ? ['lucide-react'] : []
   },
-  webpack: (config, { isServer }) => {
-    // Use require for webpack only inside this function
-    const webpack = require('webpack');
-
+  webpack: (config, { isServer, webpack }) => {
     if (isServer) {
       config.externals.push('isomorphic-dompurify');
     }
