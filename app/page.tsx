@@ -116,7 +116,7 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-10" />
                     
               <Image
-                src="https://ethiopiangobgnu.com/images/sample-business-opportunity.jpg"
+                src="https://res.cloudinary.com/dbn8jx8bh/image/upload/v1751367778/Learning_Online_nslqk9.jpg"
                 alt="Entrepreneurs collaborating globally"
                 width={600}
                 height={400}

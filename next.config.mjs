@@ -128,21 +128,17 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com https://browser.sentry-cdn.com",
-              "worker-src 'self' blob:",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' blob: data: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com https://res.cloudinary.com https://cdn.jsdelivr.net https://lh3.googleusercontent.com https://*.cloudinary.com https://*.imgix.net https://*.amazonaws.com https://*.vercel.app https://*.githubusercontent.com",
-              "media-src 'self' blob: data: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com https://res.cloudinary.com https://cdn.jsdelivr.net https://lh3.googleusercontent.com https://*.cloudinary.com https://*.imgix.net https://*.amazonaws.com https://*.vercel.app https://*.githubusercontent.com",
-              "font-src 'self' data: https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net",
-              "connect-src 'self' wss://*.supabase.co https://*.supabase.co https://fmbakckfxuabratissxg.supabase.co https://www.google-analytics.com https://*.ingest.sentry.io https://*.sentry.io",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              "upgrade-insecure-requests"
-            ].join('; ')
+            value: `
+              default-src 'self';
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.cloudinary.com;
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+              img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://res.cloudinary.com/dbn8jx8bh/ https://fmbakckfxuabratissxg.supabase.co;
+              font-src 'self' https://fonts.gstatic.com;
+              connect-src 'self' https://api.cloudinary.com https://fmbakckfxuabratissxg.supabase.co https://*.supabase.co https://*.google-analytics.com https://*.sentry.io https://*.ingest.sentry.io;
+              frame-src 'self';
+              object-src 'none';
+              base-uri 'self';
+            `.replace(/\s{2,}/g, ' ').trim(),
           },
           {
             key: 'X-DNS-Prefetch-Control',

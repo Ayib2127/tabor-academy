@@ -16,23 +16,69 @@ interface CourseData {
 interface CourseMediaStepProps {
   courseData: CourseData
   updateCourseData: (updates: Partial<CourseData>) => void
+  onNext: () => void
 }
 
-export function CourseMediaStep({ courseData, updateCourseData }: CourseMediaStepProps) {
+export function CourseMediaStep({ courseData, updateCourseData, onNext }: CourseMediaStepProps) {
   const [thumbnailPreview, setThumbnailPreview] = useState<string>("")
-  const [videoPreview, setVideoPreview] = useState<string>("")
+  const [thumbnailError, setThumbnailError] = useState<string>("")
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const [promoVideoUrl, setPromoVideoUrl] = useState(courseData.promoVideoUrl || "")
+  const [promoVideoError, setPromoVideoError] = useState<string>("")
 
-  const handleFileUpload = (file: File, type: "thumbnail" | "video") => {
-    const url = URL.createObjectURL(file)
-
-    if (type === "thumbnail") {
-      setThumbnailPreview(url)
-      updateCourseData({ thumbnailUrl: url })
-    } else {
-      setVideoPreview(url)
-      updateCourseData({ promoVideoUrl: url })
+  const validateUrl = (url: string) => {
+    try {
+      new URL(url)
+      return true
+    } catch {
+      return false
     }
   }
+
+  const handleThumbnailUpload = async (file: File) => {
+    setIsUploading(true)
+    setThumbnailError("")
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("upload_preset", "Tabor-Academy")
+    try {
+      const res = await fetch("https://api.cloudinary.com/v1_1/dbn8jx8bh/image/upload", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+      if (data.secure_url) {
+        updateCourseData({ thumbnailUrl: data.secure_url })
+        setThumbnailPreview(data.secure_url)
+      } else {
+        setThumbnailError("Image upload failed. Please try again.")
+      }
+    } catch (err) {
+      setThumbnailError("Image upload failed. Please try again.")
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handlePromoVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setPromoVideoUrl(url);
+    if (url && !validateUrl(url)) {
+      setPromoVideoError("Please enter a valid video URL (optional)");
+      updateCourseData({ promoVideoUrl: undefined });
+    } else if (!url) {
+      setPromoVideoError("");
+      updateCourseData({ promoVideoUrl: undefined });
+    } else {
+      setPromoVideoError("");
+      updateCourseData({ promoVideoUrl: url });
+    }
+  };
+
+  const isStepValid =
+    !!courseData.thumbnailUrl &&
+    !thumbnailError &&
+    (!promoVideoUrl || (promoVideoUrl && !promoVideoError && validateUrl(promoVideoUrl)))
 
   return (
     <div className="space-y-6">
@@ -58,77 +104,47 @@ export function CourseMediaStep({ courseData, updateCourseData }: CourseMediaSte
                     accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
-                      if (file) handleFileUpload(file, "thumbnail")
+                      if (file) handleThumbnailUpload(file)
                     }}
-                    className="hidden"
+                    className=""
                     id="thumbnail-upload"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("thumbnail-upload")?.click()}
-                    className="border-[#4ECDC4] text-[#4ECDC4] hover:bg-[#4ECDC4]/5"
-                  >
-                    Choose File
-                  </Button>
+                  {isUploading ? (
+                    <p className="text-sm text-[#2C3E50]/60 mt-2">Uploading...</p>
+                  ) : null}
+                  {thumbnailError && <p className="text-sm text-red-500 mt-2">{thumbnailError}</p>}
                 </div>
                 <p className="text-xs text-[#2C3E50]/60">Recommended: 1280x720px, JPG or PNG, max 5MB</p>
               </div>
 
-              {thumbnailPreview && (
+              {thumbnailPreview || courseData.thumbnailUrl ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#2C3E50]">Preview:</p>
                   <img
-                    src={thumbnailPreview || "/placeholder.svg"}
+                    src={thumbnailPreview || courseData.thumbnailUrl}
                     alt="Thumbnail preview"
                     className="w-full h-40 object-cover rounded-lg border border-[#E5E8E8]"
                   />
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Promotional Video */}
+          {/* Promotional Video URL (Optional) */}
           <div className="space-y-4">
             <Label className="text-[#2C3E50] font-semibold flex items-center gap-2">
               <Video className="w-4 h-4" />
-              Promotional Video (Optional)
+              Promotional Video URL (Optional)
             </Label>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <div className="border-2 border-dashed border-[#E5E8E8] rounded-lg p-6 text-center hover:border-[#FF6B35] transition-colors">
-                  <Video className="w-8 h-8 text-[#2C3E50]/40 mx-auto mb-2" />
-                  <p className="text-sm text-[#2C3E50]/60 mb-2">Upload a promotional video</p>
-                  <Input
-                    type="file"
-                    accept="video/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) handleFileUpload(file, "video")
-                    }}
-                    className="hidden"
-                    id="video-upload"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("video-upload")?.click()}
-                    className="border-[#FF6B35] text-[#FF6B35] hover:bg-[#FF6B35]/5"
-                  >
-                    Choose File
-                  </Button>
-                </div>
-                <p className="text-xs text-[#2C3E50]/60">Keep it short (30-90 seconds), MP4 format, max 50MB</p>
-              </div>
-
-              {videoPreview && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#2C3E50]">Preview:</p>
-                  <video src={videoPreview} controls className="w-full h-40 rounded-lg border border-[#E5E8E8]" />
-                </div>
-              )}
-            </div>
+            <Input
+              type="url"
+              value={promoVideoUrl}
+              onChange={handlePromoVideoChange}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
+            />
+            {promoVideoError && <p className="text-sm text-red-500">{promoVideoError}</p>}
+            <p className="text-sm text-[#2C3E50]/60">Paste a link to a YouTube, Vimeo, or direct video (optional)</p>
           </div>
 
           {/* Pricing */}
@@ -165,6 +181,17 @@ export function CourseMediaStep({ courseData, updateCourseData }: CourseMediaSte
                 </ul>
               </div>
             </div>
+          </div>
+
+          {/* Next Button */}
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={onNext}
+              disabled={!isStepValid}
+              className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
+            >
+              Next
+            </Button>
           </div>
         </CardContent>
       </Card>

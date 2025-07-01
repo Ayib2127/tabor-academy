@@ -18,17 +18,22 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
+interface Lesson {
+  id: number;
+  title: string;
+  type: 'video' | 'text' | 'quiz' | '';
+  order: number;
+}
+
 interface Module {
-  id: number
-  title: string
-  lessons: Array<{
-    id: number
-    title: string
-  }>
+  id: number;
+  title: string;
+  order: number;
+  lessons: Lesson[];
 }
 
 interface CourseData {
-  modules: Module[]
+  modules: Module[];
 }
 
 interface CourseStructureStepProps {
@@ -124,6 +129,8 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
   const [newModuleTitle, setNewModuleTitle] = useState("")
   const [showAddLesson, setShowAddLesson] = useState<number | null>(null)
   const [newLessonTitle, setNewLessonTitle] = useState("")
+  const [newLessonType, setNewLessonType] = useState<'' | 'video' | 'text' | 'quiz'>("")
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -132,50 +139,86 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
     }),
   )
 
+  // Helper to update orders
+  const updateOrders = (modules: Module[]) => {
+    return modules.map((module, mIdx) => ({
+      ...module,
+      order: mIdx + 1,
+      lessons: module.lessons.map((lesson, lIdx) => ({
+        ...lesson,
+        order: lIdx + 1,
+      })),
+    }))
+  }
+
+  // Validation
+  const validateStructure = (modules: Module[]) => {
+    const errors: string[] = []
+    modules.forEach((module, mIdx) => {
+      if (typeof module.order !== 'number') {
+        errors.push(`Module ${mIdx + 1} is missing order`)
+      }
+      module.lessons.forEach((lesson, lIdx) => {
+        if (!lesson.type) {
+          errors.push(`Lesson ${lIdx + 1} in Module ${mIdx + 1} is missing type`)
+        }
+        if (typeof lesson.order !== 'number') {
+          errors.push(`Lesson ${lIdx + 1} in Module ${mIdx + 1} is missing order`)
+        }
+      })
+    })
+    setValidationErrors(errors)
+    return errors.length === 0
+  }
+
   const addModule = () => {
     if (newModuleTitle.trim()) {
       const newModule: Module = {
         id: Date.now(),
         title: newModuleTitle.trim(),
+        order: courseData.modules.length + 1,
         lessons: [],
       }
-      updateCourseData({
-        modules: [...courseData.modules, newModule],
-      })
+      const updatedModules = updateOrders([...courseData.modules, newModule])
+      updateCourseData({ modules: updatedModules })
       setNewModuleTitle("")
       setShowAddModule(false)
     }
   }
 
   const deleteModule = (moduleId: number) => {
-    updateCourseData({
-      modules: courseData.modules.filter((m) => m.id !== moduleId),
-    })
+    const updatedModules = updateOrders(courseData.modules.filter((m) => m.id !== moduleId))
+    updateCourseData({ modules: updatedModules })
   }
 
   const addLesson = (moduleId: number) => {
-    if (newLessonTitle.trim()) {
-      const newLesson = {
+    if (newLessonTitle.trim() && newLessonType) {
+      const module = courseData.modules.find((m) => m.id === moduleId)
+      const newLesson: Lesson = {
         id: Date.now(),
         title: newLessonTitle.trim(),
+        type: newLessonType,
+        order: module ? module.lessons.length + 1 : 1,
       }
-
-      updateCourseData({
-        modules: courseData.modules.map((module) =>
-          module.id === moduleId ? { ...module, lessons: [...module.lessons, newLesson] } : module,
-        ),
-      })
+      const updatedModules = updateOrders(
+        courseData.modules.map((module) =>
+          module.id === moduleId ? { ...module, lessons: [...module.lessons, newLesson] } : module
+        )
+      )
+      updateCourseData({ modules: updatedModules })
       setNewLessonTitle("")
+      setNewLessonType("")
       setShowAddLesson(null)
     }
   }
 
   const deleteLesson = (moduleId: number, lessonId: number) => {
-    updateCourseData({
-      modules: courseData.modules.map((module) =>
-        module.id === moduleId ? { ...module, lessons: module.lessons.filter((l) => l.id !== lessonId) } : module,
-      ),
-    })
+    const updatedModules = updateOrders(
+      courseData.modules.map((module) =>
+        module.id === moduleId ? { ...module, lessons: module.lessons.filter((l) => l.id !== lessonId) } : module
+      )
+    )
+    updateCourseData({ modules: updatedModules })
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -236,22 +279,27 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
           {showAddLesson && (
             <Card className="mt-4 border-[#4ECDC4]/30">
               <CardContent className="p-4">
-                <div className="flex gap-2">
+                <div className="flex flex-col md:flex-row gap-2">
                   <Input
                     placeholder="Enter lesson title"
                     value={newLessonTitle}
                     onChange={(e) => setNewLessonTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        addLesson(showAddLesson)
-                      }
-                    }}
                     className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                   />
+                  <select
+                    value={newLessonType}
+                    onChange={(e) => setNewLessonType(e.target.value as any)}
+                    className="border-[#4ECDC4]/30 focus:border-[#4ECDC4] rounded px-2 py-1"
+                  >
+                    <option value="">Select type</option>
+                    <option value="video">Video</option>
+                    <option value="text">Text</option>
+                    <option value="quiz">Quiz</option>
+                  </select>
                   <Button
                     onClick={() => addLesson(showAddLesson)}
                     className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
+                    disabled={!newLessonTitle.trim() || !newLessonType}
                   >
                     Add
                   </Button>
@@ -260,13 +308,28 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
                     onClick={() => {
                       setShowAddLesson(null)
                       setNewLessonTitle("")
+                      setNewLessonType("")
                     }}
                   >
                     Cancel
                   </Button>
                 </div>
+                {(!newLessonType || !newLessonTitle.trim()) && (
+                  <p className="text-sm text-red-500 mt-2">Lesson title and type are required</p>
+                )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+              <ul className="text-sm text-red-600 space-y-1">
+                {validationErrors.map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {/* Add Module Button */}

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 
 interface CourseData {
@@ -20,6 +20,8 @@ interface CourseData {
   startDate?: string
   endDate?: string
   registrationDeadline?: string
+  thumbnailUrl?: string
+  promoVideoUrl?: string
 }
 
 interface CourseBasicsStepProps {
@@ -40,20 +42,42 @@ const categories = [
 
 export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsStepProps) {
   const [newTag, setNewTag] = useState("")
+  const [descriptionError, setDescriptionError] = useState("")
+  const [tagsError, setTagsError] = useState("")
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    updateCourseData({ description: value })
+    if (value.length < 10) {
+      setDescriptionError("Description must be at least 10 characters")
+    } else {
+      setDescriptionError("")
+    }
+  }
+
+  const validateTags = (tags: string[]) => {
+    if (!tags || tags.length === 0) {
+      setTagsError("At least one tag is required")
+      return false
+    } else {
+      setTagsError("")
+      return true
+    }
+  }
 
   const addTag = () => {
     if (newTag.trim() && !courseData.tags.includes(newTag.trim())) {
-      updateCourseData({
-        tags: [...courseData.tags, newTag.trim()],
-      })
+      const updatedTags = [...courseData.tags, newTag.trim()]
+      updateCourseData({ tags: updatedTags })
       setNewTag("")
+      validateTags(updatedTags)
     }
   }
 
   const removeTag = (tagToRemove: string) => {
-    updateCourseData({
-      tags: courseData.tags.filter((tag) => tag !== tagToRemove),
-    })
+    const updatedTags = courseData.tags.filter((tag) => tag !== tagToRemove)
+    updateCourseData({ tags: updatedTags })
+    validateTags(updatedTags)
   }
 
   return (
@@ -104,11 +128,12 @@ export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsS
             <Textarea
               id="description"
               value={courseData.description}
-              onChange={(e) => updateCourseData({ description: e.target.value })}
+              onChange={handleDescriptionChange}
               placeholder="Describe what students will learn, the outcomes they can expect, and why this course is valuable for their entrepreneurial journey..."
               rows={4}
               className="border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
             />
+            {descriptionError && <p className="text-sm text-red-500">{descriptionError}</p>}
             <p className="text-sm text-[#2C3E50]/60">
               Write a detailed description that highlights the value and practical outcomes
             </p>
@@ -234,6 +259,7 @@ export function CourseBasicsStep({ courseData, updateCourseData }: CourseBasicsS
                 </Badge>
               ))}
             </div>
+            {tagsError && <p className="text-sm text-red-500">{tagsError}</p>}
             <p className="text-sm text-[#2C3E50]/60">Add relevant tags to help students discover your course</p>
           </div>
         </CardContent>

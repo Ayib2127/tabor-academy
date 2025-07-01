@@ -62,13 +62,6 @@ export default function CourseReviewStep({ courseData }: CourseReviewStepProps) 
         >
           Back
         </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="min-w-[200px]"
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit for Review'}
-        </Button>
       </div>
     </div>
   );

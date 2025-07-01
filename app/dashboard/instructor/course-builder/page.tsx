@@ -126,19 +126,34 @@ export default function CourseWizardPage() {
     }
   }
 
-  const handleSubmitForReview = async () => {
+  const handleCreateCourse = async () => {
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/instructor/courses/${courseId}/submit-review`, {
+      // Prepare payload and remove promoVideoUrl if empty or invalid
+      const payload = { ...courseData };
+      if (!payload.promoVideoUrl || typeof payload.promoVideoUrl !== 'string' || !/^https?:\/\//.test(payload.promoVideoUrl)) {
+        delete payload.promoVideoUrl;
+      }
+      const response = await fetch('/api/instructor/courses/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
       const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Failed to submit for review')
-      toast.success(result.message || 'Course submitted for review!')
-      // Optionally redirect or update UI here
+      if (!response.ok) throw new Error(result.error || 'Failed to create course')
+      toast({
+        title: 'Success',
+        description: result.message || 'Course created successfully!'
+      })
+      // Redirect to the new course page
+      if (result.course && result.course.id) {
+        router.push(`/dashboard/instructor/courses/${result.course.id}`)
+      }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to submit for review')
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to create course'
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -242,19 +257,19 @@ export default function CourseWizardPage() {
               </Button>
             ) : (
               <Button
-                onClick={handleSubmitForReview}
+                onClick={handleCreateCourse}
                 className="flex items-center gap-2 bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting...
+                    Creating...
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    Submit for Review
+                    Create Course
                   </>
                 )}
               </Button>
