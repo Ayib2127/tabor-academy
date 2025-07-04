@@ -59,6 +59,7 @@ interface CourseOverview {
   updated_at: string;
   rejection_reason?: string;
   averageRating: number;
+  edited_since_rejection: boolean;
 }
 
 interface ActionItem {
@@ -240,24 +241,50 @@ export default function InstructorDashboardPageClient({ user, role }: { user: an
           </Button>
         );
       case 'rejected':
-        return (
-          <div className="space-y-2">
+        if (!course.edited_since_rejection) {
+          return (
+            <div className="space-y-2">
+              <Button
+                onClick={() => router.push(`/dashboard/instructor/courses/${course.id}/content`)}
+                variant="outline"
+                size="sm"
+                className="w-full border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Review Feedback
+              </Button>
+              {course.rejection_reason && (
+                <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                  {course.rejection_reason}
+                </p>
+              )}
+            </div>
+          );
+        } else {
+          return (
             <Button
-              onClick={() => router.push(`/dashboard/instructor/courses/${course.id}/content`)}
-              variant="outline"
+              onClick={async () => {
+                await handleSubmitForReview(course.id);
+                toast.success('Course submitted for review! You will be notified after admin review.');
+              }}
+              disabled={submittingCourse === course.id}
+              className="w-full bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
               size="sm"
-              className="w-full border-red-300 text-red-700 hover:bg-red-50"
             >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Review Feedback
+              {submittingCourse === course.id ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Submit for Review
+                </>
+              )}
             </Button>
-            {course.rejection_reason && (
-              <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
-                {course.rejection_reason}
-              </p>
-            )}
-          </div>
-        );
+          );
+        }
       case 'pending_review':
         return (
           <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">

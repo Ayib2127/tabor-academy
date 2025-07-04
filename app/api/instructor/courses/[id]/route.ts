@@ -156,6 +156,12 @@ export async function PATCH(
     // Check if changes require re-approval
     const requiresReapproval = checkIfRequiresReapproval(course, validatedData);
 
+    // Determine if the course was rejected and is being edited
+    let editedSinceRejection = false;
+    if (course.status === 'rejected') {
+      editedSinceRejection = true;
+    }
+
     // Update course
     const { error: updateError } = await supabase
       .from('courses')
@@ -163,6 +169,7 @@ export async function PATCH(
         ...validatedData,
         status: requiresReapproval ? 'pending_review' : course.status,
         updated_at: new Date().toISOString(),
+        edited_since_rejection: editedSinceRejection,
       })
       .eq('id', courseId);
 

@@ -102,8 +102,7 @@ export function SiteFooter() {
                 { text: "For Partners", href: "/partners" },
                 { text: "Become Instructor", href: "/instructor" },
                 { text: "Community", href: "/community" },
-                { text: "Blog", href: "/blog" },
-                { text: "Careers", href: "/careers" }
+                { text: "Blog", href: "/blog" }
               ].map((link) => (
                 <li key={link.text}>
                   <Link

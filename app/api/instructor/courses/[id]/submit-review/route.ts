@@ -83,6 +83,7 @@ export async function POST(req: Request, context: Promise<{ params: { id: string
         reviewed_by: null,
         reviewed_at: null,
         rejection_reason: null,
+        edited_since_rejection: false,
       })
       .eq('id', courseId);
 

@@ -30,7 +30,24 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const supabase = createSupabaseServerClient(); // Call without arguments
+  const supabase = createSupabaseServerClient();
+
+  // Require authentication
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Check enrollment
+  const { count: enrollmentCount, error: enrollmentError } = await supabase
+    .from('enrollments')
+    .select('*', { count: 'exact', head: true })
+    .eq('course_id', id)
+    .eq('user_id', user.id);
+
+  if (enrollmentError || !enrollmentCount || enrollmentCount === 0) {
+    return NextResponse.json({ error: 'Forbidden: Not enrolled in this course' }, { status: 403 });
+  }
 
   try {
     const { data: course, error } = await supabase
@@ -39,9 +56,9 @@ export async function GET(
         *,
         lessons (*),
         users ( full_name, avatar_url )
-      `) // Select all from courses, and specific fields from users and lessons
+      `)
       .eq('id', id)
-      .single(); 
+      .single();
 
     if (error || !course) {
       console.error('Error fetching course details:', error);

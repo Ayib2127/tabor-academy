@@ -16,7 +16,10 @@ import {
   Users,
   Award,
   Play,
-  ExternalLink
+  ExternalLink,
+  Hammer,
+  Zap,
+  Smartphone
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -138,6 +141,27 @@ export function SuccessStoriesSection() {
     setCurrentIndex(index);
   };
 
+  // Auto-advance logic
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % successStories.length);
+    }, 4000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [successStories.length]);
+
+  // Dot click handler
+  const goToIndex = (idx: number) => {
+    setCurrentIndex(idx);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % successStories.length);
+      }, 4000);
+    }
+  };
+
   if (loading) {
     return (
       <section className="py-20 bg-gradient-to-br from-white via-[#F7F9F9] to-[#4ECDC4]/5">
@@ -159,154 +183,31 @@ export function SuccessStoriesSection() {
   }
 
   return (
-    <section id="success-stories" className="py-20 bg-gradient-to-br from-white via-[#F7F9F9] to-[#4ECDC4]/5 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-grid-black/[0.02] -z-10" />
-      
-      {/* Decorative Elements */}
-      <div className="absolute top-10 right-10 w-32 h-32 bg-[#FF6B35]/5 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-10 left-10 w-40 h-40 bg-[#4ECDC4]/5 rounded-full blur-3xl animate-pulse delay-1000" />
-      
-      <div className="container px-4 md:px-6 relative">
-        {/* Section Header */}
-        <div className="text-center max-w-4xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-6 border border-[#E5E8E8]">
-            <Award className="w-4 h-4 text-[#1B4D3E]" />
-            <span className="text-sm font-medium text-[#1B4D3E]">Success Stories</span>
-          </div>
-          
-          <h2 className="text-3xl md:text-5xl font-bold text-[#2C3E50] mb-6">
-            Real Students,
-            <span className="block bg-gradient-to-r from-[#FF6B35] to-[#1B4D3E] bg-clip-text text-transparent">
-              Real Success
-            </span>
-          </h2>
-          
-          <p className="text-xl text-[#2C3E50]/80 leading-relaxed">
-            Meet the entrepreneurs who transformed their lives through Tabor Academy. 
-            Their journeys from learning to launching inspire thousands across Ethiopia.
-          </p>
-        </div>
-
-        {/* Success Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent mb-2">
-              2,500+
-            </div>
-            <div className="text-sm text-[#2C3E50]/70">Businesses Launched</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent mb-2">
-              $12M+
-            </div>
-            <div className="text-sm text-[#2C3E50]/70">Revenue Generated</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent mb-2">
-              8,000+
-            </div>
-            <div className="text-sm text-[#2C3E50]/70">Jobs Created</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent mb-2">
-              15
-            </div>
-            <div className="text-sm text-[#2C3E50]/70">Countries Impacted</div>
+    <section className="w-full flex flex-col items-center py-12 bg-white dark:bg-gray-900">
+      <h2 className="text-3xl md:text-5xl font-bold text-center mb-8">
+        Success Stories
+      </h2>
+      <div className="w-full max-w-lg mx-auto flex flex-col items-center">
+        {/* Only one card visible, centered */}
+        <div className="relative w-full">
+          <div className="transition-all duration-500">
+            <SuccessStoryCard story={successStories[currentIndex]} />
           </div>
         </div>
-
-        {/* Carousel Container */}
-        {successStories.length > 0 && (
-          <div className="relative">
-            {/* Navigation Buttons */}
-            <div className="absolute top-1/2 -translate-y-1/2 -left-4 z-10">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={prevSlide}
-                className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border-[#E5E8E8] hover:border-[#4ECDC4] hover:bg-[#4ECDC4] hover:text-white shadow-lg"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-            </div>
-            
-            <div className="absolute top-1/2 -translate-y-1/2 -right-4 z-10">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={nextSlide}
-                className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm border-[#E5E8E8] hover:border-[#4ECDC4] hover:bg-[#4ECDC4] hover:text-white shadow-lg"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Carousel Content */}
-            <div className="overflow-hidden">
-              <div 
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{ 
-                  transform: `translateX(-${currentIndex * (100 / visibleCards)}%)`,
-                  width: `${(successStories.length / visibleCards) * 100}%`
-                }}
-              >
-                {successStories.map((story, index) => (
-                  <div 
-                    key={story.id}
-                    className="px-3"
-                    style={{ width: `${100 / successStories.length}%` }}
-                  >
-                    <SuccessStoryCard story={story} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pagination Dots */}
-            <div className="flex justify-center gap-2 mt-8">
-              {Array.from({ length: Math.ceil(successStories.length / visibleCards) }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    Math.floor(currentIndex / visibleCards) === index
-                      ? 'bg-[#4ECDC4] scale-125'
-                      : 'bg-[#E5E8E8] hover:bg-[#4ECDC4]/50'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Call to Action */}
-        <div className="text-center mt-16">
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-[#E5E8E8]/50 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold text-[#2C3E50] mb-4">
-              Ready to Write Your Success Story?
-            </h3>
-            <p className="text-[#2C3E50]/70 mb-6">
-              Join thousands of Ethiopian entrepreneurs who have transformed their lives through our platform.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                asChild
-              >
-                <Link href="/signup">Start Your Journey</Link>
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="border-[#4ECDC4] text-[#4ECDC4] hover:bg-[#4ECDC4] hover:text-white"
-                asChild
-              >
-                <Link href="/success-stories">View All Stories</Link>
-              </Button>
-            </div>
-          </div>
+        {/* Dots navigation */}
+        <div className="flex justify-center mt-6 space-x-2">
+          {successStories.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => goToIndex(idx)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                idx === currentIndex
+                  ? "bg-[#4ECDC4] scale-125 shadow"
+                  : "bg-gray-300 dark:bg-gray-700"
+              }`}
+              aria-label={`Go to story ${idx + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>
@@ -333,6 +234,7 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
                 alt={story.name}
                 fill
                 className="object-cover"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               

@@ -195,12 +195,11 @@ export function HowItWorksSection() {
           {/* Mobile Layout */}
           <div className="lg:hidden space-y-8">
             {steps.map((step, index) => (
-              <div key={step.number} className="relative">
+              <div key={step.number} className="relative px-2">
                 {/* Vertical Connector */}
                 {index < steps.length - 1 && (
-                  <div className="absolute left-6 top-24 w-0.5 h-16 bg-gradient-to-b from-[#4ECDC4] to-[#FF6B35] opacity-30" />
+                  <div className="absolute left-5 sm:left-6 top-24 w-0.5 h-16 bg-gradient-to-b from-[#4ECDC4] to-[#FF6B35] opacity-30" />
                 )}
-                
                 <div
                   className={`transition-all duration-800 ${
                     visibleSteps.includes(step.number)

@@ -21,6 +21,7 @@ interface CourseOverview {
   updated_at: string;
   rejection_reason?: string;
   averageRating: number;
+  edited_since_rejection: boolean;
 }
 
 interface ActionItem {
@@ -127,7 +128,8 @@ export async function GET(request: Request) {
         updated_at,
         rejection_reason,
         reviewed_at,
-        reviewed_by
+        reviewed_by,
+        edited_since_rejection
       `)
       .eq('instructor_id', user.id)
       .order('updated_at', { ascending: false });
@@ -203,6 +205,7 @@ export async function GET(request: Request) {
           updated_at: course.updated_at,
           rejection_reason: course.rejection_reason,
           averageRating: parseFloat(currentCourseRating.toFixed(1)),
+          edited_since_rejection: course.edited_since_rejection,
         };
       })
     );
@@ -267,13 +270,15 @@ export async function GET(request: Request) {
     }
 
     // Process activity data
+    const allowedTypes = ['enrollment', 'completion', 'assignment', 'question'] as const;
+    type AllowedType = typeof allowedTypes[number];
     const recentActivity: ActivityItem[] = (activityData || []).map((activity: any) => {
       const student = activity.users?.full_name || 'Unknown Student';
       const course = activity.courses?.title || 'Unknown Course';
-      
+      const type = allowedTypes.includes(activity.type) ? activity.type as AllowedType : 'assignment';
       return {
         id: activity.id,
-        type: activity.type as 'enrollment' | 'completion' | 'assignment' | 'question',
+        type,
         student,
         action: activity.action_description,
         course,

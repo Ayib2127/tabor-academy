@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, CheckCircle, Star, TrendingUp, Shield, Users, Award, Clock, Globe, Zap, Laptop, Brain, AlertCircle, DollarSign, Target } from "lucide-react"
+import { ArrowRight, CheckCircle, Star, TrendingUp, Shield, Users, Award, Clock, Globe, Zap, Laptop, Brain, AlertCircle, DollarSign, Target, Hammer, Smartphone } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { AIDemoCard } from "@/components/ai-demo-card"
@@ -25,53 +25,55 @@ export default function Home() {
         
         <div className="container px-4 md:px-6 relative z-10">
           <div className="grid gap-12 lg:grid-cols-2 items-center">
-            {/* Left Content with Enhanced Text Overlay */}
+            {/* Left Content */}
             <div className="flex flex-col gap-6 animate-fade-up relative">
-              {/* Enhanced gradient overlay for text readability */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent dark:from-gray-900/95 dark:via-gray-900/80 dark:to-transparent -z-10 rounded-2xl blur-sm lg:hidden" />
-              
               {/* Trust Badge */}
               <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-4 py-2 border border-[#E5E8E8] dark:border-gray-700 w-fit shadow-sm">
-                <div className="flex -space-x-1">
-                  <div className="w-6 h-6 bg-[#4ECDC4] rounded-full border-2 border-white dark:border-gray-800"></div>
-                  <div className="w-6 h-6 bg-[#FF6B35] rounded-full border-2 border-white dark:border-gray-800"></div>
-                  <div className="w-6 h-6 bg-[#1B4D3E] rounded-full border-2 border-white dark:border-gray-800"></div>
-                </div>
-                <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Join 10,000+ Ethiopian entrepreneurs</span>
+                <Globe className="w-5 h-5 text-brand-teal-500" />
+                <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Join 10,000+ Learners Worldwide</span>
               </div>
 
-              {/* Main Headline with Enhanced Typography */}
+              {/* Main Headline */}
               <div className="space-y-4">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
-                  <span className="block text-[#2C3E50] dark:text-white drop-shadow-sm">Your</span>
-                  <span className="block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent drop-shadow-sm">
-                    Launchpad:
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] animate-fade-up">
+                  <span className="block text-[#2C3E50] dark:text-white drop-shadow-sm">
+                    Unlock Your Potential.
                   </span>
-                  <span className="block text-[#2C3E50] dark:text-white drop-shadow-sm">From Idea to Income</span>
+                  <span
+                    className="block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent drop-shadow-sm"
+                    style={{
+                      backgroundSize: '200% 200%',
+                      animation: 'gradient-move 3s ease-in-out infinite alternate',
+                    }}
+                  >
+                    Master New Skills.
+                  </span>
               </h1>
-                
                 <p className="text-xl md:text-2xl text-[#2C3E50]/90 dark:text-white/90 leading-relaxed max-w-2xl font-medium">
-                  Tabor Academy provides <span className="font-semibold text-[#4ECDC4]">mobile-first, project-based education</span> tailored for Ethiopia, connecting you with mentors and a community to launch a real business.
+                  Empower your journey with hands-on projects, expert mentors, and a global community.
+                </p>
+                <p className="text-[#2C3E50] text-base md:text-lg font-medium">
+                  Gain real-world skills, connect with industry leaders, and learn flexibly—anytime, anywhere.
                 </p>
               </div>
 
               {/* Value Props */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#1B4D3E]" />
-                  <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Mobile-First Learning</span>
+                <div className="flex items-center gap-2 card-hover gradient-border p-3 rounded-lg bg-white shadow">
+                  <Hammer className="w-5 h-5 text-brand-orange-500" />
+                  <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Learn by Doing</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#1B4D3E]" />
-                  <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Real Mentorship</span>
+                <div className="flex items-center gap-2 card-hover gradient-border p-3 rounded-lg bg-white shadow">
+                  <Users className="w-5 h-5 text-brand-teal-500" />
+                  <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Expert Mentorship</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#1B4D3E]" />
-                  <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Project-Based</span>
+                <div className="flex items-center gap-2 card-hover gradient-border p-3 rounded-lg bg-white shadow">
+                  <Smartphone className="w-5 h-5 text-brand-orange-500" />
+                  <span className="text-sm font-medium text-[#2C3E50] dark:text-white">Flexible & Accessible</span>
                 </div>
               </div>
 
-              {/* CTA Buttons */}
+              {/* CTA Button */}
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <Button 
                   size="lg" 
@@ -79,13 +81,13 @@ export default function Home() {
                   asChild
                 >
                   <Link href="/signup" className="flex items-center gap-2">
-                    Start Your Journey Today
+                    Start Your Journey
                     <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
               </div>
 
-              {/* Social Proof */}
+              {/* Social Proof (optional, keep if you want) */}
               <div className="flex items-center gap-6 pt-4 border-t border-[#E5E8E8]/50 dark:border-gray-700/50">
                 <div className="flex items-center gap-2">
                   <div className="flex">
@@ -102,37 +104,28 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Visual - Enhanced Images */}
+            {/* Right Visual - Keep your optimized image */}
             <div className="relative animate-fade-in">
-              {/* Main Image Container with Enhanced Styling */}
               <div className="relative">
-                {/* Enhanced Gradient Background */}
                 <div className="absolute inset-0 bg-gradient-to-r from-[#4ECDC4]/30 to-[#FF6B35]/30 rounded-3xl blur-3xl scale-110" />
-                
-                {/* Main Image with Better Composition */}
                 <div className="relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm rounded-3xl p-6 border border-white/30 dark:border-gray-700/30 shadow-2xl">
                   <div className="relative overflow-hidden rounded-2xl">
-                    {/* Text overlay gradient for better readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-10" />
-                    
               <Image
                 src="https://res.cloudinary.com/dbn8jx8bh/image/upload/v1751367778/Learning_Online_nslqk9.jpg"
-                alt="Entrepreneurs collaborating globally"
+                      alt="Learning platform hero"
                 width={600}
                 height={400}
                 className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"
                 priority
               />
-                    
-                    {/* Overlay text for context */}
                     <div className="absolute bottom-4 left-4 right-4 z-20">
                       <p className="text-white text-sm font-medium drop-shadow-lg">
-                        Real entrepreneurs, real success stories
+                        Real learners, real success stories
                       </p>
                     </div>
                   </div>
-                  
-                  {/* Enhanced Floating Stats Cards */}
+                  {/* Floating Stats Cards (optional, keep for global appeal) */}
                   <div className="absolute -top-6 -left-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 border border-[#E5E8E8] dark:border-gray-700 animate-float">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center">
@@ -144,7 +137,6 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                  
                   <div className="absolute -bottom-6 -right-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 border border-[#E5E8E8] dark:border-gray-700 animate-float delay-500">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-[#FF6B35]/20 rounded-full flex items-center justify-center">
@@ -170,142 +162,106 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. Problem & Solution Section with Enhanced Icons */}
-      <section className="py-20 bg-gradient-to-br from-[#F7F9F9] to-white dark:from-gray-800 dark:to-gray-900 relative overflow-hidden">
+      {/* 3. Problem & Solution Section */}
+      <section className="py-20 bg-[#F7F9F9] dark:bg-gray-900 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02] -z-10" />
         
-        {/* Background decorative elements */}
-        <div className="absolute top-10 left-10 w-32 h-32 bg-[#4ECDC4]/5 rounded-full blur-2xl" />
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-[#FF6B35]/5 rounded-full blur-2xl" />
-        
-        <div className="container px-4 md:px-6 relative">
-          {/* Problem Statement */}
+        {/* Problem Block */}
+        <div className="container px-4 md:px-6 relative mb-20">
           <div className="text-center max-w-4xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 bg-[#FF6B35]/10 rounded-full px-4 py-2 mb-6">
-              <AlertCircle className="w-4 h-4 text-[#FF6B35]" />
-              <span className="text-sm font-medium text-[#FF6B35]">The Challenge</span>
-            </div>
-            
             <h2 className="text-3xl md:text-5xl font-bold text-[#2C3E50] dark:text-white mb-6">
-            Why Traditional Learning Fails Entrepreneurs?
-              <span className="block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
-                Ethiopian Entrepreneurs
-              </span>
+              Why Most Online Courses Don't Work
             </h2>
-            
-            <p className="text-xl text-[#2C3E50]/80 dark:text-white/80 leading-relaxed mb-8">
-              You have brilliant business ideas, but existing education platforms are expensive, 
-              require constant internet, and teach generic skills that don't address Ethiopia's unique opportunities and challenges.
+            <p className="text-lg text-[#6E6C75] dark:text-white/80 leading-relaxed mb-10">
+              Ever felt lost or unmotivated in an online course? Too often, e-learning means endless videos, little real-world practice, and no one to turn to for help. The result: skills that don't stick and progress that stalls.
             </p>
-
-            {/* Problem Points */}
-            <div className="grid md:grid-cols-3 gap-6 mb-12">
-              <div className="flex items-start gap-3 text-left">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <DollarSign className="w-4 h-4 text-red-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-[#2C3E50] dark:text-white mb-1">Too Expensive</h4>
-                  <p className="text-sm text-[#2C3E50]/70 dark:text-white/70">Most platforms cost $100+ per month - out of reach for emerging entrepreneurs</p>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                <AlertCircle className="w-8 h-8 mb-3 text-brand-orange-500" />
+                <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">Lack of Practical Application</h3>
+                <p className="text-muted-foreground text-sm">
+                  Most courses focus on theory, leaving you without the hands-on skills needed to succeed in real jobs.
+                </p>
               </div>
-              
-              <div className="flex items-start gap-3 text-left">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Clock className="w-4 h-4 text-red-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-[#2C3E50] dark:text-white mb-1">Internet Dependent</h4>
-                  <p className="text-sm text-[#2C3E50]/70 dark:text-white/70">Require constant high-speed internet that's unreliable or expensive in many areas</p>
-                </div>
+              <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                <Users className="w-8 h-8 mb-3 text-brand-teal-500" />
+                <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">Passive and Isolating</h3>
+                <p className="text-muted-foreground text-sm">
+                  Hours of video lectures can be disengaging and lonely, making it hard to stay motivated or connected.
+                </p>
               </div>
-              
-              <div className="flex items-start gap-3 text-left">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Target className="w-4 h-4 text-red-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-[#2C3E50] dark:text-white mb-1">Generic Content</h4>
-                  <p className="text-sm text-[#2C3E50]/70 dark:text-white/70">One-size-fits-all courses that ignore local markets, regulations, and opportunities</p>
-                </div>
+              <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                <Clock className="w-8 h-8 mb-3 text-brand-orange-500" />
+                <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">Outdated Content</h3>
+                <p className="text-muted-foreground text-sm">
+                  Many platforms don't keep up with the latest trends, so you end up learning skills that are already obsolete.
+                </p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Solution Statement */}
-          <div className="text-center max-w-4xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 bg-[#1B4D3E]/10 rounded-full px-4 py-2 mb-6">
-              <CheckCircle className="w-4 h-4 text-[#1B4D3E]" />
-              <span className="text-sm font-medium text-[#1B4D3E]">The Solution</span>
-            </div>
-            
-            <h2 className="text-3xl md:text-5xl font-bold text-[#2C3E50] dark:text-white mb-6">
-              Ethiopia-First Education That 
-              <span className="block bg-gradient-to-r from-[#4ECDC4] to-[#1B4D3E] bg-clip-text text-transparent">
-                Actually Works
-              </span>
-          </h2>
-            
-            <p className="text-xl text-[#2C3E50]/80 dark:text-white/80 leading-relaxed">
-              Tabor Academy combines cutting-edge technology with deep understanding of Ethiopian markets 
-              to deliver practical, affordable, and accessible entrepreneurial education.
-            </p>
-          </div>
+        {/* Visual Divider */}
+        <div className="w-full flex justify-center mb-20">
+          <div className="h-2 w-24 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] opacity-60"></div>
+        </div>
 
-          {/* Solution Features Grid with Enhanced Icons */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Feature 1: Mobile-First Learning */}
-            <div className="p-6 border border-[#E5E8E8] dark:border-gray-700 rounded-lg hover:border-[#4ECDC4]/40 transition-all duration-300 hover:shadow-lg group bg-white dark:bg-gray-800">
-              <div className="w-12 h-12 bg-[#4ECDC4]/20 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Laptop className="w-6 h-6 text-[#4ECDC4]" />
-              </div>
-              <h3 className="text-lg font-semibold text-[#2C3E50] dark:text-white mb-2">Mobile-First Learning</h3>
-              <p className="text-[#2C3E50]/70 dark:text-white/70 text-sm leading-relaxed">
-                Optimized for smartphones with offline capabilities. Learn anywhere, anytime, even with limited internet.
+        {/* Solution Block with Image on Right */}
+        <div className="container px-4 md:px-6 relative">
+          <div className="grid gap-12 lg:grid-cols-2 items-center">
+            {/* Left Content */}
+            <div className="flex flex-col gap-6">
+              <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent mb-6">
+                Learn, Build, and Grow with Tabor Academy
+              </h2>
+              <p className="text-lg text-[#2C3E50] dark:text-white/90 leading-relaxed mb-10">
+                Tabor Academy redefines online learning with live sessions, hands-on projects, and real mentorship. Experience interactive classes, personalized guidance, and a supportive learning network—so you can master new skills and achieve your goals, your way.
               </p>
-            </div>
-
-            {/* Feature 2: AI-Powered Mentorship */}
-            <div className="p-6 border border-[#E5E8E8] dark:border-gray-700 rounded-lg hover:border-[#4ECDC4]/40 transition-all duration-300 hover:shadow-lg group bg-white dark:bg-gray-800">
-              <div className="w-12 h-12 bg-[#FF6B35]/20 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Brain className="w-6 h-6 text-[#FF6B35]" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Feature 1 */}
+                <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                  <Hammer className="w-8 h-8 mb-3 text-brand-orange-500" />
+                  <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">Build Real-World Projects</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Apply what you learn by creating a portfolio of work that proves your abilities.
+                  </p>
+                </div>
+                {/* Feature 2 */}
+                <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                  <Zap className="w-8 h-8 mb-3 text-brand-teal-500" />
+                  <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">Live Learning Sessions</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Join interactive, instructor-led classes that keep you engaged and motivated.
+                  </p>
+                </div>
+                {/* Feature 3 */}
+                <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                  <Users className="w-8 h-8 mb-3 text-brand-teal-500" />
+                  <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">1:1 Mentorship</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Get personalized feedback and support from experienced mentors, every step of the way.
+                  </p>
+                </div>
+                {/* Feature 4 */}
+                <div className="card-hover gradient-border p-6 rounded-xl bg-white dark:bg-gray-800 shadow flex flex-col items-center text-center">
+                  <Smartphone className="w-8 h-8 mb-3 text-brand-orange-500" />
+                  <h3 className="font-bold text-lg text-[#2C3E50] dark:text-white mb-2">Learn Anytime, Anywhere</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Study on your schedule, on any device, with flexible, accessible courses.
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-[#2C3E50] dark:text-white mb-2">AI-Powered Mentorship</h3>
-              <p className="text-[#2C3E50]/70 dark:text-white/70 text-sm leading-relaxed">
-                Get personalized guidance 24/7 from our AI mentor, trained on successful Ethiopian business cases.
-              </p>
             </div>
-
-            {/* Feature 3: Real-World Projects */}
-            <div className="p-6 border border-[#E5E8E8] dark:border-gray-700 rounded-lg hover:border-[#4ECDC4]/40 transition-all duration-300 hover:shadow-lg group bg-white dark:bg-gray-800">
-              <div className="w-12 h-12 bg-[#1B4D3E]/20 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6 text-[#1B4D3E]" />
-              </div>
-              <h3 className="text-lg font-semibold text-[#2C3E50] dark:text-white mb-2">Real-World Projects</h3>
-              <p className="text-[#2C3E50]/70 dark:text-white/70 text-sm leading-relaxed">
-                Build actual businesses while learning. Graduate with a portfolio and revenue, not just certificates.
-              </p>
+            {/* Right Image */}
+            <div className="relative">
+              <Image
+                src="https://res.cloudinary.com/dbn8jx8bh/image/upload/v1751367781/The_solution_1_m4maew.png"
+                alt="Learning at Tabor Academy"
+                width={500}
+                height={400}
+                className="rounded-2xl shadow-lg"
+              />
             </div>
-
-            {/* Feature 4: AI Demo Card */}
-            <AIDemoCard />
-          </div>
-
-          {/* Call to Action */}
-          <div className="text-center mt-16">
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
-              asChild
-            >
-              <Link href="/signup" className="flex items-center gap-2">
-                Experience the Full Platform
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-            </Button>
-            <p className="text-sm text-[#2C3E50]/60 dark:text-white/60 mt-3">
-              Start with our free tier - no credit card required
-            </p>
           </div>
         </div>
       </section>
