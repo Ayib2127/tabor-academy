@@ -117,26 +117,27 @@ export function SiteHeader() {
           <Link href="/" className="flex items-center space-x-2">
             <Image
               src="/logo.jpg"
-              alt="Tabor Digital Academy"
+              alt="Tabor Academy"
               width={40}
               height={40}
               className="rounded-lg"
             />
             <span className="hidden font-bold sm:inline-block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
-              Tabor Digital Academy
+              Tabor Academy
             </span>
           </Link>
         </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6 ml-6">
-          <Link 
+          {/* Removed: For Partners */}
+          {/* <Link 
             href="/#partners" 
             className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
             onClick={(e) => handleSmoothScroll(e, 'partners')}
           >
             For Partners
-          </Link>
+          </Link> */}
           
           <Link 
             href="/about" 
@@ -209,28 +210,36 @@ export function SiteHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <Link 
-            href="/#pricing" 
+          {/* Removed: Pricing */}
+          {/* <Link 
+            href="/pricing" 
             className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
-            onClick={(e) => handleSmoothScroll(e, 'pricing')}
           >
             Pricing
-          </Link>
+          </Link> */}
+
           <Link 
-            href="/#success-stories" 
+            href="/success-stories" 
             className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
-            onClick={(e) => handleSmoothScroll(e, 'success-stories')}
           >
             Success Stories
           </Link>
 
-          {/* FAQs Link */}
           <Link 
             href="/faqs" 
-            className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] flex items-center gap-1 dark:text-white dark:hover:text-[#4ECDC4]"
+            className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
           >
-            <HelpCircle className="w-4 h-4" />
             FAQs
+          </Link>
+
+          {/* Become Instructor - visually unique, after FAQs */}
+          <Link
+            href="/become-instructor"
+            className="relative group text-sm font-bold px-5 py-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white shadow-md transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#4ECDC4] focus:ring-offset-2
+              before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-r before:from-[#FF6B35]/30 before:to-[#4ECDC4]/30 before:blur-lg before:opacity-0 group-hover:before:opacity-100 before:transition-opacity before:duration-500"
+            style={{ overflow: 'hidden' }}
+          >
+            <span className="relative z-10">Become Instructor</span>
           </Link>
         </nav>
 

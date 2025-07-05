@@ -37,7 +37,7 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
       phone: "+254 700 000000"
     },
     company: {
-      name: "Tabor Digital Academy",
+      name: "Tabor Academy",
       address: "456 Business Avenue, Nairobi, Kenya",
       phone: "+254 700 111111",
       email: "billing@taboracademy.com",
@@ -103,7 +103,7 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
               <div className="flex items-center gap-4">
                 <Image
                   src="/logo.jpg"
-                  alt="Tabor Digital Academy"
+                  alt="Tabor Academy"
                   width={80}
                   height={80}
                   className="rounded-lg"
@@ -232,7 +232,7 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
               <div className="flex justify-between items-center">
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Thank you for choosing Tabor Digital Academy
+                    Thank you for choosing Tabor Academy
                   </p>
                   <p className="text-xs text-muted-foreground">
                     This is a computer-generated document and requires no signature

@@ -18,7 +18,7 @@ export default function FAQPage() {
               How Can We Help?
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Find answers to common questions about learning with Tabor Digital Academy
+              Find answers to common questions about learning with Tabor Academy
             </p>
             <div className="relative max-w-xl mx-auto">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />

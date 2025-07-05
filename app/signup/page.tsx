@@ -141,7 +141,7 @@ export default function SignUpPage() {
             <>
               <div className="text-center mb-8">
                 <h1 className="text-4xl font-bold tracking-tighter gradient-text mb-4">
-                  Join Tabor Digital Academy
+                  Join Tabor Academy
                 </h1>
                 <p className="text-xl text-muted-foreground">
                   Start your journey to digital success in Ethiopia

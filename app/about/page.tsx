@@ -16,7 +16,7 @@ export default function AboutPage() {
         <div className="container px-4 md:px-6">
           <div className="max-w-3xl mx-auto text-center animate-fade-up">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter gradient-text mb-6">
-              About Tabor Digital Academy
+              About Tabor Academy
             </h1>
             <p className="text-xl text-muted-foreground">
               Building Ethiopia's digital future through accessible, quality education

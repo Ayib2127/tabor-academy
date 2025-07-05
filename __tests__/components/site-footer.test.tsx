@@ -7,7 +7,7 @@ describe('SiteFooter', () => {
   it('renders company information', () => {
     render(<SiteFooter />)
     
-    expect(screen.getByText('Tabor Digital Academy')).toBeInTheDocument()
+    expect(screen.getByText('Tabor Academy')).toBeInTheDocument()
     expect(screen.getByText(/empowering Ethiopian entrepreneurs/i)).toBeInTheDocument()
   })
 

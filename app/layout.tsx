@@ -19,14 +19,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL('https://taboracademy.com'),
   title: {
-    default: 'Tabor Digital Academy - Empowering Ethiopian Entrepreneurs',
-    template: '%s | Tabor Digital Academy'
+    default: 'Tabor Academy - Empowering Ethiopian Entrepreneurs',
+    template: '%s | Tabor Academy'
   },
   description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
   keywords: ['digital skills', 'Ethiopian entrepreneurs', 'online learning', 'digital marketing', 'e-commerce', 'entrepreneurship'],
-  authors: [{ name: 'Tabor Digital Academy' }],
-  creator: 'Tabor Digital Academy',
-  publisher: 'Tabor Digital Academy',
+  authors: [{ name: 'Tabor Academy' }],
+  creator: 'Tabor Academy',
+  publisher: 'Tabor Academy',
   formatDetection: {
     email: false,
     address: false,
@@ -36,21 +36,21 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://taboracademy.com',
-    siteName: 'Tabor Digital Academy',
-    title: 'Tabor Digital Academy - Empowering Ethiopian Entrepreneurs',
+    siteName: 'Tabor Academy',
+    title: 'Tabor Academy - Empowering Ethiopian Entrepreneurs',
     description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
     images: [
       {
         url: 'https://taboracademy.com/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Tabor Digital Academy'
+        alt: 'Tabor Academy'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tabor Digital Academy - Empowering Ethiopian Entrepreneurs',
+    title: 'Tabor Academy - Empowering Ethiopian Entrepreneurs',
     description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
     images: ['https://taboracademy.com/twitter-image.jpg'],
     creator: '@taboracademy'

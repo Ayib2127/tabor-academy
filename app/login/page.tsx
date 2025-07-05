@@ -154,7 +154,7 @@ export default function LoginPage() {
                 Welcome Back
               </h1>
               <p className="text-muted-foreground">
-                Continue your learning journey with Tabor Digital Academy
+                Continue your learning journey with Tabor Academy
               </p>
             </div>
 
@@ -269,7 +269,7 @@ export default function LoginPage() {
 
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                New to Tabor Digital Academy?{" "}
+                New to Tabor Academy?{" "}
                 <Link href="/signup" className="text-orange-500 hover:underline">
                   Sign up for free
                 </Link>

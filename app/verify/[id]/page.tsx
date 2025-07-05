@@ -34,7 +34,7 @@ export default function CertificateVerificationPage({ params }: { params: { id: 
     id: params.id,
     title: "Digital Marketing Specialist",
     recipient: "Sarah Kimani",
-    issuer: "Tabor Digital Academy",
+    issuer: "Tabor Academy",
     issueDate: new Date(2024, 1, 15),
     grade: "A",
     blockchain: {
@@ -139,7 +139,7 @@ export default function CertificateVerificationPage({ params }: { params: { id: 
                     <div className="flex justify-between mb-4">
                       <Image
                         src="/logo.jpg"
-                        alt="Tabor Digital Academy"
+                        alt="Tabor Academy"
                         width={100}
                         height={100}
                         className="h-16 w-auto"

@@ -1,9 +1,9 @@
 export const swaggerSpec = {
   openapi: '3.0.0',
   info: {
-    title: 'Tabor Digital Academy API',
+    title: 'Tabor Academy API',
     version: '1.0.0',
-    description: 'API documentation for Tabor Digital Academy',
+    description: 'API documentation for Tabor Academy',
   },
   paths: {
     '/api/auth/login': {

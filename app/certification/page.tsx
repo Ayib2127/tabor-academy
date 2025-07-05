@@ -34,7 +34,7 @@ export default function CertificationPage() {
       {
         id: "cert-001",
         name: "Digital Marketing Specialist",
-        issuer: "Tabor Digital Academy",
+        issuer: "Tabor Academy",
         progress: 75,
         requirements: [
           { name: "Core Courses", completed: true },
@@ -48,7 +48,7 @@ export default function CertificationPage() {
       {
         id: "cert-002",
         name: "E-commerce Entrepreneur",
-        issuer: "Tabor Digital Academy",
+        issuer: "Tabor Academy",
         progress: 45,
         requirements: [
           { name: "Business Fundamentals", completed: true },
@@ -64,7 +64,7 @@ export default function CertificationPage() {
       {
         id: "cert-003",
         name: "Web Development Fundamentals",
-        issuer: "Tabor Digital Academy",
+        issuer: "Tabor Academy",
         completionDate: "January 2024",
         grade: "A",
         verificationId: "TDA-WD-2024-001",

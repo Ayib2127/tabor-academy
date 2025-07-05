@@ -45,7 +45,7 @@ describe('SiteHeader', () => {
     render(<SiteHeader />)
     
     // Check if logo is present
-    expect(screen.getByAltText('Tabor Digital Academy')).toBeInTheDocument()
+    expect(screen.getByAltText('Tabor Academy')).toBeInTheDocument()
     
     // Check if main navigation links are present
     expect(screen.getByText('About')).toBeInTheDocument()

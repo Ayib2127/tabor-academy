@@ -153,7 +153,7 @@ function SocialAuthCallbackInner() {
                     Link Your Account
                   </h2>
                   <p className="text-muted-foreground mb-6">
-                    Connect your {provider} account with your existing Tabor Digital Academy account
+                    Connect your {provider} account with your existing Tabor Academy account
                   </p>
                 </div>
 

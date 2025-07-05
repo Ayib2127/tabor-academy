@@ -1,4 +1,4 @@
-# Pre-Deployment Checklist for Tabor Digital Academy
+# Pre-Deployment Checklist for Tabor Academy
 
 Use this checklist to ensure your application is ready for production deployment.
 

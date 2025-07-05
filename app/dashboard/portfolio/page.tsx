@@ -107,13 +107,13 @@ const portfolioData = {
   certifications: [
     {
       title: "Digital Marketing Professional",
-      issuer: "Tabor Digital Academy",
+      issuer: "Tabor Academy",
       date: "2024",
       credential: "DMP-2024-001"
     },
     {
       title: "E-commerce Business Expert",
-      issuer: "Tabor Digital Academy",
+      issuer: "Tabor Academy",
       date: "2024",
       credential: "EBE-2024-002"
     }

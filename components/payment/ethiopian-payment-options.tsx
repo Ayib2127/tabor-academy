@@ -25,7 +25,7 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     name: 'TeleBirr',
     logo: '/payment-logos/telebirr.png', // You'll need to add these logos
     accountNumber: '0911234567',
-    accountName: 'Tabor Digital Academy',
+    accountName: 'Tabor Academy',
     instructions: [
       'Open your TeleBirr app',
       'Select "Send Money" or "Transfer"',
@@ -42,12 +42,12 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     name: 'Commercial Bank of Ethiopia',
     logo: '/payment-logos/cbe.png',
     accountNumber: '1000123456789',
-    accountName: 'Tabor Digital Academy',
+    accountName: 'Tabor Academy',
     instructions: [
       'Visit CBE mobile app or nearest branch',
       'Select "Transfer" or "Send Money"',
       'Enter account number: 1000123456789',
-      'Enter account name: Tabor Digital Academy',
+      'Enter account name: Tabor Academy',
       'Enter the exact amount shown above',
       'Complete the transaction',
       'Keep your transaction receipt',
@@ -60,12 +60,12 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     name: 'Bank of Abyssinia',
     logo: '/payment-logos/boa.png',
     accountNumber: '2000987654321',
-    accountName: 'Tabor Digital Academy',
+    accountName: 'Tabor Academy',
     instructions: [
       'Open BOA mobile app or visit branch',
       'Select "Fund Transfer"',
       'Enter account number: 2000987654321',
-      'Enter account name: Tabor Digital Academy',
+      'Enter account name: Tabor Academy',
       'Enter the exact amount shown above',
       'Complete the transaction',
       'Save your transaction receipt',
@@ -78,7 +78,7 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     name: 'M-PESA Ethiopia',
     logo: '/payment-logos/mpesa.png',
     accountNumber: '0912345678',
-    accountName: 'Tabor Digital Academy',
+    accountName: 'Tabor Academy',
     instructions: [
       'Dial *665# or open M-PESA app',
       'Select "Send Money"',

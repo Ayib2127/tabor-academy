@@ -4,7 +4,7 @@ test.describe('Navigation', () => {
   test('should navigate between main pages', async ({ page }) => {
     // Start from homepage
     await page.goto('/');
-    await expect(page).toHaveTitle(/Tabor Digital Academy/);
+    await expect(page).toHaveTitle(/Tabor Academy/);
 
     // Navigate to courses
     await page.click('text=Courses');

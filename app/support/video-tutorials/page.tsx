@@ -44,7 +44,7 @@ export default function VideoTutorialsPage() {
         duration: "5:30",
         views: "1.2K",
         thumbnail: "https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b",
-        description: "Complete walkthrough of the Tabor Digital Academy platform",
+        description: "Complete walkthrough of the Tabor Academy platform",
         instructor: "Sarah Mwangi",
         level: "Beginner"
       },
@@ -220,7 +220,7 @@ export default function VideoTutorialsPage() {
                   </span>
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  Complete walkthrough of the Tabor Digital Academy platform, including navigation,
+                  Complete walkthrough of the Tabor Academy platform, including navigation,
                   key features, and getting started tips.
                 </p>
                 <div className="flex items-center gap-4">

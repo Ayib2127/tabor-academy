@@ -32,14 +32,14 @@ export function SiteFooter() {
             <div className="flex items-center space-x-3">
               <Image
                 src="/logo.jpg"
-                alt="Tabor Digital Academy"
+                alt="Tabor Academy"
                 width={50}
                 height={50}
                 className="rounded-lg"
               />
               <div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
-                  Tabor Digital Academy
+                  Tabor Academy
                 </h3>
                 <p className="text-white/70 text-sm">The Skills to Build. The Tools to Launch. Your Business Starts Here!</p>
               </div>
@@ -114,6 +114,14 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/become-instructor"
+                  className="font-semibold text-[#FF6B35] hover:text-[#4ECDC4] transition-colors text-base"
+                >
+                  Become an Instructor
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -219,7 +227,7 @@ export function SiteFooter() {
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
           {/* Copyright */}
           <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-white/60">
-            <p>© {new Date().getFullYear()} Tabor Digital Academy. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Tabor Academy. All rights reserved.</p>
             <div className="flex items-center gap-2">
               <Heart className="w-4 h-4 text-[#FF6B35]" />
               <span>Made with love in Ethiopia</span>

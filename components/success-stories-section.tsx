@@ -183,31 +183,40 @@ export function SuccessStoriesSection() {
   }
 
   return (
-    <section className="w-full flex flex-col items-center py-12 bg-white dark:bg-gray-900">
-      <h2 className="text-3xl md:text-5xl font-bold text-center mb-8">
-        Success Stories
-      </h2>
-      <div className="w-full max-w-lg mx-auto flex flex-col items-center">
-        {/* Only one card visible, centered */}
-        <div className="relative w-full">
-          <div className="transition-all duration-500">
-            <SuccessStoryCard story={successStories[currentIndex]} />
-          </div>
+    <section className="relative min-h-screen flex items-center bg-gradient-to-br from-[#FF6B35]/10 via-[#4ECDC4]/10 to-white dark:from-[#FF6B35]/20 dark:via-[#4ECDC4]/20 dark:to-gray-900 overflow-hidden">
+      {/* Optional: SVG or pattern overlay */}
+      <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02] -z-10" />
+      {/* Optional: Animated shapes */}
+      <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-to-r from-[#FF6B35]/10 to-[#4ECDC4]/10 rounded-full blur-3xl animate-pulse" />
+      <div className="container px-4 md:px-6">
+        <h2 className="text-3xl md:text-5xl font-bold text-center mb-8">
+          Success Stories
+          </h2>
+        <div className="w-full max-w-lg mx-auto flex flex-col items-center">
+          {/* Only one card visible, centered */}
+          <div className="relative w-full">
+            {successStories && successStories.length > 0 ? (
+              <SuccessStoryCard story={successStories[currentIndex]} />
+            ) : (
+              <div className="text-center py-12 text-gray-400">Loading...</div>
+            )}
         </div>
-        {/* Dots navigation */}
-        <div className="flex justify-center mt-6 space-x-2">
-          {successStories.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => goToIndex(idx)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                idx === currentIndex
-                  ? "bg-[#4ECDC4] scale-125 shadow"
-                  : "bg-gray-300 dark:bg-gray-700"
-              }`}
-              aria-label={`Go to story ${idx + 1}`}
-            />
-          ))}
+          {/* Dots navigation */}
+          <div className="flex justify-center mt-6 space-x-2">
+            {successStories && successStories.length > 0 &&
+              successStories.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => goToIndex(idx)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    idx === currentIndex
+                      ? "bg-[#4ECDC4] scale-125 shadow"
+                      : "bg-gray-300 dark:bg-gray-700"
+                  }`}
+                  aria-label={`Go to story ${idx + 1}`}
+                />
+              ))}
+          </div>
         </div>
       </div>
     </section>

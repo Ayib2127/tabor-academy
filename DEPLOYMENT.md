@@ -1,6 +1,6 @@
-# Deployment Guide for Tabor Digital Academy
+# Deployment Guide for Tabor Academy
 
-This guide provides instructions for deploying the Tabor Digital Academy platform to production.
+This guide provides instructions for deploying the Tabor Academy platform to production.
 
 ## Prerequisites
 

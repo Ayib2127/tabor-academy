@@ -46,7 +46,7 @@ export default function SuccessStoriesPage() {
                 <Quote className="h-12 w-12 text-teal-600 mb-6" />
                 <h2 className="text-3xl font-bold mb-4">Sarah Mwangi</h2>
                 <p className="text-xl mb-6 text-muted-foreground italic">
-                  "Tabor Digital Academy transformed my life. I went from struggling to find work to running my own successful digital marketing agency serving clients across East Ethiopia."
+                  "Tabor Academy transformed my life. I went from struggling to find work to running my own successful digital marketing agency serving clients across East Ethiopia."
                 </p>
                 <div className="flex items-center gap-2 mb-6">
                   {[1, 2, 3, 4, 5].map((star) => (
