@@ -29,10 +29,11 @@ interface VersionSnapshot {
 }
 
 interface VersionHistoryProps {
-  lessonId: string;
-  currentContent: any;
+  lessonId?: string;
+  currentContent?: any;
   onRestore: (content: any) => void;
   onClose: () => void;
+  isVisible?: boolean;
 }
 
 const VersionHistory: FC<VersionHistoryProps> = ({
@@ -40,7 +41,10 @@ const VersionHistory: FC<VersionHistoryProps> = ({
   currentContent,
   onRestore,
   onClose,
+  isVisible = true,
 }) => {
+  if (!isVisible) return null;
+
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<any>(null);

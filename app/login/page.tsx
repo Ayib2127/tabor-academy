@@ -99,6 +99,19 @@ export default function LoginPage() {
       }
 
       toast.success("Logged in successfully!")
+      
+      // Trigger welcome email check (non-blocking)
+      if (authData.user?.id) {
+        fetch('/api/auth/welcome-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: authData.user.id }),
+        }).catch(error => {
+          console.error('Welcome email check failed:', error);
+        });
+      }
     } catch (error) {
       console.error('Login error:', error)
       setError(error instanceof Error ? error.message : 'An error occurred')

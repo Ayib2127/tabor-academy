@@ -27,10 +27,11 @@ interface AIAssistantProps {
   selectedText?: string;
   onContentGenerated: (content: any) => void;
   onQuizGenerated: (quiz: any) => void;
-  lessonType: 'text' | 'video' | 'quiz';
+  lessonType?: 'text' | 'video' | 'quiz';
   lessonTitle?: string;
   moduleTitle?: string;
   currentContent?: any;
+  isVisible?: boolean;
 }
 
 interface AIAction {
@@ -62,7 +63,10 @@ const AIAssistant: FC<AIAssistantProps> = ({
   lessonTitle,
   moduleTitle,
   currentContent,
+  isVisible = true,
 }) => {
+  if (!isVisible) return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);

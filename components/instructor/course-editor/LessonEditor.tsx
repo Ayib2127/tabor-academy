@@ -16,16 +16,20 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 
 interface LessonEditorProps {
-  lesson: Lesson;
+  lesson?: Lesson;
   onUpdate: (updatedLesson: Lesson) => void;
   onDelete: () => void;
+  isVisible?: boolean;
 }
 
 const LessonEditor: FC<LessonEditorProps> = ({
   lesson,
   onUpdate,
   onDelete,
+  isVisible = true,
 }) => {
+  if (!isVisible || !lesson) return null;
+
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [selectedText, setSelectedText] = useState<string>('');

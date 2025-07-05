@@ -65,6 +65,17 @@ function SocialAuthCallbackInner() {
                 // Default to student dashboard for other roles or if role is null/undefined
                 router.push('/dashboard')
               }
+              
+              // Trigger welcome email check for social login (non-blocking)
+              fetch('/api/auth/welcome-email', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.id }),
+              }).catch(error => {
+                console.error('Welcome email check failed for social login:', error);
+              });
             } else {
               // If no user data found, maybe redirect to profile completion or handle as error
               console.log('No user data found for user:', user.id);

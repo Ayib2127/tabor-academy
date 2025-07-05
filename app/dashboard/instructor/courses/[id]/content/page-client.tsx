@@ -602,10 +602,6 @@ export default function CourseContentPage() {
     checkAuth();
   }, []);
 
-  if (!authChecked) {
-    return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
-  }
-
   useEffect(() => {
     if (!courseId) return;
 
@@ -992,7 +988,9 @@ export default function CourseContentPage() {
   // Refactored conditional rendering
   let content;
 
-  if (!courseId) {
+  if (!authChecked) {
+    content = <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
+  } else if (!courseId) {
     content = (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
         <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
@@ -1255,85 +1253,86 @@ export default function CourseContentPage() {
           {/* Panel 2: Editing Canvas */}
           <div className="flex-1 bg-[#FEFEFE] overflow-hidden">
             <div className="h-full overflow-y-auto">
-              {selectedLesson ? (
-                <div className="p-6">
-                  {/* AI Assistant Integration */}
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-[#2C3E50]">
-                      Editing: {selectedLesson.lesson.title}
-                    </h2>
-                    <AIAssistant
-                      selectedText={selectedText}
-                      onContentGenerated={handleAIContentGenerated}
-                      onQuizGenerated={handleAIQuizGenerated}
-                      lessonType={selectedLesson.lesson.type}
-                      lessonTitle={selectedLesson.lesson.title}
-                      moduleTitle={courseData.modules.find(m => m.id === selectedLesson.moduleId)?.title}
-                    />
-                  </div>
-
-                  <LessonEditor
-                    lesson={selectedLesson.lesson}
-                    onUpdate={updatedLesson => {
-                      setCourseData(prev =>
-                        prev
-                          ? {
-                              ...prev,
-                              modules: prev.modules.map(m =>
-                                m.id === selectedLesson.moduleId
-                                  ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
-                                  : m
-                              ),
-                            }
-                          : prev
-                      );
-                      setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
-                    }}
-                    onDelete={() => {
-                      setCourseData(prev =>
-                        prev
-                          ? {
-                              ...prev,
-                              modules: prev.modules.map(m =>
-                                m.id === selectedLesson.moduleId
-                                  ? { ...m, lessons: m.lessons.filter(l => l.id !== selectedLesson.lesson.id) }
-                                  : m
-                              ),
-                            }
-                          : prev
-                      );
-                      setSelectedLesson(null);
-                    }}
+              {/* Always render AIAssistant and LessonEditor, control visibility with props */}
+              <div className={selectedLesson ? "p-6" : "hidden"}>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-[#2C3E50]">
+                    Editing: {selectedLesson?.lesson.title}
+                  </h2>
+                  <AIAssistant
+                    selectedText={selectedText}
+                    onContentGenerated={handleAIContentGenerated}
+                    onQuizGenerated={handleAIQuizGenerated}
+                    lessonType={selectedLesson?.lesson.type}
+                    lessonTitle={selectedLesson?.lesson.title}
+                    moduleTitle={selectedLesson ? courseData.modules.find(m => m.id === selectedLesson.moduleId)?.title : undefined}
+                    isVisible={!!selectedLesson}
                   />
                 </div>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Edit className="w-16 h-16 text-[#4ECDC4] mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-[#2C3E50] mb-2">Select a lesson to edit</h3>
-                    <p className="text-[#2C3E50]/60 mb-6">
-                      Choose a lesson from the sidebar to start editing its content.
-                    </p>
-                    <div className="flex items-center justify-center gap-4">
-                      <Button
-                        onClick={() => setShowCommandPalette(true)}
-                        variant="outline"
-                        className="border-[#E5E8E8] hover:border-[#4ECDC4]"
-                      >
-                        <Command className="w-4 h-4 mr-2" />
-                        Open Command Palette
-                      </Button>
-                      <Button
-                        onClick={() => setShowCoursePreview(true)}
-                        className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Preview Course
-                      </Button>
-                    </div>
+                <LessonEditor
+                  lesson={selectedLesson?.lesson}
+                  onUpdate={updatedLesson => {
+                    if (!selectedLesson) return;
+                    setCourseData(prev =>
+                      prev
+                        ? {
+                            ...prev,
+                            modules: prev.modules.map(m =>
+                              m.id === selectedLesson.moduleId
+                                ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
+                                : m
+                            ),
+                          }
+                        : prev
+                    );
+                    setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
+                  }}
+                  onDelete={() => {
+                    if (!selectedLesson) return;
+                    setCourseData(prev =>
+                      prev
+                        ? {
+                            ...prev,
+                            modules: prev.modules.map(m =>
+                              m.id === selectedLesson.moduleId
+                                ? { ...m, lessons: m.lessons.filter(l => l.id !== selectedLesson.lesson.id) }
+                                : m
+                            ),
+                          }
+                        : prev
+                    );
+                    setSelectedLesson(null);
+                  }}
+                  isVisible={!!selectedLesson}
+                />
+              </div>
+              {/* Show placeholder if no lesson selected */}
+              <div className={!selectedLesson ? "h-full flex items-center justify-center" : "hidden"}>
+                <div className="text-center">
+                  <Edit className="w-16 h-16 text-[#4ECDC4] mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-[#2C3E50] mb-2">Select a lesson to edit</h3>
+                  <p className="text-[#2C3E50]/60 mb-6">
+                    Choose a lesson from the sidebar to start editing its content.
+                  </p>
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      onClick={() => setShowCommandPalette(true)}
+                      variant="outline"
+                      className="border-[#E5E8E8] hover:border-[#4ECDC4]"
+                    >
+                      <Command className="w-4 h-4 mr-2" />
+                      Open Command Palette
+                    </Button>
+                    <Button
+                      onClick={() => setShowCoursePreview(true)}
+                      className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Preview Course
+                    </Button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -1441,29 +1440,29 @@ export default function CourseContentPage() {
           onModeChange={setPreviewMode}
         />
 
-        {selectedLesson && showVersionHistory && (
-          <VersionHistory
-            lessonId={selectedLesson.lesson.id}
-            currentContent={selectedLesson.lesson.content}
-            onRestore={(content) => {
-              const updatedLesson = { ...selectedLesson.lesson, content };
-              setCourseData(prev =>
-                prev
-                  ? {
-                      ...prev,
-                      modules: prev.modules.map(m =>
-                        m.id === selectedLesson.moduleId
-                          ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
-                          : m
-                      ),
-                    }
-                  : prev
-              );
-              setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
-            }}
-            onClose={() => setShowVersionHistory(false)}
-          />
-        )}
+        <VersionHistory
+          lessonId={selectedLesson?.lesson.id}
+          currentContent={selectedLesson?.lesson.content}
+          onRestore={(content) => {
+            if (!selectedLesson) return;
+            const updatedLesson = { ...selectedLesson.lesson, content };
+            setCourseData(prev =>
+              prev
+                ? {
+                    ...prev,
+                    modules: prev.modules.map(m =>
+                      m.id === selectedLesson.moduleId
+                        ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
+                        : m
+                    ),
+                  }
+                : prev
+            );
+            setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
+          }}
+          onClose={() => setShowVersionHistory(false)}
+          isVisible={!!selectedLesson && showVersionHistory}
+        />
       </div>
     );
   }

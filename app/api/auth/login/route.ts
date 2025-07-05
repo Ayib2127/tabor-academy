@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { handleWelcomeEmail } from '@/lib/utils/welcome-email';
 
 /**
  * @swagger
@@ -91,6 +92,13 @@ export async function POST(request: NextRequest) {
         { error: error.message },
         { status: 401 }
       );
+    }
+
+    // Send welcome email on first login (don't await to avoid blocking the response)
+    if (data.user) {
+      handleWelcomeEmail(data.user.id).catch(error => {
+        console.error('Welcome email error (non-blocking):', error);
+      });
     }
 
     return NextResponse.json({
