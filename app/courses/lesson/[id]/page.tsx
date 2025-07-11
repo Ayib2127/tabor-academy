@@ -31,15 +31,14 @@ import {
   Smartphone,
   Wifi,
   WifiOff,
-  FileText,
-  Progress as LucideProgress
+  FileText
 } from "lucide-react"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import Link from "next/link"
 
-import LessonContentDisplay from '@/components/student/lesson-content';
+import LessonContent from '@/components/course-player/LessonContent';
 import Skeleton from '@/components/ui/skeleton';
 
 export default function LessonPlayerPage() {
@@ -47,6 +46,9 @@ export default function LessonPlayerPage() {
   const supabase = createClientComponentClient();
   const [lessonData, setLessonData] = useState<any | null>(null);
   const [error, setError] = useState<any | null>(null);
+  const [moduleTitle, setModuleTitle] = useState<string | null>(null);
+  const [courseTitle, setCourseTitle] = useState<string | null>(null);
+  const [moduleLessons, setModuleLessons] = useState<any[]>([]);
 
   // Alias for easier reference in JSX and handlers
   const lesson = (lessonData as any) ?? {};
@@ -75,11 +77,47 @@ export default function LessonPlayerPage() {
       if (!id) return;
       const { data, error } = await supabase
         .from('module_lessons')
-        .select('id, title, video_url, content_json')
+        .select('id, title, type, content, is_published, module_id, duration, order')
         .eq('id', id)
         .single();
-      if (!error) setLessonData(data);
-      else setError(error);
+      if (!error) {
+        // Parse content based on type
+        let parsedContent = data.content;
+        if (data.type === 'video' || data.type === 'assignment' || data.type === 'text') {
+          // For video/text/assignment, content is a string (HTML or URL)
+          // For video, you may want to parse JSON if you store more info
+        } else if (data.type === 'quiz') {
+          try {
+            parsedContent = JSON.parse(data.content);
+          } catch { parsedContent = null; }
+        }
+        setLessonData({ ...data, content: parsedContent });
+        // Fetch module and course titles for breadcrumbs
+        if (data?.module_id) {
+          const { data: moduleData } = await supabase
+            .from('course_modules')
+            .select('title, course_id')
+            .eq('id', data.module_id)
+            .single();
+          setModuleTitle(moduleData?.title || null);
+          let courseId = moduleData?.course_id;
+          if (courseId) {
+            const { data: courseData } = await supabase
+              .from('courses')
+              .select('title')
+              .eq('id', courseId)
+              .single();
+            setCourseTitle(courseData?.title || null);
+          }
+          // Fetch all lessons in this module for sidebar/chapters
+          const { data: lessonsInModule } = await supabase
+            .from('module_lessons')
+            .select('id, title, is_published, order')
+            .eq('module_id', data.module_id)
+            .order('order', { ascending: true });
+          setModuleLessons(lessonsInModule || []);
+        }
+      } else setError(error);
     })();
   }, [id]);
 
@@ -215,22 +253,18 @@ export default function LessonPlayerPage() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link href="/courses" className="hover:text-foreground">Courses</Link>
             <ChevronRight className="h-4 w-4" />
-            {/* Course breadcrumb could be added here when joined */}
-            <ChevronRight className="h-4 w-4" />
-            <span>{lesson.module ?? ''}</span>
+            {courseTitle && <span>{courseTitle}</span>}
+            {courseTitle && <ChevronRight className="h-4 w-4" />}
+            {moduleTitle && <span>{moduleTitle}</span>}
+            {moduleTitle && <ChevronRight className="h-4 w-4" />}
+            <span>{lesson.title ?? ''}</span>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Video Player Column */}
             <div className="md:col-span-2">
-              {/* show BlockNote content if present */}
-              {lesson.content_json && (
-                <LessonContentDisplay content={lesson.content_json} />
-              )}
-              {/* Legacy content fallback: render plain HTML if no content_json */}
-              {(!lesson.content_json && lesson.content) && (
-                <div className="prose max-w-none mt-6" dangerouslySetInnerHTML={{ __html: lesson.content }} />
-              )}
+              {/* Robust lesson content rendering for all types */}
+              {lesson && <LessonContent lesson={lesson} />}
 
               {/* show video if present */}
               <div ref={playerRef} className="relative bg-black rounded-lg overflow-hidden">
@@ -458,17 +492,14 @@ export default function LessonPlayerPage() {
               <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Chapters</h2>
                 <div className="space-y-2">
-                  {(lesson.chapters ?? []).map((chapter, index) => (
+                  {moduleLessons.map((l, idx) => (
                     <Button
-                      key={index}
+                      key={l.id}
                       variant="ghost"
-                      className={`w-full justify-start ${
-                        currentChapter === index ? "bg-accent" : ""
-                      }`}
-                      onClick={() => handleSeek(chapter.time)}
+                      className={`w-full justify-start ${l.id === lesson.id ? "bg-accent" : ""}`}
+                      asChild
                     >
-                      <span className="mr-2">{formatTime(chapter.time)}</span>
-                      {chapter.title}
+                      <Link href={`/courses/lesson/${l.id}`}>{l.title}</Link>
                     </Button>
                   ))}
                 </div>
@@ -512,27 +543,24 @@ export default function LessonPlayerPage() {
 
               {/* Navigation */}
               <div className="space-y-2">
-                {lesson.previousLesson && (
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    asChild
-                  >
-                    <Link href={`/courses/lesson/${lesson.previousLesson.id}`}>
-                      <ChevronLeft className="h-4 w-4 mr-2" />
-                      Previous Lesson
-                    </Link>
-                  </Button>
-                )}
-                
-                {lesson.nextLesson && (
-                  <Button className="w-full justify-between" asChild>
-                    <Link href={`/courses/lesson/${lesson.nextLesson.id}`}>
-                      Next Lesson
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                )}
+                {/* Dynamic previous/next navigation */}
+                {(() => {
+                  const idx = moduleLessons.findIndex(l => l.id === lesson.id);
+                  const prev = idx > 0 ? moduleLessons[idx - 1] : null;
+                  const next = idx >= 0 && idx < moduleLessons.length - 1 ? moduleLessons[idx + 1] : null;
+                  return <>
+                    {prev && (
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <Link href={`/courses/lesson/${prev.id}`}><ChevronLeft className="h-4 w-4 mr-2" />Previous Lesson</Link>
+                      </Button>
+                    )}
+                    {next && (
+                      <Button className="w-full justify-between" asChild>
+                        <Link href={`/courses/lesson/${next.id}`}>Next Lesson<ChevronRight className="h-4 w-4 ml-2" /></Link>
+                      </Button>
+                    )}
+                  </>;
+                })()}
               </div>
 
               {/* Help & Support */}

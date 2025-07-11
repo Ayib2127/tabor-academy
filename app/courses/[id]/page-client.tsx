@@ -41,6 +41,8 @@ export default function CourseDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
+  const [completedLessons, setCompletedLessons] = useState(0);
+  const [totalValidLessons, setTotalValidLessons] = useState(0);
 
   // Move these up!
   const [activeTab, setActiveTab] = useState("overview");
@@ -92,24 +94,27 @@ export default function CourseDetailsPage() {
   }, [id]);
 
   useEffect(() => {
-    async function checkEnrollment() {
-      if (!currentUserId || !course?.id) {
-        setIsEnrolled(false);
-        return;
-      }
+    async function fetchEnrollmentStatus() {
+      if (!currentUserId || !course?.id) return;
       try {
-        const response = await fetch(`/api/enrollments?courseId=${course.id}`);
-        if (!response.ok) {
+        const res = await fetch(`/api/enrollments?courseId=${course.id}`);
+        const data = await res.json();
+        if (data && data.enrollment) {
+          setIsEnrolled(true);
+          setCompletedLessons(data.completedLessons || 0);
+          setTotalValidLessons(data.totalValidLessons || 0);
+        } else {
           setIsEnrolled(false);
-          return;
+          setCompletedLessons(0);
+          setTotalValidLessons(0);
         }
-        const data = await response.json();
-        setIsEnrolled(!!data.enrollment);
-      } catch {
+      } catch (err) {
         setIsEnrolled(false);
+        setCompletedLessons(0);
+        setTotalValidLessons(0);
       }
     }
-    checkEnrollment();
+    fetchEnrollmentStatus();
   }, [currentUserId, course?.id]);
 
   // Find the first published lesson (sorted by module order and lesson order)
@@ -119,7 +124,24 @@ export default function CourseDetailsPage() {
     for (const module of sortedModules) {
       if (module.lessons && module.lessons.length > 0) {
         const sortedLessons = [...module.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
-        const publishedLesson = sortedLessons.find((lesson) => lesson.is_published);
+        const publishedLesson = sortedLessons.find((lesson) => {
+          if (!lesson.is_published) return false;
+          switch (lesson.type) {
+            case 'video':
+              return lesson.content && lesson.content.src;
+            case 'text':
+              return lesson.content && lesson.content.length > 0;
+            case 'quiz':
+              try {
+                const quizContent = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+                return quizContent && Array.isArray(quizContent.questions) && quizContent.questions.length > 0;
+              } catch { return false; }
+            case 'assignment':
+              return lesson.content && lesson.content.length > 0;
+            default:
+              return false;
+          }
+        });
         if (publishedLesson) {
           firstLessonId = publishedLesson.id;
           break;
@@ -127,6 +149,9 @@ export default function CourseDetailsPage() {
       }
     }
   }
+
+  // Calculate progress percentage
+  const progressPercent = totalValidLessons > 0 ? Math.round((completedLessons / totalValidLessons) * 100) : 0;
 
   // Now you can do early returns
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -184,6 +209,16 @@ export default function CourseDetailsPage() {
                 <div className="flex items-center gap-1">
                   <Clock className="h-5 w-5" />
                   <span>Last updated {course.lastUpdated}</span>
+                </div>
+                {/* Progress Bar and Lesson Count UI */}
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <div className="w-32 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                    <div
+                      className="bg-[#4ECDC4] h-2.5 rounded-full"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <span>{progressPercent}% Complete • {completedLessons}/{totalValidLessons} Lessons</span>
                 </div>
               </div>
 

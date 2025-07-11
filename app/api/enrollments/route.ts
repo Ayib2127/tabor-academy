@@ -19,6 +19,47 @@ export async function GET(request: NextRequest) {
     const courseId = searchParams.get('courseId');
     if (courseId) {
       try {
+        // Get all published, valid lessons for the course
+        const { data: modules, error: modulesError } = await supabase
+          .from('course_modules')
+          .select('id')
+          .eq('course_id', courseId);
+        if (modulesError) throw modulesError;
+        const moduleIds = (modules || []).map(m => m.id);
+        let { data: lessons, error: lessonsError } = await supabase
+          .from('module_lessons')
+          .select('id, type, content, is_published')
+          .in('module_id', moduleIds);
+        if (lessonsError) throw lessonsError;
+        // Only count published lessons with valid content
+        lessons = (lessons || []).filter(lesson => {
+          if (!lesson.is_published) return false;
+          switch (lesson.type) {
+            case 'video':
+              return lesson.content && JSON.parse(lesson.content)?.src;
+            case 'text':
+              return lesson.content && lesson.content.length > 0;
+            case 'quiz':
+              try {
+                const quizContent = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+                return quizContent && Array.isArray(quizContent.questions) && quizContent.questions.length > 0;
+              } catch { return false; }
+            case 'assignment':
+              return lesson.content && lesson.content.length > 0;
+            default:
+              return false;
+          }
+        });
+        const lessonIds = lessons.map(l => l.id);
+        // Get completed lessons for the user
+        const { data: progressRows, error: progressError } = await supabase
+          .from('progress')
+          .select('lesson_id, completed')
+          .eq('user_id', session.user.id)
+          .in('lesson_id', lessonIds);
+        if (progressError) throw progressError;
+        const completedLessons = (progressRows || []).filter(p => p.completed).length;
+        // Get enrollment as before
         const { data: enrollment, error } = await supabase
           .from('enrollments')
           .select('*')
@@ -32,7 +73,11 @@ export async function GET(request: NextRequest) {
             { status: 500 }
           );
         }
-        return NextResponse.json({ enrollment });
+        return NextResponse.json({
+          enrollment,
+          completedLessons,
+          totalValidLessons: lessons.length
+        });
       } catch (err) {
         console.error('Unexpected error in enrollments GET:', err);
         return NextResponse.json(

@@ -5,6 +5,8 @@ import { Lesson } from '@/types/course';
 import QuizPlayer from './QuizPlayer';
 import { toast } from 'react-hot-toast';
 import { QuizResults } from '@/types/quiz';
+import Link from 'next/link';
+import LessonContentDisplay from '@/components/student/lesson-content';
 
 interface LessonContentProps {
   lesson: Lesson;
@@ -25,30 +27,58 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false }) =>
                 poster={`/api/thumbnails/${lesson.id}`}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-white">
+              <div className="flex flex-col items-center justify-center h-full text-white">
                 Video content not available
+                <BackToCourseButton courseId={lesson['course_id']} />
               </div>
             )}
           </div>
         );
 
-      case 'text':
-        return (
-          <div className="prose max-w-none">
-            {lesson.content ? (
+      case 'text': {
+        // If content is Tiptap JSON, render with LessonContentDisplay; else, render as HTML
+        if (!lesson.content) {
+          return (
+            <div className="flex flex-col items-center text-gray-500">
+              No content available
+              <BackToCourseButton courseId={lesson['course_id']} />
+            </div>
+          );
+        }
+        let tiptapContent = null;
+        if (typeof lesson.content === 'object' && lesson.content.type === 'doc') {
+          tiptapContent = lesson.content;
+        } else if (typeof lesson.content === 'string') {
+          try {
+            const parsed = JSON.parse(lesson.content);
+            if (parsed && parsed.type === 'doc') tiptapContent = parsed;
+          } catch {}
+        }
+        if (tiptapContent) {
+          return <LessonContentDisplay content={tiptapContent} type="text" />;
+        } else {
+          return (
+            <div className="prose max-w-none">
               <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
-            ) : (
-              <p className="text-gray-500">No content available</p>
-            )}
-          </div>
-        );
+            </div>
+          );
+        }
+      }
 
-      case 'quiz':
+      case 'quiz': {
+        let quizContent = null;
+        if (typeof lesson.content === 'object' && lesson.content !== null) {
+          quizContent = lesson.content;
+        } else if (typeof lesson.content === 'string') {
+          try {
+            quizContent = JSON.parse(lesson.content);
+          } catch { quizContent = null; }
+        }
         return (
           <div className="quiz-container">
-            {lesson.content ? (
+            {quizContent ? (
               <QuizPlayer
-                quiz={JSON.parse(lesson.content)}
+                quiz={quizContent}
                 onComplete={async (results: QuizResults) => {
                   try {
                     const response = await fetch(`/api/student/quizzes/${lesson.id}/submit`, {
@@ -76,8 +106,26 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false }) =>
                 }}
               />
             ) : (
-              <div className="text-gray-500">
+              <div className="flex flex-col items-center text-gray-500">
                 Quiz content not available
+                <BackToCourseButton courseId={lesson['course_id']} />
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case 'assignment':
+        return (
+          <div className="assignment-container">
+            {lesson.content ? (
+              <div className="prose max-w-none">
+                <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center text-gray-500">
+                Assignment content not available
+                <BackToCourseButton courseId={lesson['course_id']} />
               </div>
             )}
           </div>
@@ -85,8 +133,11 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false }) =>
 
       default:
         return (
-          <div className="text-gray-500">
+          <div className="flex flex-col items-center text-gray-500">
             Unsupported content type
+            <div className="mt-2 text-xs text-red-500">Type: {lesson.type ? lesson.type : 'undefined'}</div>
+            <div className="mt-1 text-xs text-red-500 max-w-xl break-all">Content: {JSON.stringify(lesson.content)}</div>
+            <BackToCourseButton courseId={lesson['course_id']} />
           </div>
         );
     }
@@ -98,5 +149,14 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false }) =>
     </div>
   );
 };
+
+// Add a reusable back button
+const BackToCourseButton = ({ courseId }: { courseId?: string }) => (
+  <Link href={courseId ? `/courses/${courseId}` : '/courses'}>
+    <button className="mt-4 px-4 py-2 bg-[#4ECDC4] text-white rounded hover:bg-[#4ECDC4]/90 transition">
+      Back to Course
+    </button>
+  </Link>
+);
 
 export default LessonContent; 
