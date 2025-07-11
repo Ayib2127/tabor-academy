@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createApiSupabaseClient();
     // Get the current user
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -11,6 +12,34 @@ export async function GET(request: NextRequest) {
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+    
+    // Check for courseId query param
+    const { searchParams } = new URL(request.url);
+    const courseId = searchParams.get('courseId');
+    if (courseId) {
+      try {
+        const { data: enrollment, error } = await supabase
+          .from('enrollments')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('course_id', courseId)
+          .maybeSingle();
+        if (error) {
+          console.error('Supabase error in enrollments GET:', error);
+          return NextResponse.json(
+            { error: error.message },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json({ enrollment });
+      } catch (err) {
+        console.error('Unexpected error in enrollments GET:', err);
+        return NextResponse.json(
+          { error: 'Internal server error', details: String(err) },
+          { status: 500 }
+        );
+      }
     }
     
     // Get the user's enrollments
@@ -81,6 +110,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createApiSupabaseClient();
     const { courseId } = await request.json();
     
     if (!courseId) {

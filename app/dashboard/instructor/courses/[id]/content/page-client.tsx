@@ -78,6 +78,7 @@ interface Lesson {
   // Optionally add assignment-specific fields:
   dueDate?: string;
   needsGrading?: boolean;
+  duration?: number;
 }
 
 interface Module {
@@ -322,7 +323,7 @@ function DraggableLesson({
     new Date(courseData.start_date) <= new Date();
 
   const handleLessonClick = () => {
-    setEditingLesson(module_id, lesson.id);
+    setEditingLesson({ moduleId: module_id, lesson });
   };
 
   const isSelected = false; // This component is not directly used for selection in the main view
@@ -362,7 +363,9 @@ function DraggableLesson({
           <GripVertical className="h-4 w-4 text-[#2C3E50]/40" />
         </div>
         {getLessonIcon()}
-        <span className="text-sm text-[#2C3E50] cursor-pointer" onClick={e => { e.stopPropagation(); setEditingLesson(module_id, lesson.id); }}>{lesson.title}</span>
+        <span className="text-sm text-[#2C3E50] cursor-pointer" onClick={e => { e.stopPropagation(); setEditingLesson({ moduleId: module_id, lesson }); }}>{lesson.title}{typeof lesson.duration === 'number' && lesson.duration > 0 && (
+          <span className="ml-2 text-xs text-gray-500">• {lesson.duration} min</span>
+        )}</span>
         {lesson.is_published && (
           <Badge variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
             Published
@@ -374,7 +377,7 @@ function DraggableLesson({
           variant="outline"
           size="sm"
           className="ml-2"
-          onClick={e => { e.stopPropagation(); setEditingLesson(module_id, lesson.id); }}
+          onClick={e => { e.stopPropagation(); setEditingLesson({ moduleId: module_id, lesson }); }}
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -623,10 +626,9 @@ export default function CourseContentPage() {
   };
 
   // 2. Handler to open editor with fresh data
-  const handleEditLesson = async (moduleId, lessonId) => {
-    const latestLesson = await fetchLessonById(lessonId);
+  const handleEditLesson = async ({ moduleId, lesson }: { moduleId: string, lesson: Lesson }) => {
+    const latestLesson = await fetchLessonById(lesson.id);
     if (latestLesson) {
-      console.log('[DEBUG] Opening lesson in editor:', latestLesson);
       setEditingLesson({
         moduleId,
         lesson: {

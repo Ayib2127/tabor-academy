@@ -30,6 +30,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { snakeToCamel } from "@/lib/utils/snakeToCamel";
+import { EnrollmentButton } from "@/components/course/enrollment-button";
+import { supabase } from "@/lib/supabase/client";
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
@@ -37,10 +39,20 @@ export default function CourseDetailsPage() {
   const [modules, setModules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
 
   // Move these up!
   const [activeTab, setActiveTab] = useState("overview");
   const [expandedModules, setExpandedModules] = useState<number[]>([]);
+
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    }
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     async function fetchCourse() {
@@ -78,6 +90,43 @@ export default function CourseDetailsPage() {
       fetchModules();
     }
   }, [id]);
+
+  useEffect(() => {
+    async function checkEnrollment() {
+      if (!currentUserId || !course?.id) {
+        setIsEnrolled(false);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/enrollments?courseId=${course.id}`);
+        if (!response.ok) {
+          setIsEnrolled(false);
+          return;
+        }
+        const data = await response.json();
+        setIsEnrolled(!!data.enrollment);
+      } catch {
+        setIsEnrolled(false);
+      }
+    }
+    checkEnrollment();
+  }, [currentUserId, course?.id]);
+
+  // Find the first published lesson (sorted by module order and lesson order)
+  let firstLessonId: string | null = null;
+  if (modules && modules.length > 0) {
+    const sortedModules = [...modules].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
+    for (const module of sortedModules) {
+      if (module.lessons && module.lessons.length > 0) {
+        const sortedLessons = [...module.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
+        const publishedLesson = sortedLessons.find((lesson) => lesson.is_published);
+        if (publishedLesson) {
+          firstLessonId = publishedLesson.id;
+          break;
+        }
+      }
+    }
+  }
 
   // Now you can do early returns
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -173,9 +222,17 @@ export default function CourseDetailsPage() {
                   <span className="text-3xl font-bold">${course.price}</span>
                 </div>
 
-                <Button className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-lg py-6">
-                  Enroll Now
-                </Button>
+                <EnrollmentButton
+                  courseId={course.id}
+                  courseTitle={course.title}
+                  price={course.price}
+                  isEnrolled={isEnrolled}
+                  isOwnCourse={course.instructor_id === currentUserId}
+                  contentType={course.contentType}
+                  enrollmentCount={course.enrollments}
+                  onEnrolled={() => setIsEnrolled(true)}
+                  firstLessonId={firstLessonId}
+                />
 
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1">

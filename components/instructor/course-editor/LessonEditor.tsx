@@ -122,6 +122,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               is_published: updatedLesson.is_published ?? false,
               order: updatedLesson.order,
               dueDate: updatedLesson.dueDate,
+              duration: updatedLesson.duration,
               needsGrading: updatedLesson.needsGrading,
               updated_at: new Date().toISOString(),
             })
@@ -154,6 +155,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               is_published: updatedLesson.is_published ?? false,
               order: updatedLesson.order,
               dueDate: updatedLesson.dueDate,
+              duration: updatedLesson.duration,
               needsGrading: updatedLesson.needsGrading,
               updated_at: new Date().toISOString(),
             })
@@ -425,6 +427,26 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   Published
                 </Label>
               </div>
+            </div>
+            <div>
+              <Label htmlFor="lesson-duration" className="text-[#2C3E50] font-semibold">
+                Duration <span className="text-xs text-gray-400">(minutes, optional)</span>
+              </Label>
+              <Input
+                id="lesson-duration"
+                type="number"
+                min={1}
+                value={localLesson.duration ?? ''}
+                onChange={e => {
+                  const value = e.target.value;
+                  setLocalLesson(prev => ({
+                    ...prev,
+                    duration: value === '' ? undefined : Math.max(1, parseInt(value, 10) || 1)
+                  }));
+                }}
+                placeholder="e.g. 10"
+                className="mt-1 border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20 w-32"
+              />
             </div>
           </div>
 

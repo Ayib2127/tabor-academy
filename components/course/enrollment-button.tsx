@@ -29,6 +29,8 @@ interface EnrollmentButtonProps {
   contentType?: string
   enrollmentCount?: number
   className?: string
+  onEnrolled?: () => void // NEW: callback for parent to update state
+  firstLessonId?: string | null // NEW: id of first published lesson
 }
 
 export function EnrollmentButton({
@@ -39,7 +41,9 @@ export function EnrollmentButton({
   isOwnCourse = false,
   contentType,
   enrollmentCount = 0,
-  className = ""
+  className = "",
+  onEnrolled,
+  firstLessonId,
 }: EnrollmentButtonProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -90,18 +94,24 @@ export function EnrollmentButton({
             router.push('/login')
             return
           }
-          
+          // If already enrolled, update UI immediately
           if (data.enrolled) {
-            toast.info('You are already enrolled in this course')
-            router.push(`/courses/${courseId}`)
+            if (onEnrolled) onEnrolled();
+            // No toast, just update UI
             return
           }
-
           throw new Error(data.error || 'Enrollment failed')
         }
 
-        toast.success(data.message || 'Successfully enrolled!')
-        router.push(data.redirect_url || `/courses/${courseId}`)
+        toast.success("You're enrolled! Redirecting to your course...")
+        if (onEnrolled) onEnrolled();
+        setTimeout(() => {
+          if (firstLessonId) {
+            router.push(`/courses/lesson/${firstLessonId}`)
+          } else {
+            router.push(`/courses/${courseId}`)
+          }
+        }, 1500)
         return
       }
 
@@ -185,7 +195,13 @@ export function EnrollmentButton({
     return (
       <div className="space-y-3">
         <Button 
-          onClick={() => router.push(`/courses/${courseId}`)}
+          onClick={() => {
+            if (firstLessonId) {
+              router.push(`/courses/lesson/${firstLessonId}`)
+            } else {
+              router.push(`/courses/${courseId}`)
+            }
+          }}
           className="w-full bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
         >
           <CheckCircle className="h-4 w-4 mr-2" />
