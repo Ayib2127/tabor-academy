@@ -1,33 +1,47 @@
-import { z } from 'zod';
-
-export const lessonSchema = z.object({
-  title: z.string().min(1, 'Lesson title is required').max(100),
-  type: z.enum(['video', 'text', 'quiz']),
-  duration: z.number().optional(),
-  order: z.number(),
-});
-
-export const moduleSchema = z.object({
-  title: z.string().min(1, 'Module title is required').max(100),
-  description: z.string().optional(),
-  lessons: z.array(lessonSchema),
-  order: z.number(),
-});
+import { z } from "zod";
 
 export const courseCreationSchema = z.object({
-  deliveryType: z.enum(['self_paced','cohort']),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  registrationDeadline: z.string().optional(),
   title: z.string().min(1, 'Course title is required').max(100),
+  subtitle: z.string().max(150).optional(),
   description: z.string().min(10, 'Description must be at least 10 characters'),
+  language: z.string().max(50).optional(),
+  subtitles: z.array(z.string().max(50)).optional(),
+  video_hours: z.number().min(0).optional(),
+  resources: z.number().min(0).optional(),
+  certificate: z.boolean().optional(),
+  community: z.boolean().optional(),
+  lifetime_access: z.boolean().optional(),
+  learning_outcomes: z.array(z.string()).optional(),
+  requirements: z.array(z.string()).optional(),
+  success_stories: z.array(z.object({
+    name: z.string(),
+    photo: z.string().optional(),
+    outcome: z.string().optional(),
+    story: z.string(),
+  })).optional(),
+  faq: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).optional(),
   category: z.string().min(1, 'Category is required'),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   tags: z.array(z.string()).min(1, 'At least one tag is required'),
   price: z.number().min(0, 'Price must be 0 or greater'),
   thumbnailUrl: z.string().url('Invalid thumbnail URL').optional(),
   promoVideoUrl: z.string().url('Invalid promo video URL').optional(),
-  modules: z.array(moduleSchema).min(1, 'At least one module is required'),
+  deliveryType: z.enum(['self_paced', 'cohort']),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  registrationDeadline: z.string().optional(),
+  modules: z.array(z.object({
+    title: z.string().min(1, 'Module title is required'),
+    description: z.string().optional(),
+    order: z.number(),
+    lessons: z.array(z.object({
+      title: z.string().min(1, 'Lesson title is required'),
+      type: z.enum(['video', 'text', 'quiz']),
+      order: z.number(),
+      duration: z.number().optional(),
+    })),
+  })).min(1, 'At least one module is required'),
 });
-
-export type CourseCreationData = z.infer<typeof courseCreationSchema>; 

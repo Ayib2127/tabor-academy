@@ -25,13 +25,14 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 
-export default function CertificateVerificationPage({ params }: { params: { id: string } }) {
+export default async function VerifyPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [verificationStatus, setVerificationStatus] = useState<"verified" | "invalid" | "pending">("verified")
   const [isVerifying, setIsVerifying] = useState(false)
 
   // Mock certificate data
   const certificate = {
-    id: params.id,
+    id: id,
     title: "Digital Marketing Specialist",
     recipient: "Sarah Kimani",
     issuer: "Tabor Academy",

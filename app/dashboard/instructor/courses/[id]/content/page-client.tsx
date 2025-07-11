@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { toast } from "sonner"
@@ -39,6 +39,10 @@ import {
   History,
   Command,
   Sparkles,
+  Plus,
+  User,
+  BarChart,
+  ChevronDown,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -55,14 +59,25 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core"
+import { TagInput } from "@/components/ui/TagInput"
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { v4 as uuidv4 } from 'uuid';
+import { snakeToCamel } from "@/lib/utils/snakeToCamel";
+import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import Draggable from 'react-draggable';
 
 interface Lesson {
   id: string;
   title: string;
   content?: object | null; // Updated to support Tiptap JSON
-  type: 'video' | 'text' | 'quiz';
+  type: 'video' | 'text' | 'quiz' | 'assignment';
   is_published: boolean;
   order: number;
+  // Optionally add assignment-specific fields:
+  dueDate?: string;
+  needsGrading?: boolean;
 }
 
 interface Module {
@@ -72,6 +87,7 @@ interface Module {
   weekly_sprint_goal?: string; // Added for cohort courses
   unlocks_on_week?: number; // Added for cohort courses
   order: number;
+  description?: string; // Added for module description
 }
 
 interface LiveSession {
@@ -105,6 +121,18 @@ interface CourseData {
   status: 'draft' | 'pending_review' | 'published'; // Added status
   modules: Module[];
   live_sessions?: LiveSession[]; // Added for cohort courses
+  subtitle?: string;
+  language?: string;
+  subtitles?: string[];
+  videoHours?: number;
+  resources?: number;
+  certificate?: boolean;
+  community?: boolean;
+  lifetimeAccess?: boolean;
+  learningOutcomes?: string[];
+  requirements?: string[];
+  successStories?: { name: string; photo?: string; outcome?: string; story: string }[];
+  faq?: { question: string; answer: string }[];
 }
 
 interface DraggableModuleProps {
@@ -150,6 +178,7 @@ function DraggableModule({
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [isEditingModuleTitle, setIsEditingModuleTitle] = useState(false);
   const [editedModuleTitle, setEditedModuleTitle] = useState(module.title);
+  const [editedDescription, setEditedDescription] = useState(module.description || "");
 
   // Check if course is locked (cohort course that has started)
   const isCourseLocked = courseData.delivery_type === 'cohort' && 
@@ -177,160 +206,79 @@ function DraggableModule({
   const isSelected = selectedModule?.module.id === module.id;
 
   return (
-    <div className="mb-4">
-      {/* Week Header for Cohort Courses */}
-      {courseData.delivery_type === 'cohort' && weekNumber && (
-        <div className="mb-2 px-3 py-1 bg-gradient-to-r from-[#FF6B35]/10 to-[#4ECDC4]/10 rounded-md">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-[#2C3E50]">Week {weekNumber}</h4>
-            {module.weekly_sprint_goal && (
-              <Badge variant="outline" className="text-xs border-[#FF6B35]/30 text-[#FF6B35]">
-                <Target className="w-3 h-3 mr-1" />
-                Goal Set
-              </Badge>
-            )}
-          </div>
-        </div>
-      )}
-      
-      <Card 
+    <div className="mb-8">
+      <div
         ref={setNodeRef} 
         style={style} 
-        className={`border-[#E5E8E8] shadow-sm cursor-pointer transition-all duration-200 ${
-          isSelected ? 'ring-2 ring-[#4ECDC4] border-[#4ECDC4]' : 'hover:border-[#4ECDC4]/50'
-        }`}
+        className={`bg-[#F7F9F9] rounded-xl shadow-md p-6 transition-all duration-200 ${isSelected ? 'ring-2 ring-[#4ECDC4]' : 'hover:ring-1 hover:ring-[#4ECDC4]/40'}`}
         onClick={handleModuleClick}
       >
-        <CardHeader className="pb-3 bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5">
-          <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div
                 {...attributes}
                 {...listeners}
-                className={`cursor-grab hover:cursor-grabbing p-1 rounded hover:bg-white/50 ${
-                  isCourseLocked ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                onClick={(e) => e.stopPropagation()}
+              className="cursor-grab p-1 rounded hover:bg-white/50"
+              onClick={e => e.stopPropagation()}
               >
                 <GripVertical className="h-4 w-4 text-[#2C3E50]/40" />
               </div>
-              <BookOpen className="h-5 w-5 text-[#FF6B35]" />
-              {isEditingModuleTitle ? (
-                <Input
-                  value={editedModuleTitle}
-                  onChange={(e) => setEditedModuleTitle(e.target.value)}
-                  onBlur={handleSaveModuleTitle}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSaveModuleTitle();
-                    }
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-lg border-b border-gray-300 focus:border-blue-500 outline-none p-0 h-auto font-bold text-[#2C3E50]"
-                  disabled={isCourseLocked}
-                />
-              ) : (
-                <CardTitle 
-                  className="text-[#2C3E50] text-lg cursor-pointer" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isCourseLocked) {
-                      setIsEditingModuleTitle(true);
-                    }
-                  }}
-                >
-                  {module.title}
-                </CardTitle>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isCourseLocked) {
-                  onDeleteModule(module.id);
-                }
-              }}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-              disabled={isCourseLocked}
-            >
-              <Trash2 className="h-4 w-4" />
+            <span className="font-bold text-lg text-[#2C3E50]">Module {module.order + 1}: {module.title}</span>
+          </div>
+          <div className="flex gap-2">
+            <Button size="icon" variant="ghost" aria-label="Edit Module" onClick={e => { e.stopPropagation(); setIsEditingModuleTitle(true); }}>
+              <Edit className="h-4 w-4 text-[#FF6B35]" />
+            </Button>
+            <Button size="icon" variant="ghost" aria-label="Delete Module" onClick={e => { e.stopPropagation(); onDeleteModule(module.id); }}>
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+            <Button size="icon" variant="ghost" aria-label="Reorder Module" disabled>
+              <GripVertical className="h-4 w-4 text-[#4ECDC4]" />
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="space-y-2 ml-8">
-            <SortableContext
-              items={module.lessons.map(lesson => `lesson-${module.id}-${lesson.id}`)}
-              strategy={verticalListSortingStrategy}
-            >
-              {module.lessons.map((lesson) => (
-                <DraggableLesson
-                  key={lesson.id}
-                  module_id={module.id}
-                  lesson={lesson}
-                  courseData={courseData}
-                  onDeleteLesson={onDeleteLesson}
-                  onLessonTitleChange={onLessonTitleChange}
-                  setSelectedLesson={setSelectedLesson}
-                  selectedLesson={selectedLesson}
-                />
-              ))}
-            </SortableContext>
-
-            {showAddLessonInput === module.id ? (
-              <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+        </div>
+        <div className="space-y-2">
+          {module.lessons.map((lesson, idx) => (
+            <div key={lesson.id} className="flex items-center gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full mr-2 ${
+                lesson.type === 'video' ? 'bg-[#4ECDC4]/20 text-[#4ECDC4]' :
+                lesson.type === 'text' ? 'bg-[#FF6B35]/20 text-[#FF6B35]' :
+                lesson.type === 'quiz' ? 'bg-purple-100 text-purple-600' :
+                'bg-[#E5E8E8] text-[#2C3E50]'
+              }`}>
+                {lesson.type.charAt(0).toUpperCase() + lesson.type.slice(1)}
+              </span>
+              <span className="flex-1 text-[#2C3E50] font-medium">{lesson.title}</span>
+            </div>
+          ))}
+            </div>
+            <Button
+          variant="outline"
+              size="sm"
+          onClick={e => { e.stopPropagation(); setShowAddLessonInput(module.id); }}
+          className="w-full mt-4 border-[#4ECDC4]/30 text-[#4ECDC4] hover:bg-[#4ECDC4]/5"
+        >
+          <PlusCircle className="h-4 w-4 mr-2" /> Add Lesson
+            </Button>
+        {showAddLessonInput === module.id && (
+          <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
                 <Input
                   placeholder="Enter lesson title"
                   value={newLessonTitle}
-                  onChange={(e) => setNewLessonTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddLesson();
-                    }
-                    e.stopPropagation();
-                  }}
+              onChange={e => setNewLessonTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddLesson(); } e.stopPropagation(); }}
                   className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                 />
-                <Button
-                  onClick={handleAddLesson}
-                  className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
-                >
-                  Add
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowAddLessonInput(null);
-                    setNewLessonTitle("");
-                  }}
-                >
-                  Cancel
-                </Button>
+            <Button
+              onClick={e => { e.stopPropagation(); handleAddLesson(); }}
+              className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
+            >
+              Add
+            </Button>
+            <Button variant="outline" onClick={() => { setShowAddLessonInput(null); setNewLessonTitle(''); }}>Cancel</Button>
               </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!isCourseLocked) {
-                    setShowAddLessonInput(module.id);
-                  }
-                }}
-                className="w-full mt-3 border-[#4ECDC4]/30 text-[#4ECDC4] hover:bg-[#4ECDC4]/5"
-                disabled={isCourseLocked}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Lesson
-              </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -341,8 +289,7 @@ interface DraggableLessonProps {
   courseData: CourseData;
   onDeleteLesson: (moduleId: string, lessonId: string) => void;
   onLessonTitleChange: (moduleId: string, lessonId: string, newTitle: string) => void;
-  setSelectedLesson: (val: { moduleId: string, lesson: Lesson } | null) => void;
-  selectedLesson: { moduleId: string; lesson: Lesson } | null;
+  setEditingLesson: (val: { moduleId: string, lesson: Lesson } | null) => void;
 }
 
 function DraggableLesson({
@@ -351,8 +298,7 @@ function DraggableLesson({
   courseData,
   onDeleteLesson,
   onLessonTitleChange,
-  setSelectedLesson,
-  selectedLesson,
+  setEditingLesson,
 }: DraggableLessonProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `lesson-${module_id}-${lesson.id}`,
@@ -364,24 +310,22 @@ function DraggableLesson({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(lesson.title);
+  // Defensive parsing for lesson content
+  const safeLesson = {
+    ...lesson,
+    content: typeof lesson.content === 'string' ? (() => { try { return JSON.parse(lesson.content); } catch { return {}; } })() : lesson.content,
+  };
 
   // Check if course is locked (cohort course that has started)
   const isCourseLocked = courseData.delivery_type === 'cohort' && 
     courseData.start_date && 
     new Date(courseData.start_date) <= new Date();
 
-  const handleSave = () => {
-    onLessonTitleChange(module_id, lesson.id, editedTitle);
-    setIsEditing(false);
-  };
-
   const handleLessonClick = () => {
-    setSelectedLesson({ moduleId: module_id, lesson });
+    setEditingLesson(module_id, lesson.id);
   };
 
-  const isSelected = selectedLesson?.lesson.id === lesson.id && selectedLesson?.moduleId === module_id;
+  const isSelected = false; // This component is not directly used for selection in the main view
 
   // Get icon and color based on lesson type
   const getLessonIcon = () => {
@@ -418,34 +362,7 @@ function DraggableLesson({
           <GripVertical className="h-4 w-4 text-[#2C3E50]/40" />
         </div>
         {getLessonIcon()}
-        {isEditing ? (
-          <Input
-            value={editedTitle}
-            onChange={(e) => setEditedTitle(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSave();
-              }
-              e.stopPropagation();
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="text-sm border-b border-gray-300 focus:border-blue-500 outline-none p-0 h-auto"
-            disabled={isCourseLocked}
-          />
-        ) : (
-          <span 
-            className="text-sm text-[#2C3E50] cursor-pointer" 
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isCourseLocked) {
-                setIsEditing(true);
-              }
-            }}
-          >
-            {lesson.title}
-          </span>
-        )}
+        <span className="text-sm text-[#2C3E50] cursor-pointer" onClick={e => { e.stopPropagation(); setEditingLesson(module_id, lesson.id); }}>{lesson.title}</span>
         {lesson.is_published && (
           <Badge variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
             Published
@@ -457,10 +374,7 @@ function DraggableLesson({
           variant="outline"
           size="sm"
           className="ml-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleLessonClick();
-          }}
+          onClick={e => { e.stopPropagation(); setEditingLesson(module_id, lesson.id); }}
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -510,15 +424,301 @@ const levelOptions = [
   { value: "advanced", label: "⭐ Advanced" },
 ];
 
+// Sidebar top-level sections
+const sidebarSections = [
+  { key: 'course-details', label: 'Course Details', icon: BookOpen },
+  { key: 'content-modules', label: 'Content Modules', icon: Layers },
+  { key: 'cohort-management', label: 'Cohort Management', icon: Users },
+  { key: 'assessment-tools', label: 'Assessment Tools', icon: CheckCircle },
+  { key: 'publishing-settings', label: 'Publishing Settings', icon: Settings },
+  { key: 'analytics-reports', label: 'Analytics & Reports', icon: BarChart },
+];
+
+// Add prop types for ModuleAccordionCard:
+interface ModuleAccordionCardProps {
+  module: Module;
+  courseData: CourseData;
+  handleModuleTitleChange: (moduleId: string, newTitle: string) => void;
+  handleModuleUpdate: (moduleId: string, updates: Partial<Module>) => void;
+  addLesson: (moduleId: string, title: string, type: 'text' | 'video' | 'quiz') => void;
+  deleteLesson: (moduleId: string, lessonId: string) => void;
+  handleLessonTitleChange: (moduleId: string, lessonId: string, newTitle: string) => void;
+  setEditingLesson: (val: { moduleId: string, lesson: Lesson } | null) => void;
+  addLessonState: { open: boolean, title: string, type: 'text' | 'video' | 'quiz' };
+  setAddLessonState: React.Dispatch<React.SetStateAction<{ [moduleId: string]: { open: boolean, title: string, type: 'text' | 'video' | 'quiz' } }>>;
+  deleteModule: (moduleId: string) => void;
+}
+function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, handleModuleUpdate, addLesson, deleteLesson, handleLessonTitleChange, setEditingLesson, addLessonState, setAddLessonState, deleteModule }: ModuleAccordionCardProps) {
+  const [open, setOpen] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(module.title);
+  const [editedWeek, setEditedWeek] = useState(module.unlocks_on_week || 1);
+  const [editedDescription, setEditedDescription] = useState(module.description || "");
+  const isCohort = courseData.delivery_type === 'cohort';
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const showAddLessonInput = addLessonState.open;
+  const newLessonTitle = addLessonState.title;
+  const newLessonType = addLessonState.type;
+
+  const handleSave = () => {
+    handleModuleTitleChange(module.id, editedTitle);
+    handleModuleUpdate(module.id, { description: editedDescription });
+    if (isCohort) handleModuleUpdate(module.id, { unlocks_on_week: editedWeek });
+    setShowEditModal(false);
+  };
+
+  const handleAddLesson = () => {
+    if (newLessonTitle.trim()) {
+      addLesson(module.id, newLessonTitle.trim(), newLessonType);
+      setAddLessonState(prev => ({ ...prev, [module.id]: { open: false, title: '', type: 'text' } }));
+    }
+  };
+
+  return (
+    <div className="mb-6">
+      <div
+        className={`bg-white rounded-xl shadow-lg border-2 border-transparent hover:border-[#4ECDC4] transition-all duration-300 cursor-pointer ${open ? 'border-gradient-to-r from-[#FF6B35] to-[#4ECDC4]' : ''}`}
+        style={{ fontFamily: 'Inter, sans-serif' }}
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        tabIndex={0}
+      >
+        <div className="flex items-center justify-between px-6 py-4">
+          <span className="font-bold text-lg text-[#2C3E50]">{module.title}</span>
+          <div className="flex gap-2">
+            <Button size="icon" variant="ghost" aria-label="Edit Module" onClick={e => { e.stopPropagation(); setShowEditModal(true); }}>
+              <Edit className="h-4 w-4 text-[#FF6B35]" />
+            </Button>
+            <ChevronDown className={`h-5 w-5 text-[#4ECDC4] transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+        <div className={`overflow-hidden transition-all duration-500 ${open ? 'max-h-96 py-4 px-6' : 'max-h-0 py-0 px-6'}`}
+          style={{ background: open ? 'linear-gradient(90deg, #FF6B35 0%, #4ECDC4 100%, #F7F9F9 100%)' : undefined }}>
+          {open && (
+            <>
+              <div
+                style={{ maxHeight: '60vh', overflowY: 'auto' }}
+                className="space-y-2 scrollbar-brand"
+              >
+                {module.lessons.map(lesson => (
+                  <DraggableLesson
+                    key={lesson.id}
+                    module_id={module.id}
+                    lesson={lesson}
+                    courseData={courseData}
+                    onDeleteLesson={deleteLesson}
+                    onLessonTitleChange={handleLessonTitleChange}
+                    setEditingLesson={setEditingLesson}
+                  />
+                ))}
+              </div>
+              {/* Add Lesson UI */}
+              {showAddLessonInput ? (
+                <div
+                  className="flex gap-2 mt-4 items-center"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <Input
+                    placeholder="Enter lesson title"
+                    value={newLessonTitle ?? ''}
+                    onChange={e => setAddLessonState(prev => ({ ...prev, [module.id]: { ...prev[module.id], title: e.target.value } }))}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddLesson(); } }}
+                    className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <Select
+                    value={newLessonType}
+                    onValueChange={val => setAddLessonState(prev => ({ ...prev, [module.id]: { ...prev[module.id], type: val as 'text' | 'video' | 'quiz' } }))}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <SelectTrigger className="w-32 border-[#4ECDC4]/30 focus:border-[#4ECDC4]">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">📝 Text</SelectItem>
+                      <SelectItem value="video">🎬 Video</SelectItem>
+                      <SelectItem value="quiz">❓ Quiz</SelectItem>
+                      <SelectItem value="assignment">📄 Assignment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white" onClick={e => { e.stopPropagation(); handleAddLesson(); }}>Add</Button>
+                  <Button variant="outline" onClick={e => { e.stopPropagation(); setAddLessonState(prev => ({ ...prev, [module.id]: { open: false, title: '', type: 'text' } })); }}>Cancel</Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={e => { e.stopPropagation(); setAddLessonState(prev => ({ ...prev, [module.id]: { ...prev[module.id], open: true } })); }}
+                  className="w-full mt-4 border-[#4ECDC4]/30 text-[#4ECDC4] hover:bg-[#4ECDC4]/5"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" /> Add Lesson
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      {/* Module Edit Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="bg-white rounded-xl shadow-xl p-8 max-w-md mx-auto fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50" aria-modal="true" role="dialog">
+          <div className="flex items-center justify-between draggable-modal-title">
+            <DialogTitle className="text-xl font-bold text-[#2C3E50] mb-2">Edit Module</DialogTitle>
+            <Button variant="ghost" size="icon" aria-label="Delete Module" onClick={() => setShowDeleteConfirm(true)} className="text-red-500 hover:text-red-700">
+              <Trash2 className="h-5 w-5" />
+            </Button>
+          </div>
+          <DialogDescription className="mb-4 text-[#6E6C75]">Update the module details below.</DialogDescription>
+          <label className="block mb-2 font-semibold text-[#2C3E50]">Module Title</label>
+          <Input value={editedTitle} onChange={e => setEditedTitle(e.target.value)} className="mb-4" autoFocus aria-label="Module Title" />
+          <label className="block mb-2 font-semibold text-[#2C3E50]">Module Description <span className="text-xs text-gray-400">(optional)</span></label>
+          <Textarea value={editedDescription} onChange={e => setEditedDescription(e.target.value)} className="mb-4" placeholder="Enter a short description for this module (optional)" aria-label="Module Description" />
+          {isCohort && (
+            <>
+              <label className="block mb-2 font-semibold text-[#2C3E50]">Unlock Week</label>
+              <Input type="number" min={1} value={editedWeek} onChange={e => setEditedWeek(Number(e.target.value))} className="mb-4" aria-label="Unlock Week" />
+            </>
+          )}
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button onClick={handleSave} className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold">Save</Button>
+          </div>
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
+              <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+                <h2 className="text-lg font-bold text-red-600 mb-2">Delete Module?</h2>
+                <p className="mb-4 text-[#2C3E50]">Are you sure you want to delete this module? <b>This action cannot be undone.</b></p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+                  <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => { setShowDeleteConfirm(false); setShowEditModal(false); deleteModule(module.id); }}>Delete</Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function CourseContentPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
   const supabase = createClientComponentClient();
+
+  // 1. Fetch a lesson by ID
+  const fetchLessonById = async (lessonId) => {
+    const { data, error } = await supabase
+      .from('module_lessons')
+      .select('*')
+      .eq('id', lessonId)
+      .single();
+
+    if (error) {
+      toast.error('Failed to fetch lesson');
+      return null;
+    }
+    return data;
+  };
+
+  // 2. Handler to open editor with fresh data
+  const handleEditLesson = async (moduleId, lessonId) => {
+    const latestLesson = await fetchLessonById(lessonId);
+    if (latestLesson) {
+      console.log('[DEBUG] Opening lesson in editor:', latestLesson);
+      setEditingLesson({
+        moduleId,
+        lesson: {
+          ...latestLesson,
+          content: typeof latestLesson.content === 'string'
+            ? (() => { try { return JSON.parse(latestLesson.content); } catch { return {}; } })()
+            : latestLesson.content,
+        }
+      });
+    }
+  };
+
+  const saveLessonToBackend = async (updatedLesson) => {
+    console.log('[DEBUG] Saving lesson:', updatedLesson);
+    // Serialize content if needed
+    const contentToSave = typeof updatedLesson.content === 'string'
+      ? updatedLesson.content
+      : JSON.stringify(updatedLesson.content);
+
+    // Save to backend
+    const { error } = await supabase
+      .from('module_lessons')
+      .update({
+        title: updatedLesson.title,
+        content: contentToSave,
+        type: updatedLesson.type,
+        is_published: updatedLesson.is_published,
+        // ...add other fields as needed
+      })
+      .eq('id', updatedLesson.id);
+
+    console.log('[DEBUG] Backend update error:', error);
+
+    if (!error) {
+      // Refetch the lesson from backend to get the latest data
+      const { data: freshLesson, error: fetchError } = await supabase
+        .from('module_lessons')
+        .select('*')
+        .eq('id', updatedLesson.id)
+        .single();
+
+      console.log('[DEBUG] Fetched fresh lesson after save:', freshLesson, 'Fetch error:', fetchError);
+
+      if (!fetchError && freshLesson) {
+        // Update courseData with the fresh lesson
+        setCourseData(prev =>
+          prev
+            ? {
+                ...prev,
+                modules: prev.modules.map(m =>
+                  m.id === editingLesson?.moduleId
+                    ? {
+                        ...m,
+                        lessons: m.lessons.map(l =>
+                          l.id === updatedLesson.id
+                            ? {
+                                ...freshLesson,
+                                content: typeof freshLesson.content === 'string'
+                                  ? (() => { try { return JSON.parse(freshLesson.content); } catch { return {}; } })()
+                                  : freshLesson.content,
+                              }
+                            : l
+                        ),
+                      }
+                    : m
+                ),
+              }
+            : prev
+        );
+        // Update editingLesson with the fresh lesson
+        setEditingLesson(editingLesson
+          ? {
+              ...editingLesson,
+              lesson: {
+                ...freshLesson,
+                content: typeof freshLesson.content === 'string'
+                  ? (() => { try { return JSON.parse(freshLesson.content); } catch { return {}; } })()
+                  : freshLesson.content,
+              }
+            }
+          : null
+        );
+      }
+    } else {
+      toast.error('Failed to save lesson');
+    }
+  };
+
   const [authChecked, setAuthChecked] = useState(false);
 
-  const [courseData, setCourseData] = useState<CourseData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [courseData, setCourseData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<{ moduleId: string, lesson: Lesson } | null>(null);
   const [selectedModule, setSelectedModule] = useState<{ module: Module } | null>(null);
@@ -526,6 +726,11 @@ export default function CourseContentPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
+  // Add Lesson Input State (per module)
+  const [addLessonState, setAddLessonState] = useState<{
+    [moduleId: string]: { open: boolean; title: string; type: 'text' | 'video' | 'quiz' }
+  }>({});
+
   // AI and Advanced Features State
   const [selectedText, setSelectedText] = useState<string>('');
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -603,85 +808,80 @@ export default function CourseContentPage() {
   }, []);
 
   useEffect(() => {
-    if (!courseId) return;
-
-    const fetchCourseData = async () => {
+    async function fetchCourse() {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        const { data: course, error: fetchError } = await supabase
-          .from('courses')
-          .select('*, modules:course_modules(*, lessons:module_lessons(*))')
-          .eq('id', courseId)
-          .single();
+        // Fetch from your API route, not directly from Supabase
+        const response = await fetch(`/api/instructor/courses/${courseId}`);
+        if (!response.ok) throw new Error('Course not found');
+        const course = await response.json();
 
-        if (fetchError) {
-          throw new Error(fetchError.message);
-        }
-
-        if (!course) {
-          throw new Error("Course not found");
-        }
-
-        // Transform fetched data to CourseData format
-        const transformedData: CourseData = {
-          id: course.id,
-          title: course.title,
-          description: course.description,
-          category: course.category,
-          level: course.level as "beginner" | "intermediate" | "advanced",
-          tags: course.tags || [],
-          price: course.price || 0,
-          thumbnail_url: course.thumbnail_url,
-          promo_video_url: course.promo_video_url,
-          is_published: course.is_published,
-          delivery_type: course.delivery_type || 'self_paced',
-          start_date: course.start_date,
-          end_date: course.end_date,
-          status: course.status || 'draft',
-          modules: course.modules.map((mod: any) => ({
-            id: mod.id,
-            title: mod.title,
-            weekly_sprint_goal: mod.weekly_sprint_goal,
-            unlocks_on_week: mod.unlocks_on_week,
-            order: mod.order || 0,
-            lessons: mod.lessons.map((lesson: any) => ({
-              id: lesson.id,
-              title: lesson.title,
-              content: lesson.content,
-              type: lesson.type || 'text',
-              is_published: lesson.is_published || false,
-              order: lesson.order || 0,
-            })),
-          })),
-          live_sessions: [], // TODO: Fetch from live_sessions table
-        };
-        setCourseData(transformedData);
-
+        setCourseData(course);
+        setLearningOutcomes(course.learningOutcomes ?? []);
+        setRequirements(course.requirements ?? []);
+        setSuccessStories(course.successStories ?? []);
+        setFaqs(course.faq ?? []);
       } catch (err: any) {
-        console.error("Error fetching course for editing:", err);
-        setError(err.message || 'Failed to load course for editing.');
-        toast.error(err.message || 'Failed to load course for editing.');
+        setError(err.message || 'Failed to load course');
       } finally {
         setLoading(false);
       }
-    };
+    }
+    if (courseId) fetchCourse();
+  }, [courseId]);
 
-    fetchCourseData();
-  }, [courseId, supabase]);
+  // (Optional) Slightly improve the cleanup effect for addLessonState:
+  useEffect(() => {
+    if (!courseData) return;
+    setAddLessonState(prev => {
+      const moduleIds = new Set(courseData.modules.map(m => m.id));
+      // Only keep state for modules that still exist
+      return Object.fromEntries(
+        Object.entries(prev).filter(([id]) => moduleIds.has(id))
+      );
+    });
+  }, [courseData?.modules.map(m => m.id).join(",")]);
+
+  // (Optional) Debug log
+  useEffect(() => {
+    console.log("addLessonState", addLessonState);
+  }, [addLessonState]);
 
   const updateCourseData = (updates: Partial<CourseData>) => {
     setCourseData((prev) => (prev ? { ...prev, ...updates } : null));
   };
 
-  const addModule = () => {
-    if (courseData) {
-      const newModule: Module = {
-        id: `temp-module-${Date.now()}`,
-        title: "New Module",
-        lessons: [],
-        order: courseData.modules.length,
-      };
-      updateCourseData({ modules: [...courseData.modules, newModule] });
+  const [addingModule, setAddingModule] = useState(false);
+
+  const addModule = async () => {
+    setAddingModule(true);
+    try {
+      const supabase = createClientComponentClient();
+      const courseId = courseData?.id;
+      if (!courseId) throw new Error('No course ID');
+      const { data: newModule, error } = await supabase
+        .from('course_modules')
+        .insert({
+          course_id: courseId,
+          title: 'New Module',
+          order: courseData.modules.length, // <-- use 'order' not 'position'
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setCourseData(prev => {
+        if (!prev) return prev;
+        return { ...prev, modules: [...prev.modules, { ...newModule, lessons: [] }] };
+      });
+      setAddLessonState(prev => ({
+        ...prev,
+        [newModule.id]: { open: false, title: '', type: 'text' }
+      }));
+    } catch (err) {
+      toast.error('Failed to create module');
+    } finally {
+      setAddingModule(false);
     }
   };
 
@@ -695,21 +895,51 @@ export default function CourseContentPage() {
     }
   };
 
-  const addLesson = (moduleId: string) => {
-    if (courseData) {
-      const newLesson: Lesson = {
-        id: `temp-lesson-${Date.now()}`,
-        title: "New Lesson",
-        type: 'text',
+  const addLesson = async (moduleId: string, title: string, type: 'text' | 'video' | 'quiz') => {
+    // 1. Find the order for the new lesson
+    const module = courseData?.modules.find(m => m.id === moduleId);
+    const order = module ? module.lessons.length : 0;
+
+    // 2. Insert the lesson into the backend
+    const { data: newLesson, error } = await supabase
+      .from('module_lessons')
+      .insert({
+        module_id: moduleId,
+        title,
+        type,
         is_published: false,
-        order: 0,
-      };
-      updateCourseData({
-        modules: courseData.modules.map((module) =>
-          module.id === moduleId ? { ...module, lessons: [...module.lessons, newLesson] } : module,
-        ),
-      });
+        order,
+        content: '', // or default content structure if needed
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Failed to add lesson');
+      return;
     }
+
+    // 3. Update local state with the real lesson id
+    setCourseData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        modules: prev.modules.map(module =>
+          module.id === moduleId
+            ? {
+                ...module,
+                lessons: [...module.lessons, newLesson],
+              }
+            : module
+        ),
+      };
+    });
+
+    // 4. Reset only the addLessonState for this module
+    setAddLessonState(prev => ({
+      ...prev,
+      [moduleId]: { open: false, title: '', type: 'text' }
+    }));
   };
 
   const deleteLesson = (moduleId: string, lessonId: string) => {
@@ -783,7 +1013,19 @@ export default function CourseContentPage() {
       // Update main course details
       const courseUpdateData: any = {
         title: courseData.title,
+        subtitle: courseData.subtitle,
         description: courseData.description,
+        language: courseData.language,
+        subtitles: courseData.subtitles,
+        video_hours: courseData.videoHours,
+        resources: courseData.resources,
+        certificate: courseData.certificate,
+        community: courseData.community,
+        lifetime_access: courseData.lifetimeAccess,
+        learning_outcomes: learningOutcomes,
+        requirements: requirements,
+        success_stories: successStories,
+        faq: faqs,
         category: courseData.category,
         level: courseData.level,
         tags: courseData.tags,
@@ -801,6 +1043,7 @@ export default function CourseContentPage() {
         courseUpdateData.status = 'pending_review';
       }
 
+      console.log("Saving course with payload:", courseUpdateData); // <--- ADD THIS
       const { error: courseUpdateError } = await supabase
         .from('courses')
         .update(courseUpdateData)
@@ -985,6 +1228,83 @@ export default function CourseContentPage() {
     }
   };
 
+  // Add state for new sections
+  const [learningOutcomes, setLearningOutcomes] = useState<string[]>([]);
+  const [requirements, setRequirements] = useState<string[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [successStories, setSuccessStories] = useState<any[]>([]);
+
+  // Handlers for Learning Outcomes
+  const handleAddLearningOutcome = (tag: string) => setLearningOutcomes([...learningOutcomes, tag]);
+  const handleRemoveLearningOutcome = (i: number) => setLearningOutcomes(learningOutcomes.filter((_, idx) => idx !== i));
+  // Handlers for Requirements
+  const handleAddRequirement = (tag: string) => setRequirements([...requirements, tag]);
+  const handleRemoveRequirement = (i: number) => setRequirements(requirements.filter((_, idx) => idx !== i));
+  // Handlers for FAQ
+  const handleAddFaq = () => setFaqs([...faqs, { question: "", answer: "" }]);
+  const handleRemoveFaq = (i: number) => setFaqs(faqs.filter((_, idx) => idx !== i));
+  const handleFaqChange = (i: number, field: "question" | "answer", value: string) => setFaqs(faqs.map((faq, idx) => idx === i ? { ...faq, [field]: value } : faq));
+  // Handlers for Success Stories
+  const handleAddSuccessStory = () => setSuccessStories([...successStories, { name: "", photo: "", outcome: "", story: "" }]);
+  const handleRemoveSuccessStory = (i: number) => setSuccessStories(successStories.filter((_, idx) => idx !== i));
+  const handleSuccessStoryChange = (i: number, field: string, value: string) => setSuccessStories(successStories.map((story, idx) => idx === i ? { ...story, [field]: value } : story));
+
+  // State for open group and active section
+  const [activeSection, setActiveSection] = useState('course-details');
+
+  // 1. In CourseContentPage, add centralized editingLesson state:
+  const [editingLesson, setEditingLesson] = useState<{ moduleId: string, lesson: Lesson } | null>(null);
+
+  // 1. Add state for modal position in CourseContentPage:
+  const [modalPosition, setModalPosition] = useState<{ top: number; left: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // 2. Drag event handlers:
+  const handleTitleMouseDown = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    setDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const modal = document.getElementById('resizable-movable-modal');
+    if (modal) {
+      const rect = modal.getBoundingClientRect();
+      dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    document.body.style.userSelect = 'none';
+  };
+  const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+    if (!dragging) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    setModalPosition({
+      left: clientX - dragOffset.current.x,
+      top: clientY - dragOffset.current.y,
+    });
+  };
+  const handleMouseUp = () => {
+    setDragging(false);
+    document.body.style.userSelect = '';
+  };
+  useEffect(() => {
+    if (dragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('touchmove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchend', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchend', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [dragging]);
+
   // Refactored conditional rendering
   let content;
 
@@ -1029,440 +1349,367 @@ export default function CourseContentPage() {
     content = (
       <div className="h-screen flex flex-col bg-[#FAFBFB]">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-[#E5E8E8] px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-[#E5E8E8] px-8 py-4 flex items-center justify-between" style={{ fontFamily: 'Inter, sans-serif' }}>
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="lg:hidden"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              
-              {/* Breadcrumb Navigation */}
-              <nav className="flex items-center space-x-2 text-sm text-[#2C3E50]">
-                <Link href="/dashboard/instructor/courses" className="hover:text-[#4ECDC4]">
-                  My Courses
-                </Link>
-                <span>/</span>
-                <span className="font-medium">{courseData.title}</span>
-                {selectedLesson && (
-                  <>
-                    <span>/</span>
-                    <span className="text-[#4ECDC4]">{selectedLesson.lesson.title}</span>
-                  </>
-                )}
-              </nav>
-
-              {/* Course Type Badge */}
-              <Badge variant="outline" className={`${
-                courseData.delivery_type === 'cohort' 
-                  ? 'border-[#FF6B35]/30 text-[#FF6B35]' 
-                  : 'border-[#4ECDC4]/30 text-[#4ECDC4]'
-              }`}>
-                {courseData.delivery_type === 'cohort' ? (
-                  <>
-                    <Users className="w-3 h-3 mr-1" />
-                    Cohort Course
-                  </>
-                ) : (
-                  <>
-                    <Clock className="w-3 h-3 mr-1" />
-                    Self-Paced
-                  </>
-                )}
-              </Badge>
+            <h2 className="text-2xl font-bold text-[#2C3E50]">{courseData.title}</h2>
+            <Badge variant="outline" className={`ml-2 ${courseData.delivery_type === 'cohort' ? 'border-[#FF6B35]/30 text-[#FF6B35]' : 'border-[#4ECDC4]/30 text-[#4ECDC4]'}`}>{courseData.delivery_type === 'cohort' ? 'Cohort-Based' : 'Self-Paced'}</Badge>
+            {saveStatus === 'saving' && <span className="ml-4 text-[#FF6B35] animate-pulse">Saving...</span>}
+            {saveStatus === 'saved' && <span className="ml-4 text-[#4ECDC4]">All changes saved</span>}
             </div>
-
-            <div className="flex items-center gap-4">
-              {/* Advanced Tools */}
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCommandPalette(true)}
-                  className="border-[#E5E8E8] hover:border-[#4ECDC4] text-[#2C3E50]"
-                >
-                  <Command className="w-4 h-4 mr-2" />
-                  ⌘K
+            <Button variant="outline" size="sm" onClick={() => setShowCoursePreview(true)} className="border-[#E5E8E8] hover:border-[#4ECDC4] text-[#2C3E50]">
+              <Eye className="w-4 h-4 mr-2" /> Preview
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCoursePreview(true)}
-                  className="border-[#E5E8E8] hover:border-[#4ECDC4] text-[#2C3E50]"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview
+            <Button onClick={handleSaveChanges} className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white font-bold" disabled={saveStatus === 'saving'}>
+              <Save className="w-4 h-4 mr-2" /> Save & Publish
                 </Button>
-                {selectedLesson && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowVersionHistory(true)}
-                    className="border-[#E5E8E8] hover:border-[#4ECDC4] text-[#2C3E50]"
-                  >
-                    <History className="w-4 h-4 mr-2" />
-                    History
-                  </Button>
-                )}
-              </div>
-
-              {renderSaveStatus()}
-              <Button 
-                onClick={handleSaveChanges} 
-                className="bg-gradient-to-r from-[#1B4D3E] to-[#4ECDC4] hover:from-[#1B4D3E]/90 hover:to-[#4ECDC4]/90 text-white"
-                disabled={saveStatus === 'saving'}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </Button>
-            </div>
           </div>
         </div>
 
         {/* Three-Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Panel 1: Structure Sidebar */}
-          <div className={`${
-            isSidebarOpen ? 'w-80' : 'w-0'
-          } lg:w-80 bg-[#F7F9F9] border-r border-[#E5E8E8] transition-all duration-300 overflow-hidden`}>
-            <div className="h-full flex flex-col">
-              {/* Sidebar Header */}
-              <div className="p-4 border-b border-[#E5E8E8] bg-white">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-[#2C3E50]">Course Structure</h3>
+          {/* Sidebar */}
+          <div className={`transition-all duration-500 h-full flex flex-col bg-[#F7F9F9] border-r border-[#E5E8E8] ${isSidebarOpen ? 'w-64' : 'w-16'} overflow-hidden`} aria-label="Course Editor Sidebar">
+            <div className="p-4 border-b border-[#E5E8E8] bg-white flex items-center justify-between">
+              {isSidebarOpen && <h3 className="font-semibold text-[#2C3E50]">Course Builder</h3>}
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="lg:hidden"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                className="ml-auto"
                   >
-                    <X className="h-4 w-4" />
+                {isSidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-5 w-5" />}
                   </Button>
                 </div>
-                
-                {/* Tabs for Cohort Courses */}
-                {courseData.delivery_type === 'cohort' ? (
-                  <div className="flex mt-3 bg-[#F7F9F9] rounded-lg p-1">
+            <nav className="flex-1 py-4">
+              {sidebarSections.map(section => (
                     <button
-                      onClick={() => setActiveView('structure')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                        activeView === 'structure'
-                          ? 'bg-white text-[#2C3E50] shadow-sm'
-                          : 'text-[#2C3E50]/60 hover:text-[#2C3E50]'
-                      }`}
-                    >
-                      <Layers className="w-4 h-4 inline mr-1" />
-                      Structure
+                  key={section.key}
+                  onClick={() => setActiveSection(section.key)}
+                  className={`flex items-center gap-3 px-6 py-3 rounded transition-all duration-200 w-full text-left focus:outline-none focus:ring-2 focus:ring-[#4ECDC4] mb-1 font-semibold ${
+                    activeSection === section.key ? 'bg-[#4ECDC4] text-white shadow-md scale-105' : 'text-[#2C3E50] hover:bg-[#E5E8E8] hover:scale-105'
+                  }`}
+                  aria-current={activeSection === section.key ? 'page' : undefined}
+                  aria-label={section.label}
+                  tabIndex={0}
+                  style={{ fontFamily: 'Inter, sans-serif' }}
+                >
+                  <section.icon className="h-5 w-5" />
+                  {isSidebarOpen && <span className="truncate">{section.label}</span>}
                     </button>
+              ))}
+            </nav>
+            <div className="relative flex-shrink-0 p-4 mt-auto">
                     <button
-                      onClick={() => setActiveView('drip-content')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                        activeView === 'drip-content'
-                          ? 'bg-white text-[#2C3E50] shadow-sm'
-                          : 'text-[#2C3E50]/60 hover:text-[#2C3E50]'
-                      }`}
-                    >
-                      <Calendar className="w-4 h-4 inline mr-1" />
-                      Schedule
-                    </button>
-                    <button
-                      onClick={() => setActiveView('live-sessions')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                        activeView === 'live-sessions'
-                          ? 'bg-white text-[#2C3E50] shadow-sm'
-                          : 'text-[#2C3E50]/60 hover:text-[#2C3E50]'
-                      }`}
-                    >
-                      <Video className="w-4 h-4 inline mr-1" />
-                      Sessions
+                className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white rounded-full shadow-lg p-4 hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
+                aria-label="Add New Item"
+                onClick={() => {
+                  if (activeSection === 'content-modules') addModule();
+                  if (activeSection === 'course-details') handleAddLearningOutcome('');
+                }}
+              >
+                <Plus className="h-6 w-6" />
                     </button>
                   </div>
-                ) : (
-                  <div className="mt-3 text-sm text-[#2C3E50]/60">
-                    Self-paced course structure
                   </div>
-                )}
-              </div>
-
-              {/* Sidebar Content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {activeView === 'structure' ? (
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleReorderModules}>
-                    <SortableContext items={courseData.modules.map(m => `module-${m.id}`)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-2">
-                        {getModulesByWeek().map(({ week, modules }) => (
-                          <div key={week || 'no-week'}>
-                            {modules.map(module => (
-                              <DraggableModule
-                                key={module.id}
-                                module={module}
-                                courseData={courseData}
-                                onDeleteModule={deleteModule}
-                                onAddLesson={addLesson}
-                                onDeleteLesson={deleteLesson}
-                                onLessonTitleChange={handleLessonTitleChange}
-                                onModuleTitleChange={handleModuleTitleChange}
-                                setSelectedLesson={setSelectedLesson}
-                                setSelectedModule={setSelectedModule}
-                                selectedLesson={selectedLesson}
-                                selectedModule={selectedModule}
-                                weekNumber={week || undefined}
-                              />
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                ) : activeView === 'drip-content' ? (
-                  <DripContentManager
-                    modules={courseData.modules}
-                    onModuleUpdate={handleModuleUpdate}
-                    startDate={courseData.start_date}
-                    totalWeeks={12}
-                  />
-                ) : (
-                  <LiveSessionScheduler
-                    courseId={courseData.id}
-                    sessions={courseData.live_sessions || []}
-                    onSessionsChange={(sessions) => updateCourseData({ live_sessions: sessions })}
-                    startDate={courseData.start_date}
-                    endDate={courseData.end_date}
-                  />
-                )}
-
-                {/* Add Module Button */}
-                {activeView === 'structure' && (
-                  <Button 
-                    onClick={addModule} 
-                    className="w-full mt-4 bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
-                    disabled={courseData.delivery_type === 'cohort' && courseData.start_date && new Date(courseData.start_date) <= new Date()}
-                  >
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add New Module
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Panel 2: Editing Canvas */}
-          <div className="flex-1 bg-[#FEFEFE] overflow-hidden">
-            <div className="h-full overflow-y-auto">
-              {/* Always render AIAssistant and LessonEditor, control visibility with props */}
-              <div className={selectedLesson ? "p-6" : "hidden"}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-[#2C3E50]">
-                    Editing: {selectedLesson?.lesson.title}
-                  </h2>
-                  <AIAssistant
-                    selectedText={selectedText}
-                    onContentGenerated={handleAIContentGenerated}
-                    onQuizGenerated={handleAIQuizGenerated}
-                    lessonType={selectedLesson?.lesson.type}
-                    lessonTitle={selectedLesson?.lesson.title}
-                    moduleTitle={selectedLesson ? courseData.modules.find(m => m.id === selectedLesson.moduleId)?.title : undefined}
-                    isVisible={!!selectedLesson}
-                  />
-                </div>
-                <LessonEditor
-                  lesson={selectedLesson?.lesson}
-                  onUpdate={updatedLesson => {
-                    if (!selectedLesson) return;
-                    setCourseData(prev =>
-                      prev
-                        ? {
-                            ...prev,
-                            modules: prev.modules.map(m =>
-                              m.id === selectedLesson.moduleId
-                                ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
-                                : m
-                            ),
-                          }
-                        : prev
-                    );
-                    setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
-                  }}
-                  onDelete={() => {
-                    if (!selectedLesson) return;
-                    setCourseData(prev =>
-                      prev
-                        ? {
-                            ...prev,
-                            modules: prev.modules.map(m =>
-                              m.id === selectedLesson.moduleId
-                                ? { ...m, lessons: m.lessons.filter(l => l.id !== selectedLesson.lesson.id) }
-                                : m
-                            ),
-                          }
-                        : prev
-                    );
-                    setSelectedLesson(null);
-                  }}
-                  isVisible={!!selectedLesson}
-                />
-              </div>
-              {/* Show placeholder if no lesson selected */}
-              <div className={!selectedLesson ? "h-full flex items-center justify-center" : "hidden"}>
-                <div className="text-center">
-                  <Edit className="w-16 h-16 text-[#4ECDC4] mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-[#2C3E50] mb-2">Select a lesson to edit</h3>
-                  <p className="text-[#2C3E50]/60 mb-6">
-                    Choose a lesson from the sidebar to start editing its content.
-                  </p>
-                  <div className="flex items-center justify-center gap-4">
-                    <Button
-                      onClick={() => setShowCommandPalette(true)}
-                      variant="outline"
-                      className="border-[#E5E8E8] hover:border-[#4ECDC4]"
-                    >
-                      <Command className="w-4 h-4 mr-2" />
-                      Open Command Palette
-                    </Button>
-                    <Button
-                      onClick={() => setShowCoursePreview(true)}
-                      className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview Course
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Panel 3: Inspector Panel */}
-          <div className="w-80 bg-[#F7F9F9] border-l border-[#E5E8E8] overflow-hidden">
-            <div className="h-full flex flex-col">
-              {/* Inspector Header */}
-              <div className="p-4 border-b border-[#E5E8E8] bg-white">
-                <h3 className="font-semibold text-[#2C3E50]">Properties</h3>
-              </div>
-
-              {/* Inspector Content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {selectedLesson ? (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-[#2C3E50] font-semibold">Lesson Type</Label>
-                      <div className="mt-1 p-2 bg-white rounded border border-[#E5E8E8]">
-                        <div className="flex items-center gap-2">
-                          {selectedLesson.lesson.type === 'text' && <FileText className="h-4 w-4 text-[#4ECDC4]" />}
-                          {selectedLesson.lesson.type === 'video' && <Video className="h-4 w-4 text-[#FF6B35]" />}
-                          {selectedLesson.lesson.type === 'quiz' && <HelpCircle className="h-4 w-4 text-purple-500" />}
-                          <span className="capitalize text-sm text-[#2C3E50]">{selectedLesson.lesson.type}</span>
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeSection === 'course-details' && (
+              <>
+                {/* Course Info Card */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="font-bold text-[#2C3E50] flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-[#FF6B35]" /> Course Info
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-4">
+                      <Label>Course Title</Label>
+                      <Input
+                        value={courseData.title}
+                        onChange={e => updateCourseData({ title: e.target.value })}
+                        placeholder="Enter course title"
+                        required
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <Label>Subtitle</Label>
+                      <Input
+                        value={courseData.subtitle || ""}
+                        onChange={e => updateCourseData({ subtitle: e.target.value })}
+                        placeholder="Enter a short subtitle"
+                        maxLength={150}
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={courseData.description}
+                        onChange={e => updateCourseData({ description: e.target.value })}
+                        placeholder="Enter course description"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <Label>Language</Label>
+                      <select
+                        className="input input-bordered w-full"
+                        value={courseData.language || ""}
+                        onChange={e => updateCourseData({ language: e.target.value })}
+                      >
+                        <option value="">Select language</option>
+                        <option value="English">English</option>
+                        <option value="French">French</option>
+                        <option value="Swahili">Swahili</option>
+                        <option value="Arabic">Arabic</option>
+                        {/* Add more as needed */}
+                      </select>
+                    </div>
+                    <div className="mb-4">
+                      <Label>Subtitles</Label>
+                      <TagInput
+                        tags={courseData.subtitles || []}
+                        onAdd={tag => updateCourseData({ subtitles: [...(courseData.subtitles || []), tag] })}
+                        onRemove={i => updateCourseData({ subtitles: courseData.subtitles.filter((_, idx) => idx !== i) })}
+                        placeholder="Type a language and press Enter"
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <Label>Course Features</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Video Hours</Label>
+                          <Input
+                            type="number"
+                            value={courseData.videoHours || ""}
+                            onChange={e => updateCourseData({ videoHours: Number(e.target.value) })}
+                            placeholder="e.g. 24"
+                            min={0}
+                          />
+                        </div>
+                        <div>
+                          <Label>Downloadable Resources</Label>
+                          <Input
+                            type="number"
+                            value={courseData.resources || ""}
+                            onChange={e => updateCourseData({ resources: Number(e.target.value) })}
+                            placeholder="e.g. 15"
+                            min={0}
+                          />
+                        </div>
+                        <div>
+                          <Label>
+                            <input
+                              type="checkbox"
+                              checked={!!courseData.certificate}
+                              onChange={e => updateCourseData({ certificate: e.target.checked })}
+                            />
+                            Certificate of Completion
+                          </Label>
+                        </div>
+                        <div>
+                          <Label>
+                            <input
+                              type="checkbox"
+                              checked={!!courseData.community}
+                              onChange={e => updateCourseData({ community: e.target.checked })}
+                            />
+                            Community Access
+                          </Label>
+                        </div>
+                        <div>
+                          <Label>
+                            <input
+                              type="checkbox"
+                              checked={!!courseData.lifetimeAccess}
+                              onChange={e => updateCourseData({ lifetimeAccess: e.target.checked })}
+                            />
+                            Lifetime Access
+                          </Label>
                         </div>
                       </div>
                     </div>
-
-                    <div>
-                      <Label className="text-[#2C3E50] font-semibold">Publication Status</Label>
-                      <div className="mt-1 p-2 bg-white rounded border border-[#E5E8E8]">
-                        <Badge variant={selectedLesson.lesson.is_published ? "default" : "secondary"}>
-                          {selectedLesson.lesson.is_published ? "Published" : "Draft"}
-                        </Badge>
+                  </CardContent>
+                </Card>
+                {/* Learning Outcomes */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="font-bold text-[#2C3E50] flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-[#4ECDC4]" /> Learning Outcomes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <TagInput tags={learningOutcomes} onAdd={handleAddLearningOutcome} onRemove={handleRemoveLearningOutcome} placeholder="Type an outcome and press Enter" />
+                  </CardContent>
+                </Card>
+                {/* Requirements */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="font-bold text-[#2C3E50] flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-[#FF6B35]" /> Requirements
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <TagInput tags={requirements} onAdd={handleAddRequirement} onRemove={handleRemoveRequirement} placeholder="Type a requirement and press Enter" />
+                  </CardContent>
+                </Card>
+                {/* Success Stories */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="font-bold text-[#2C3E50] flex items-center gap-2">
+                      <User className="h-5 w-5 text-[#FF6B35]" /> Success Stories
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {successStories.map((story, idx) => (
+                      <div key={idx} className="mb-6 border-b border-[#E5E8E8] pb-4">
+                        <div className="flex gap-4 items-center mb-2">
+                          <Input
+                            className="w-1/3"
+                            value={story.name}
+                            onChange={e => handleSuccessStoryChange(idx, "name", e.target.value)}
+                            placeholder="Name"
+                          />
+                          <Input
+                            className="w-1/3"
+                            value={story.outcome}
+                            onChange={e => handleSuccessStoryChange(idx, "outcome", e.target.value)}
+                            placeholder="Outcome (e.g. Got a job!)"
+                          />
+                          <Input
+                            className="w-1/3"
+                            value={story.photo}
+                            onChange={e => handleSuccessStoryChange(idx, "photo", e.target.value)}
+                            placeholder="Photo URL"
+                          />
+                          <Button variant="destructive" onClick={() => handleRemoveSuccessStory(idx)}>
+                            Remove
+                          </Button>
+                        </div>
+                        <Textarea
+                          value={story.story}
+                          onChange={e => handleSuccessStoryChange(idx, "story", e.target.value)}
+                          placeholder="Success story details"
+                          rows={2}
+                        />
                       </div>
-                    </div>
-
-                    {/* AI Suggestions */}
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                      <h5 className="text-sm font-semibold text-purple-900 mb-2 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        AI Suggestions
-                      </h5>
-                      <ul className="text-xs text-purple-800 space-y-1">
-                        <li>• Add more interactive elements</li>
-                        <li>• Include practical examples</li>
-                        <li>• Consider adding a quiz</li>
-                        <li>• Break into smaller sections</li>
-                      </ul>
-                    </div>
-                  </div>
-                ) : selectedModule ? (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-[#2C3E50] font-semibold">Module Title</Label>
-                      <div className="mt-1 p-2 bg-white rounded border border-[#E5E8E8]">
-                        <span className="text-sm text-[#2C3E50]">{selectedModule.module.title}</span>
+                    ))}
+                    <Button onClick={handleAddSuccessStory} className="mt-2">
+                      Add Success Story
+                    </Button>
+                  </CardContent>
+                </Card>
+                {/* FAQ */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="font-bold text-[#2C3E50] flex items-center gap-2">
+                      <HelpCircle className="h-5 w-5 text-[#4ECDC4]" /> FAQ
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {faqs.map((faq, idx) => (
+                      <div key={idx} className="mb-6 border-b border-[#E5E8E8] pb-4">
+                        <Input
+                          className="mb-2"
+                          value={faq.question}
+                          onChange={e => handleFaqChange(idx, "question", e.target.value)}
+                          placeholder="Question"
+                        />
+                        <Textarea
+                          value={faq.answer}
+                          onChange={e => handleFaqChange(idx, "answer", e.target.value)}
+                          placeholder="Answer"
+                          rows={2}
+                        />
+                        <Button variant="destructive" onClick={() => handleRemoveFaq(idx)} className="mt-2">
+                          Remove
+                        </Button>
                       </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-[#2C3E50] font-semibold">Lessons Count</Label>
-                      <div className="mt-1 p-2 bg-white rounded border border-[#E5E8E8]">
-                        <span className="text-sm text-[#2C3E50]">{selectedModule.module.lessons.length} lessons</span>
+                    ))}
+                    <Button onClick={handleAddFaq} className="mt-2">
+                      Add FAQ
+                    </Button>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+            {activeSection === 'content-modules' && (
+              <div>
+                {/* Add New Module Button */}
+                <div className="flex justify-end mb-4">
+                  <Button
+                    onClick={addModule}
+                    className="bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white font-bold rounded px-6 py-2 shadow-md transition-colors"
+                    aria-label="Add New Module"
+                    disabled={addingModule}
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    {addingModule ? 'Adding...' : 'Add New Module'}
+                  </Button>
+              </div>
+                {/* For cohort-based: group by week, else flat list */}
+                {courseData.delivery_type === 'cohort' ? (
+                  getModulesByWeek().map((week, idx) => (
+                    <div key={week.week} className="mb-10">
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-lg font-bold text-[#2C3E50]">Week {week.week}</span>
                       </div>
-                    </div>
-
-                    {/* Weekly Sprint Goal for Cohort Courses */}
-                    {courseData.delivery_type === 'cohort' && (
-                      <WeeklyGoalEditor
-                        module={selectedModule.module}
-                        onUpdate={handleModuleUpdate}
-                        weekNumber={selectedModule.module.unlocks_on_week}
-                      />
-                    )}
-                  </div>
+                      {week.modules.map(module => (
+                        <ModuleAccordionCard
+                                key={module.id}
+                                module={module}
+                                courseData={courseData}
+                          handleModuleTitleChange={handleModuleTitleChange}
+                          handleModuleUpdate={handleModuleUpdate}
+                          addLesson={addLesson}
+                          deleteLesson={deleteLesson}
+                          handleLessonTitleChange={handleLessonTitleChange}
+                          setEditingLesson={handleEditLesson}
+                          addLessonState={addLessonState[module.id] || { open: false, title: '', type: 'text' }}
+                          setAddLessonState={setAddLessonState}
+                          deleteModule={deleteModule}
+                              />
+                            ))}
+                          </div>
+                  ))
                 ) : (
-                  <div className="text-center py-8">
-                    <Settings className="w-12 h-12 text-[#4ECDC4] mx-auto mb-4" />
-                    <h4 className="text-lg font-semibold text-[#2C3E50] mb-2">No Selection</h4>
-                    <p className="text-sm text-[#2C3E50]/60">
-                      Select a lesson or module to view its properties and settings.
-                    </p>
-                  </div>
+                  courseData.modules.map(module => (
+                    <ModuleAccordionCard
+                      key={module.id}
+                      module={module}
+                      courseData={courseData}
+                      handleModuleTitleChange={handleModuleTitleChange}
+                      handleModuleUpdate={handleModuleUpdate}
+                      addLesson={addLesson}
+                      deleteLesson={deleteLesson}
+                      handleLessonTitleChange={handleLessonTitleChange}
+                      setEditingLesson={handleEditLesson}
+                      addLessonState={addLessonState[module.id] || { open: false, title: '', type: 'text' }}
+                      setAddLessonState={setAddLessonState}
+                      deleteModule={deleteModule}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+            {activeSection === 'cohort-management' && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="font-bold text-[#2C3E50] flex items-center gap-2">
+                    <Users className="h-5 w-5 text-[#FF6B35]" /> Cohort Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* TODO: Add Cohort Management UI here */}
+                  <div className="text-[#6E6C75]">Cohort management features coming soon.</div>
+                </CardContent>
+              </Card>
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Advanced Features Modals */}
-        <CommandPalette
-          isOpen={showCommandPalette}
-          onClose={() => setShowCommandPalette(false)}
-          onNavigate={handleCommandNavigate}
-          onAIAction={handleCommandAIAction}
-          onPreview={handleCommandPreview}
-          courseData={courseData}
-        />
-
-        <CoursePreview
-          courseData={courseData}
-          isOpen={showCoursePreview}
-          onClose={() => setShowCoursePreview(false)}
-          previewMode={previewMode}
-          onModeChange={setPreviewMode}
-        />
-
-        <VersionHistory
-          lessonId={selectedLesson?.lesson.id}
-          currentContent={selectedLesson?.lesson.content}
-          onRestore={(content) => {
-            if (!selectedLesson) return;
-            const updatedLesson = { ...selectedLesson.lesson, content };
-            setCourseData(prev =>
-              prev
-                ? {
-                    ...prev,
-                    modules: prev.modules.map(m =>
-                      m.id === selectedLesson.moduleId
-                        ? { ...m, lessons: m.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l) }
-                        : m
-                    ),
-                  }
-                : prev
-            );
-            setSelectedLesson({ moduleId: selectedLesson.moduleId, lesson: updatedLesson });
-          }}
-          onClose={() => setShowVersionHistory(false)}
-          isVisible={!!selectedLesson && showVersionHistory}
-        />
       </div>
     );
   }
@@ -1471,6 +1718,82 @@ export default function CourseContentPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-white">
       <SiteHeader />
       {content}
+      {editingLesson && (
+        <Dialog open={!!editingLesson} onOpenChange={open => { if (!open) setEditingLesson(null); }}>
+          <DialogContent
+            id="resizable-movable-modal"
+            className="bg-white rounded-xl shadow-xl p-0 max-w-3xl w-full mx-auto mt-12 z-50 flex flex-col resize overflow-auto"
+            style={{
+              minWidth: '400px',
+              minHeight: '400px',
+              maxWidth: '95vw',
+              maxHeight: '95vh',
+              position: modalPosition ? 'fixed' : undefined,
+              top: modalPosition ? modalPosition.top : '10vh',
+              left: modalPosition ? modalPosition.left : '50%',
+              transform: modalPosition ? 'none' : 'translateX(-50%)',
+              cursor: dragging ? 'grabbing' : undefined,
+            }}
+            aria-modal="true"
+            role="dialog"
+          >
+            {/* Sticky Header with drag handlers */}
+            <div
+              className="sticky top-0 z-10 bg-white border-b border-[#E5E8E8] px-8 py-4 flex items-center justify-between cursor-move select-none"
+              onMouseDown={handleTitleMouseDown}
+              onTouchStart={handleTitleMouseDown}
+              style={{ cursor: 'move' }}
+            >
+              <DialogTitle className="text-xl font-bold">
+                Edit Lesson{editingLesson.lesson.title ? `: ${editingLesson.lesson.title}` : ''}
+              </DialogTitle>
+              <button
+                onClick={() => setEditingLesson(null)}
+                className="text-[#FF6B35] hover:text-[#4ECDC4] text-lg font-bold px-2"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-8 py-6" style={{ minHeight: 0 }}>
+              <LessonEditor
+                lesson={{
+                  ...editingLesson.lesson,
+                  // Normalize: parse then immediately serialize and parse again
+                  content: (() => {
+                    let parsed;
+                    if (typeof editingLesson.lesson.content === 'string') {
+                      try {
+                        parsed = JSON.parse(editingLesson.lesson.content);
+                      } catch {
+                        parsed = editingLesson.lesson.content;
+                      }
+                    } else {
+                      parsed = editingLesson.lesson.content;
+                    }
+                    // Now serialize and parse again to normalize
+                    try {
+                      return JSON.parse(JSON.stringify(parsed));
+                    } catch {
+                      return parsed;
+                    }
+                  })(),
+                }}
+                onUpdate={saveLessonToBackend}
+                onDelete={() => {
+                  deleteLesson(editingLesson.moduleId, editingLesson.lesson.id);
+                  setEditingLesson(null);
+                }}
+                onSave={() => {
+                  setEditingLesson(null);
+                }}
+                isVisible={!!editingLesson}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       {showVersionHistory && (
         <div className="fixed inset-0 bg-black/50 z-50" />
       )}

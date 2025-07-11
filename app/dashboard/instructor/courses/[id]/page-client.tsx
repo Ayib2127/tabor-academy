@@ -17,11 +17,13 @@ import {
   CheckCircle,
   Lock,
   FileText,
+  Send,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { CourseStatusIndicator } from '@/components/instructor/course-status-indicator';
 import { CourseAnnouncements } from '@/components/instructor/course-announcements';
+import { Badge } from '@/components/ui/badge';
 
 interface CourseDetails {
   id: string;
@@ -184,44 +186,44 @@ export default function CoursePage() {
 
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">{course.title}</h1>
-            <p className="text-[#2C3E50]/70 mb-4">{course.description}</p>
-            
-            {/* Course Status */}
-              <div className="mb-6">
-              <CourseStatusIndicator 
-                course={course} 
-                onSubmitForReview={handleSubmitForReview}
-                isSubmitting={isSubmitting}
-              />
-              </div>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-[#2C3E50] mb-1">{course.title}</h1>
+            <p className="text-[#2C3E50]/70 mb-2">{course.description}</p>
+            <div className="flex items-center gap-3 mb-4">
+              <Badge variant="outline" className="text-xs">
+                {course.status === 'draft' && <>Draft</>}
+                {course.status === 'pending_review' && <>Pending Review</>}
+                {course.status === 'published' && <>Published</>}
+                {course.status === 'rejected' && <>Needs Changes</>}
+              </Badge>
+              {/* Add more status info if needed */}
+            </div>
+            <div className="flex flex-wrap gap-3">
               <Link href={`/dashboard/instructor/courses/${courseId}/content`}>
-                <Button className="bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white">
+                <Button>
                   <BookOpen className="w-4 h-4 mr-2" />
                   Edit Content
                 </Button>
               </Link>
-              
+              <Button
+                onClick={handleSubmitForReview}
+                disabled={isSubmitting || course.status !== 'draft'}
+                className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {isSubmitting ? "Submitting..." : "Submit for Review"}
+              </Button>
               <Link href={`/dashboard/instructor/courses/${courseId}/students`}>
-                <Button variant="outline" className="border-[#E5E8E8] hover:border-[#4ECDC4]">
+                <Button variant="outline">
                   <Users className="w-4 h-4 mr-2" />
                   View Students
                 </Button>
               </Link>
-              
               <Link href={`/dashboard/instructor/courses/${courseId}/analytics`}>
-                <Button variant="outline" className="border-[#E5E8E8] hover:border-[#4ECDC4]">
+                <Button variant="outline">
                   <BarChart className="w-4 h-4 mr-2" />
                   Analytics
                 </Button>
               </Link>
-              
-              {course.status === 'published' && (
-                <CourseAnnouncements courseId={courseId} studentCount={course.students_count} />
-              )}
             </div>
           </div>
 

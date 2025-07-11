@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 
 interface AutoSaveConfig<T> {
@@ -6,6 +6,7 @@ interface AutoSaveConfig<T> {
   onSave: (data: T) => Promise<void>;
   debounceTime?: number;
   onError?: (error: Error) => void;
+  enabled?: boolean;
 }
 
 export function useAutoSave<T>({
@@ -13,21 +14,32 @@ export function useAutoSave<T>({
   onSave,
   debounceTime = 1000,
   onError,
+  enabled = true,
 }: AutoSaveConfig<T>) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  const lastDataRef = useRef<T>(data);
 
   const save = useCallback(async (dataToSave: T) => {
+    // Skip if data hasn't actually changed
+    if (JSON.stringify(lastDataRef.current) === JSON.stringify(dataToSave)) {
+      return;
+    }
+
     try {
       setIsSaving(true);
       await onSave(dataToSave);
+      lastDataRef.current = dataToSave;
       setLastSaved(new Date());
     } catch (error) {
       console.error('Auto-save error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       if (onError) {
         onError(error as Error);
       } else {
-        toast.error('Failed to save changes');
+        toast.error(`Failed to save changes: ${errorMessage}`);
       }
     } finally {
       setIsSaving(false);
@@ -35,15 +47,37 @@ export function useAutoSave<T>({
   }, [onSave, onError]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    if (!enabled) return;
+
+    // Clear existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Set new timeout for debounced save
+    timeoutRef.current = setTimeout(() => {
       save(data);
     }, debounceTime);
 
-    return () => clearTimeout(timeoutId);
-  }, [data, debounceTime, save]);
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [data, debounceTime, save, enabled]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     isSaving,
     lastSaved,
+    save: () => save(data), // Manual save function
   };
 } 

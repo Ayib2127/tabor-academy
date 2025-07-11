@@ -1,10 +1,14 @@
-import { withAuth } from '@/lib/utils/withAuth';
-import QuizzesPageClient from './page-client';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import QuizzesPageClient from './QuizzesPageClient';
 
-export default async function QuizzesPageWrapper({ params }: { params: { id: string } }) {
-  await withAuth({
-    roles: ['instructor'],
-    resource: { table: 'courses', id: params.id, ownerField: 'instructor_id' },
-  });
-  return <QuizzesPageClient id={params.id} />;
-} 
+export default async function QuizzesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  
+  return (
+    <ProtectedRoute
+      resource={{ table: 'courses', id, ownerField: 'instructor_id' }}
+    >
+      <QuizzesPageClient id={id} />
+    </ProtectedRoute>
+  );
+}

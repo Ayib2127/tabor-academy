@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS activity_log (
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 
 -- Policy for instructors to read activity for their courses
+DROP POLICY IF EXISTS "Instructors can read activity for their courses" ON activity_log;
 CREATE POLICY "Instructors can read activity for their courses"
   ON activity_log
   FOR SELECT
@@ -36,6 +37,7 @@ CREATE POLICY "Instructors can read activity for their courses"
   USING (auth.uid() = instructor_id);
 
 -- Policy for users to read their own activity
+DROP POLICY IF EXISTS "Users can read their own activity" ON activity_log;
 CREATE POLICY "Users can read their own activity"
   ON activity_log
   FOR SELECT

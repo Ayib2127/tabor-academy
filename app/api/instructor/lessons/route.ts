@@ -81,6 +81,41 @@ export async function PATCH(req: Request, context: Promise<{ params: { id: strin
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    // Hybrid logic: If is_published is set to true and parent course is published, flag course for review
+    if (parse.data.is_published === true) {
+      // Get parent course status and id
+      const courseId = lesson.module?.course?.id;
+      if (courseId) {
+        const { data: courseData, error: courseError } = await supabase
+          .from('courses')
+          .select('id, status, title')
+          .eq('id', courseId)
+          .maybeSingle();
+        if (!courseError && courseData && courseData.status === 'published') {
+          // Set course status to pending_review
+          await supabase
+            .from('courses')
+            .update({ status: 'pending_review' })
+            .eq('id', courseData.id);
+          // Notify all admins
+          const { data: admins, error: adminError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'admin');
+          if (!adminError && admins && admins.length > 0) {
+            const notifications = admins.map((admin: any) => ({
+              user_id: admin.id,
+              type: 'course_status_change',
+              title: 'Course Needs Review',
+              message: `Course "${courseData.title}" requires review due to a newly published lesson by the instructor.`,
+              data: { course_id: courseData.id },
+            }));
+            await supabase.from('notifications').insert(notifications);
+          }
+        }
+      } // else: no courseId, do nothing
+    }
+
     return NextResponse.json({ 
       success: true,
       message: 'Lesson updated successfully',

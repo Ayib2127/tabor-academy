@@ -70,6 +70,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_ethiopian_payments_unique_transaction
 -- RLS Policies
 
 -- Users can view their own payments
+DROP POLICY IF EXISTS "Users can view own ethiopian payments" ON ethiopian_payments;
 CREATE POLICY "Users can view own ethiopian payments"
   ON ethiopian_payments
   FOR SELECT
@@ -77,6 +78,7 @@ CREATE POLICY "Users can view own ethiopian payments"
   USING (auth.uid() = user_id);
 
 -- Users can insert their own payments
+DROP POLICY IF EXISTS "Users can create own ethiopian payments" ON ethiopian_payments;
 CREATE POLICY "Users can create own ethiopian payments"
   ON ethiopian_payments
   FOR INSERT
@@ -84,6 +86,7 @@ CREATE POLICY "Users can create own ethiopian payments"
   WITH CHECK (auth.uid() = user_id);
 
 -- Admins can view all payments
+DROP POLICY IF EXISTS "Admins can view all ethiopian payments" ON ethiopian_payments;
 CREATE POLICY "Admins can view all ethiopian payments"
   ON ethiopian_payments
   FOR SELECT
@@ -97,6 +100,7 @@ CREATE POLICY "Admins can view all ethiopian payments"
   );
 
 -- Admins can update payment status
+DROP POLICY IF EXISTS "Admins can update ethiopian payments" ON ethiopian_payments;
 CREATE POLICY "Admins can update ethiopian payments"
   ON ethiopian_payments
   FOR UPDATE
@@ -122,6 +126,7 @@ VALUES ('payment-proofs', 'payment-proofs', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for payment proofs
+DROP POLICY IF EXISTS "Users can upload payment proofs" ON storage.objects;
 CREATE POLICY "Users can upload payment proofs"
   ON storage.objects
   FOR INSERT
@@ -131,6 +136,7 @@ CREATE POLICY "Users can upload payment proofs"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can view own payment proofs" ON storage.objects;
 CREATE POLICY "Users can view own payment proofs"
   ON storage.objects
   FOR SELECT
@@ -140,6 +146,7 @@ CREATE POLICY "Users can view own payment proofs"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Admins can view all payment proofs" ON storage.objects;
 CREATE POLICY "Admins can view all payment proofs"
   ON storage.objects
   FOR SELECT

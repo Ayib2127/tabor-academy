@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { Quiz, QuizQuestion, QuestionType } from '@/types/quiz';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,11 +34,20 @@ import { toast } from 'sonner';
 interface QuizBuilderProps {
   quiz: Quiz;
   onChange: (quiz: Quiz) => void;
+  onBlur?: () => void;
 }
 
-const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
+const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [editingQuestions, setEditingQuestions] = useState<{ [id: string]: string }>({});
+  const [editingAnswers, setEditingAnswers] = useState<{ [optionId: string]: string }>({});
+
+  // Sync local state when quiz changes (e.g., when switching questions)
+  useEffect(() => {
+    setEditingQuestions({});
+    setEditingAnswers({});
+  }, [quiz]);
 
   const handleQuestionAdd = (type: QuestionType) => {
     const newQuestion: QuizQuestion = {
@@ -54,14 +63,14 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
 
     onChange({
       ...quiz,
-      questions: [...quiz.questions, newQuestion],
+      questions: [...(quiz.questions ?? []), newQuestion],
     });
   };
 
   const handleQuestionUpdate = (questionId: string, updates: Partial<QuizQuestion>) => {
     onChange({
       ...quiz,
-      questions: quiz.questions.map(q =>
+      questions: (quiz.questions ?? []).map(q =>
         q.id === questionId ? { ...q, ...updates } : q
       ),
     });
@@ -70,14 +79,14 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
   const handleQuestionDelete = (questionId: string) => {
     onChange({
       ...quiz,
-      questions: quiz.questions.filter(q => q.id !== questionId),
+      questions: (quiz.questions ?? []).filter(q => q.id !== questionId),
     });
   };
 
   const handleOptionAdd = (questionId: string) => {
     onChange({
       ...quiz,
-      questions: quiz.questions.map(q => {
+      questions: (quiz.questions ?? []).map(q => {
         if (q.id !== questionId || !q.options) return q;
         return {
           ...q,
@@ -97,7 +106,7 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
   ) => {
     onChange({
       ...quiz,
-      questions: quiz.questions.map(q => {
+      questions: (quiz.questions ?? []).map(q => {
         if (q.id !== questionId || !q.options) return q;
         return {
           ...q,
@@ -148,7 +157,7 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
 
         onChange({
           ...quiz,
-          questions: [...quiz.questions, ...newQuestions],
+          questions: [...(quiz.questions ?? []), ...newQuestions],
         });
 
         toast.success(`${newQuestions.length} AI questions added successfully!`);
@@ -162,19 +171,51 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
     }
   };
 
+  function validateQuiz(quiz: Quiz) {
+    if (!quiz.title || !(quiz.questions ?? []).length) return false;
+    for (const q of quiz.questions ?? []) {
+      if (!q.question || !q.options || q.options.length === 0) return false;
+      if (!q.options.some(a => a.isCorrect)) return false;
+      if (q.options.some(a => !a.text)) return false;
+    }
+    return true;
+  }
+
+  const handleQuizChange = (updatedQuiz: Quiz, validate: boolean = false) => {
+    if (validate && !validateQuiz(updatedQuiz)) {
+      toast.error('Quiz is invalid. Please check all questions and answers.');
+      return;
+    }
+    onChange(updatedQuiz);
+  };
+
+  function cleanQuiz(quiz: Quiz): Quiz {
+    return {
+      ...quiz,
+      questions: (quiz.questions ?? [])
+        .filter(q => q.question && q.options && q.options.length > 0)
+        .map(q => ({
+          ...q,
+          options: q.options.filter(a => a.text),
+        })),
+    };
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <Input
-            value={quiz.title}
-            onChange={(e) => onChange({ ...quiz, title: e.target.value })}
+            value={quiz.title ?? ''}
+            onChange={(e) => handleQuizChange({ ...quiz, title: e.target.value }, false)}
+            onBlur={() => handleQuizChange(quiz, true)}
             placeholder="Quiz Title"
             className="text-xl font-semibold border-[#4ECDC4]/30 focus:border-[#4ECDC4] text-[#2C3E50]"
           />
           <Textarea
-            value={quiz.description || ''}
-            onChange={(e) => onChange({ ...quiz, description: e.target.value })}
+            value={quiz.description ?? ''}
+            onChange={e => onChange({ ...quiz, description: e.target.value })}
+            onBlur={onBlur}
             placeholder="Quiz Description (optional)"
             className="resize-none border-[#4ECDC4]/30 focus:border-[#4ECDC4] text-[#2C3E50]"
           />
@@ -200,11 +241,12 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                 <Label className="text-[#2C3E50]">Time Limit (minutes)</Label>
                 <Input
                   type="number"
-                  value={quiz.timeLimit || ''}
-                  onChange={(e) => onChange({
+                  value={quiz.timeLimit ?? ''}
+                  onChange={(e) => handleQuizChange({
                     ...quiz,
                     timeLimit: e.target.value ? parseInt(e.target.value) : undefined,
-                  })}
+                  }, false)}
+                  onBlur={() => handleQuizChange(quiz, true)}
                   placeholder="No time limit"
                   className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                 />
@@ -213,11 +255,12 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                 <Label className="text-[#2C3E50]">Passing Score (%)</Label>
                 <Input
                   type="number"
-                  value={quiz.passingScore}
-                  onChange={(e) => onChange({
+                  value={quiz.passingScore ?? ''}
+                  onChange={(e) => handleQuizChange({
                     ...quiz,
-                    passingScore: parseInt(e.target.value),
-                  })}
+                    passingScore: e.target.value ? parseInt(e.target.value) : undefined,
+                  }, false)}
+                  onBlur={() => handleQuizChange(quiz, true)}
                   min="0"
                   max="100"
                   className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
@@ -229,11 +272,12 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
               <Label className="text-[#2C3E50]">Attempts Allowed</Label>
               <Input
                 type="number"
-                value={quiz.attemptsAllowed}
-                onChange={(e) => onChange({
+                value={quiz.attemptsAllowed ?? ''}
+                onChange={(e) => handleQuizChange({
                   ...quiz,
-                  attemptsAllowed: parseInt(e.target.value),
-                })}
+                  attemptsAllowed: e.target.value ? parseInt(e.target.value) : undefined,
+                }, false)}
+                onBlur={() => handleQuizChange(quiz, true)}
                 min="1"
                 className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
               />
@@ -244,30 +288,33 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                 <Label className="text-[#2C3E50]">Shuffle Questions</Label>
                 <Switch
                   checked={quiz.shuffleQuestions}
-                  onCheckedChange={(checked) => onChange({
+                  onCheckedChange={(checked) => handleQuizChange({
                     ...quiz,
                     shuffleQuestions: checked,
-                  })}
+                  }, false)}
+                  onBlur={() => handleQuizChange(quiz, true)}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <Label className="text-[#2C3E50]">Show Correct Answers</Label>
                 <Switch
                   checked={quiz.showCorrectAnswers}
-                  onCheckedChange={(checked) => onChange({
+                  onCheckedChange={(checked) => handleQuizChange({
                     ...quiz,
                     showCorrectAnswers: checked,
-                  })}
+                  }, false)}
+                  onBlur={() => handleQuizChange(quiz, true)}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <Label className="text-[#2C3E50]">Show Explanations</Label>
                 <Switch
                   checked={quiz.showExplanations}
-                  onCheckedChange={(checked) => onChange({
+                  onCheckedChange={(checked) => handleQuizChange({
                     ...quiz,
                     showExplanations: checked,
-                  })}
+                  }, false)}
+                  onBlur={() => handleQuizChange(quiz, true)}
                 />
               </div>
             </div>
@@ -317,10 +364,10 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
         <DragDropContext
           onDragEnd={(result) => {
             if (!result.destination) return;
-            const items = Array.from(quiz.questions);
+            const items = Array.from(quiz.questions ?? []);
             const [reorderedItem] = items.splice(result.source.index, 1);
             items.splice(result.destination.index, 0, reorderedItem);
-            onChange({ ...quiz, questions: items });
+            handleQuizChange({ ...quiz, questions: items }, true);
           }}
         >
           <Droppable droppableId="questions">
@@ -330,7 +377,7 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                 ref={provided.innerRef}
                 className="space-y-4"
               >
-                {quiz.questions.map((question, index) => (
+                {(quiz.questions ?? []).map((question, index) => (
                   <Draggable
                     key={question.id}
                     draggableId={question.id}
@@ -353,11 +400,27 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                             <div className="flex-1 space-y-4">
                               <div className="space-y-2">
                                 <Input
-                                  value={question.question}
-                                  onChange={(e) => handleQuestionUpdate(
-                                    question.id,
-                                    { question: e.target.value }
-                                  )}
+                                  value={editingQuestions[question.id] ?? question.question ?? ''}
+                                  onChange={e => setEditingQuestions(prev => ({ ...prev, [question.id]: e.target.value }))}
+                                  onBlur={() => {
+                                    handleQuestionUpdate(question.id, { question: editingQuestions[question.id] ?? question.question });
+                                    setEditingQuestions(prev => {
+                                      const { [question.id]: _, ...rest } = prev;
+                                      return rest;
+                                    });
+                                    if (onBlur) onBlur();
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      handleQuestionUpdate(question.id, { question: editingQuestions[question.id] ?? question.question });
+                                      setEditingQuestions(prev => {
+                                        const { [question.id]: _, ...rest } = prev;
+                                        return rest;
+                                      });
+                                      if (onBlur) onBlur();
+                                      e.preventDefault();
+                                    }
+                                  }}
                                   placeholder="Question"
                                   className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                 />
@@ -388,11 +451,12 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                                   </Select>
                                   <Input
                                     type="number"
-                                    value={question.points}
+                                    value={question.points ?? 1}
                                     onChange={(e) => handleQuestionUpdate(
                                       question.id,
                                       { points: parseInt(e.target.value) }
                                     )}
+                                    onBlur={onBlur}
                                     min="1"
                                     className="w-20 border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                   />
@@ -401,18 +465,33 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
 
                               {question.type === 'multiple_choice' && (
                                 <div className="space-y-2">
-                                  {question.options?.map((option, optionIndex) => (
+                                  {(question.options || []).map((option, optionIndex) => (
                                     <div
                                       key={option.id}
                                       className="flex items-center space-x-2"
                                     >
                                       <Input
-                                        value={option.text}
-                                        onChange={(e) => handleOptionUpdate(
-                                          question.id,
-                                          option.id,
-                                          { text: e.target.value }
-                                        )}
+                                        value={editingAnswers[option.id] ?? option.text ?? ''}
+                                        onChange={e => setEditingAnswers(prev => ({ ...prev, [option.id]: e.target.value }))}
+                                        onBlur={() => {
+                                          handleOptionUpdate(question.id, option.id, { text: editingAnswers[option.id] ?? option.text });
+                                          setEditingAnswers(prev => {
+                                            const { [option.id]: _, ...rest } = prev;
+                                            return rest;
+                                          });
+                                          if (onBlur) onBlur();
+                                        }}
+                                        onKeyDown={e => {
+                                          if (e.key === 'Enter') {
+                                            handleOptionUpdate(question.id, option.id, { text: editingAnswers[option.id] ?? option.text });
+                                            setEditingAnswers(prev => {
+                                              const { [option.id]: _, ...rest } = prev;
+                                              return rest;
+                                            });
+                                            if (onBlur) onBlur();
+                                            e.preventDefault();
+                                          }
+                                        }}
                                         placeholder={`Option ${optionIndex + 1}`}
                                         className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                       />
@@ -425,6 +504,7 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                                             { isCorrect: checked }
                                           )
                                         }
+                                        onBlur={onBlur}
                                       />
                                       <Button
                                         variant="ghost"
@@ -500,11 +580,12 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
                               {question.type === 'short_answer' && (
                                 <div className="space-y-2">
                                   <Input
-                                    value={question.correctAnswer || ''}
+                                    value={question.correctAnswer ?? ''}
                                     onChange={(e) => handleQuestionUpdate(
                                       question.id,
                                       { correctAnswer: e.target.value }
                                     )}
+                                    onBlur={onBlur}
                                     placeholder="Correct Answer"
                                     className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                   />
@@ -513,11 +594,12 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange }) => {
 
                               <div className="space-y-2">
                                 <Textarea
-                                  value={question.explanation || ''}
+                                  value={question.explanation ?? ''}
                                   onChange={(e) => handleQuestionUpdate(
                                     question.id,
                                     { explanation: e.target.value }
                                   )}
+                                  onBlur={onBlur}
                                   placeholder="Explanation (optional)"
                                   className="resize-none border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                 />

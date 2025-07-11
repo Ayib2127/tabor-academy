@@ -22,6 +22,19 @@ interface CourseOverview {
   rejection_reason?: string;
   averageRating: number;
   edited_since_rejection: boolean;
+  modules?: Array<{
+    id: string;
+    title: string;
+    order: number;
+    lessons: Array<{
+      id: string;
+      title: string;
+      type: 'video' | 'text' | 'quiz' | 'assignment';
+      position: number;
+      dueDate?: string;
+      needsGrading?: boolean;
+    }>;
+  }>;
 }
 
 interface ActionItem {
@@ -184,6 +197,44 @@ export async function GET(request: Request) {
 
         const currentCourseRating = courseRating || 0;
 
+        // Fetch modules and lessons for this course
+        const { data: modulesData, error: modulesError } = await supabase
+          .from('course_modules')
+          .select(`
+            id,
+            title,
+            order,
+            module_lessons (
+              id,
+              title,
+              type,
+              position,
+              due_date,
+              needs_grading
+            )
+          `)
+          .eq('course_id', course.id)
+          .order('order', { ascending: true });
+
+        if (modulesError) {
+          console.error(`Error fetching modules for course ${course.id}:`, modulesError);
+        }
+
+        // Transform modules data to match expected format
+        const modules = (modulesData || []).map(module => ({
+          id: module.id,
+          title: module.title,
+          order: module.order,
+          lessons: (module.module_lessons || []).map(lesson => ({
+            id: lesson.id,
+            title: lesson.title,
+            type: lesson.type as 'video' | 'text' | 'quiz' | 'assignment',
+            position: lesson.position,
+            dueDate: lesson.due_date,
+            needsGrading: lesson.needs_grading || false,
+          })).sort((a, b) => a.position - b.position)
+        }));
+
         // Add to totals
         totalStudents += currentStudentCount;
         totalRevenue += revenue;
@@ -206,6 +257,7 @@ export async function GET(request: Request) {
           rejection_reason: course.rejection_reason,
           averageRating: parseFloat(currentCourseRating.toFixed(1)),
           edited_since_rejection: course.edited_since_rejection,
+          modules,
         };
       })
     );
@@ -313,7 +365,7 @@ export async function GET(request: Request) {
       } else {
         recentActivity.push(...(enrollmentActivity || []).map((enrollment: any) => ({
           id: enrollment.id,
-          type: 'enrollment',
+          type: 'enrollment' as const,
           student: enrollment.users?.full_name || 'Unknown Student',
           action: 'enrolled in',
           course: enrollment.courses?.title || 'Unknown Course',

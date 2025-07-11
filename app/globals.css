@@ -1,3 +1,4 @@
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -59,10 +60,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
   html {
     scroll-behavior: smooth;
@@ -238,6 +240,10 @@
 
   .responsive-grid-4 {
     @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .border-border {
+    border-color: hsl(var(--border));
   }
 }
 
@@ -433,4 +439,24 @@
 @keyframes gradient-move {
   0% { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
+}
+
+/* Brand Scrollbar Styles - applies to all scrollable elements */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #FF6B35 #F7F9F9; /* thumb color, track color */
+}
+
+/* For Webkit browsers (Chrome, Edge, Safari) */
+*::-webkit-scrollbar {
+  width: 10px;
+  background: #F7F9F9; /* track color */
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #FF6B35 0%, #4ECDC4 100%);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #4ECDC4 0%, #FF6B35 100%);
 }

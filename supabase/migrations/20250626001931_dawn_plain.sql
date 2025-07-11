@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS testimonials (
 ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
 
 -- Policy for public read access
+DROP POLICY IF EXISTS "Anyone can read testimonials" ON testimonials;
 CREATE POLICY "Anyone can read testimonials"
   ON testimonials
   FOR SELECT
@@ -70,6 +71,7 @@ CREATE POLICY "Anyone can read testimonials"
   USING (true);
 
 -- Policy for authenticated admin write access
+DROP POLICY IF EXISTS "Admins can manage testimonials" ON testimonials;
 CREATE POLICY "Admins can manage testimonials"
   ON testimonials
   FOR ALL

@@ -72,7 +72,31 @@ export function SuccessStoriesSection() {
           // Fallback to mock data if Supabase fails
           setSuccessStories(mockSuccessStories);
         } else if (data && data.length > 0) {
-          setSuccessStories(data);
+          // Transform data to ensure all required fields are present
+          const transformedData = data.map(item => ({
+            id: item.id || `story-${Math.random()}`,
+            name: item.name || item.full_name || 'Anonymous',
+            location: item.location || 'Unknown',
+            country: item.country || 'Unknown',
+            image_url: item.image_url || item.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+            business_name: item.business_name || item.company || 'Business',
+            business_type: item.business_type || item.industry || 'Business',
+            course_taken: item.course_taken || item.course_name || 'Course',
+            time_to_launch: item.time_to_launch || '3 months',
+            monthly_revenue: item.monthly_revenue || '$3,000',
+            employees_hired: item.employees_hired || 2,
+            quote: item.quote || item.testimonial || 'Great experience with Tabor Academy!',
+            achievement: item.achievement || 'Successfully launched business',
+            rating: item.rating || 5,
+            video_url: item.video_url || '#',
+            linkedin_url: item.linkedin_url || '#',
+            business_url: item.business_url || '#',
+            before_story: item.before_story || 'Started from scratch',
+            after_story: item.after_story || 'Built a successful business',
+            is_featured: item.is_featured || true,
+            display_order: item.display_order || 1
+          }));
+          setSuccessStories(transformedData);
         } else {
           // Use mock data if no testimonials in database
           setSuccessStories(mockSuccessStories);
@@ -226,6 +250,31 @@ export function SuccessStoriesSection() {
 function SuccessStoryCard({ story }: { story: SuccessStory }) {
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Safety check to ensure all required fields are present
+  const safeStory = {
+    id: story?.id || 'default',
+    name: story?.name || 'Anonymous',
+    location: story?.location || 'Unknown',
+    country: story?.country || 'Unknown',
+    image_url: story?.image_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+    business_name: story?.business_name || 'Business',
+    business_type: story?.business_type || 'Business',
+    course_taken: story?.course_taken || 'Course',
+    time_to_launch: story?.time_to_launch || '3 months',
+    monthly_revenue: story?.monthly_revenue || '$3,000',
+    employees_hired: story?.employees_hired || 2,
+    quote: story?.quote || 'Great experience with Tabor Academy!',
+    achievement: story?.achievement || 'Successfully launched business',
+    rating: story?.rating || 5,
+    video_url: story?.video_url || '#',
+    linkedin_url: story?.linkedin_url || '#',
+    business_url: story?.business_url || '#',
+    before_story: story?.before_story || 'Started from scratch',
+    after_story: story?.after_story || 'Built a successful business',
+    is_featured: story?.is_featured || true,
+    display_order: story?.display_order || 1
+  };
+
   return (
     <div className="relative h-[500px] perspective-1000">
       <div 
@@ -239,16 +288,21 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
             {/* Header with Image and Basic Info */}
             <div className="relative h-48 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20">
               <Image
-                src={story.image_url}
-                alt={story.name}
+                src={safeStory.image_url}
+                alt={safeStory.name}
                 fill
                 className="object-cover"
                 loading="lazy"
+                onError={(e) => {
+                  // Fallback to a default image if the original fails
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               
               {/* Play Button Overlay */}
-              {story.video_url && story.video_url !== '#' && (
+              {safeStory.video_url && safeStory.video_url !== '#' && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
                   <Button
                     size="icon"
@@ -263,7 +317,7 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
               <div className="absolute top-4 right-4">
                 <Badge className="bg-white/90 text-[#2C3E50] border-0">
                   <MapPin className="w-3 h-3 mr-1" />
-                  {story.country}
+                  {safeStory.country}
                 </Badge>
               </div>
               
@@ -273,7 +327,7 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
                   <Star 
                     key={i} 
                     className={`w-4 h-4 ${
-                      i < story.rating ? 'fill-[#FF6B35] text-[#FF6B35]' : 'text-white/50'
+                      i < safeStory.rating ? 'fill-[#FF6B35] text-[#FF6B35]' : 'text-white/50'
                     }`} 
                   />
                 ))}
@@ -283,28 +337,28 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
             {/* Content */}
             <div className="p-6 flex-1 flex flex-col">
               <div className="mb-4">
-                <h3 className="text-xl font-bold text-[#2C3E50] mb-1">{story.name}</h3>
-                <p className="text-sm text-[#2C3E50]/70 mb-2">{story.location}, {story.country}</p>
+                <h3 className="text-xl font-bold text-[#2C3E50] mb-1">{safeStory.name}</h3>
+                <p className="text-sm text-[#2C3E50]/70 mb-2">{safeStory.location}, {safeStory.country}</p>
                 <Badge variant="outline" className="border-[#4ECDC4]/30 text-[#4ECDC4] text-xs">
-                  {story.business_type}
+                  {safeStory.business_type}
                 </Badge>
               </div>
 
               <div className="relative mb-4">
                 <Quote className="w-6 h-6 text-[#4ECDC4]/30 absolute -top-2 -left-1" />
                 <p className="text-[#2C3E50]/80 text-sm leading-relaxed pl-4 line-clamp-3">
-                  {story.quote}
+                  {safeStory.quote}
                 </p>
               </div>
 
               {/* Key Metrics */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="text-center p-3 bg-[#4ECDC4]/5 rounded-lg">
-                  <div className="text-lg font-bold text-[#4ECDC4]">{story.monthly_revenue}</div>
+                  <div className="text-lg font-bold text-[#4ECDC4]">{safeStory.monthly_revenue}</div>
                   <div className="text-xs text-[#2C3E50]/60">Monthly Revenue</div>
                 </div>
                 <div className="text-center p-3 bg-[#FF6B35]/5 rounded-lg">
-                  <div className="text-lg font-bold text-[#FF6B35]">{story.time_to_launch}</div>
+                  <div className="text-lg font-bold text-[#FF6B35]">{safeStory.time_to_launch}</div>
                   <div className="text-xs text-[#2C3E50]/60">Time to Launch</div>
                 </div>
               </div>
@@ -328,8 +382,8 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-bold text-[#2C3E50]">{story.business_name}</h3>
-                <p className="text-sm text-[#2C3E50]/70">{story.name}</p>
+                <h3 className="text-lg font-bold text-[#2C3E50]">{safeStory.business_name}</h3>
+                <p className="text-sm text-[#2C3E50]/70">{safeStory.name}</p>
               </div>
               <Button
                 variant="ghost"
@@ -347,11 +401,11 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
               <div className="space-y-3">
                 <div className="p-3 bg-red-50 rounded-lg border-l-4 border-red-200">
                   <div className="text-xs font-medium text-red-600 mb-1">BEFORE</div>
-                  <div className="text-sm text-[#2C3E50]">{story.before_story}</div>
+                  <div className="text-sm text-[#2C3E50]">{safeStory.before_story}</div>
                 </div>
                 <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-200">
                   <div className="text-xs font-medium text-green-600 mb-1">AFTER</div>
-                  <div className="text-sm text-[#2C3E50]">{story.after_story}</div>
+                  <div className="text-sm text-[#2C3E50]">{safeStory.after_story}</div>
                 </div>
               </div>
             </div>
@@ -363,21 +417,21 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-[#1B4D3E]" />
                   <div>
-                    <div className="text-sm font-medium text-[#2C3E50]">{story.monthly_revenue}</div>
+                    <div className="text-sm font-medium text-[#2C3E50]">{safeStory.monthly_revenue}</div>
                     <div className="text-xs text-[#2C3E50]/60">Monthly Revenue</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#4ECDC4]" />
                   <div>
-                    <div className="text-sm font-medium text-[#2C3E50]">{story.employees_hired}</div>
+                    <div className="text-sm font-medium text-[#2C3E50]">{safeStory.employees_hired}</div>
                     <div className="text-xs text-[#2C3E50]/60">Employees Hired</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#FF6B35]" />
                   <div>
-                    <div className="text-sm font-medium text-[#2C3E50]">{story.time_to_launch}</div>
+                    <div className="text-sm font-medium text-[#2C3E50]">{safeStory.time_to_launch}</div>
                     <div className="text-xs text-[#2C3E50]/60">Time to Launch</div>
                   </div>
                 </div>
@@ -398,34 +452,34 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
                   <Award className="w-4 h-4 text-[#1B4D3E]" />
                   <span className="text-xs font-medium text-[#1B4D3E]">KEY ACHIEVEMENT</span>
                 </div>
-                <p className="text-sm text-[#2C3E50]">{story.achievement}</p>
+                <p className="text-sm text-[#2C3E50]">{safeStory.achievement}</p>
               </div>
             </div>
 
             {/* Action Links */}
             <div className="mt-auto space-y-2">
               <div className="flex gap-2">
-                {story.business_url && story.business_url !== '#' && (
+                {safeStory.business_url && safeStory.business_url !== '#' && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1 border-[#4ECDC4]/30 text-[#4ECDC4] hover:bg-[#4ECDC4] hover:text-white"
                     asChild
                   >
-                    <Link href={story.business_url} target="_blank">
+                    <Link href={safeStory.business_url} target="_blank">
                       <ExternalLink className="w-3 h-3 mr-1" />
                       Visit Business
                     </Link>
                   </Button>
                 )}
-                {story.video_url && story.video_url !== '#' && (
+                {safeStory.video_url && safeStory.video_url !== '#' && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1 border-[#FF6B35]/30 text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
                     asChild
                   >
-                    <Link href={story.video_url} target="_blank">
+                    <Link href={safeStory.video_url} target="_blank">
                       <Play className="w-3 h-3 mr-1" />
                       Watch Story
                     </Link>
@@ -433,7 +487,7 @@ function SuccessStoryCard({ story }: { story: SuccessStory }) {
                 )}
               </div>
               <Badge variant="outline" className="w-full justify-center border-[#E5E8E8] text-[#2C3E50]/60">
-                Course: {story.course_taken}
+                Course: {safeStory.course_taken}
               </Badge>
             </div>
           </CardContent>

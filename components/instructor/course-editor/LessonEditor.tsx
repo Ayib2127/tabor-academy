@@ -15,20 +15,70 @@ import AIAssistant from './AIAssistant';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 
+// Local lesson type for UI editing (content can be object or string)
+type LocalLesson = Omit<Lesson, 'content'> & { content?: any };
+
 interface LessonEditorProps {
   lesson?: Lesson;
+  moduleId?: string; // Add moduleId for new lessons
   onUpdate: (updatedLesson: Lesson) => void;
   onDelete: () => void;
   isVisible?: boolean;
+  onSave?: () => void;
 }
 
 const LessonEditor: FC<LessonEditorProps> = ({
   lesson,
+  moduleId,
   onUpdate,
   onDelete,
   isVisible = true,
+  onSave,
 }) => {
   if (!isVisible || !lesson) return null;
+
+  // Local state for editing
+  const [localLesson, setLocalLesson] = useState<LocalLesson>(() => ({
+    ...lesson,
+    content: parseContent(lesson.content),
+  }));
+
+  // Reset local state when a new lesson is selected
+  useEffect(() => {
+    setLocalLesson({
+      ...lesson,
+      content: parseContent(lesson.content),
+    });
+  }, [lesson?.id]);
+
+  // Helper to parse content string to object
+  function parseContent(content: any) {
+    if (!content) return undefined;
+    if (typeof content === 'string') {
+      try {
+        return JSON.parse(content);
+      } catch {
+        // Fallback: wrap legacy HTML string in a minimal JSON structure for the editor
+        return {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: content }
+              ]
+            }
+          ]
+        };
+      }
+    }
+    return content;
+  }
+  // Helper to serialize content object to string
+  function serializeContent(content: any) {
+    if (typeof content === 'string') return content;
+    return JSON.stringify(content);
+  }
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -42,60 +92,101 @@ const LessonEditor: FC<LessonEditorProps> = ({
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const lastContentRef = useRef<any>(lesson.content);
 
-  const debouncedSave = useCallback(async (updatedLesson: Lesson) => {
-    // Clear existing timeout
+  const debouncedSave = useCallback(async (updatedLesson: LocalLesson) => {
+    console.log("debouncedSave called", updatedLesson);
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-
-    // Set new timeout for debounced save
     saveTimeoutRef.current = setTimeout(async () => {
-      // Only save if content has actually changed
-      if (JSON.stringify(lastContentRef.current) === JSON.stringify(updatedLesson.content)) {
-        return;
-      }
+      const contentString = serializeContent(updatedLesson.content);
+
+      // Only compare serialized strings
+      if (lastContentRef.current === contentString) return;
 
       try {
         setSaveStatus('saving');
-        
-        // Update parent state immediately for optimistic UI
-        onUpdate(updatedLesson);
-        
-        // Only save to backend if lesson has a permanent UUID (not temp)
-        if (!updatedLesson.id.startsWith('temp-')) {
+        let savedLesson = { ...updatedLesson, content: updatedLesson.content };
+        // If temp ID, insert new lesson
+        if (updatedLesson.id.startsWith('temp-')) {
+          const module_id = (updatedLesson as any).module_id || moduleId;
+          if (!module_id) throw new Error('Module ID is required to create a new lesson');
+          const { data: inserted, error } = await supabase
+            .from('module_lessons')
+            .insert({
+              module_id,
+              title: updatedLesson.title,
+              description: updatedLesson.description,
+              content: contentString,
+              type: updatedLesson.type,
+              is_published: updatedLesson.is_published ?? false,
+              order: updatedLesson.order,
+              dueDate: updatedLesson.dueDate,
+              needsGrading: updatedLesson.needsGrading,
+              updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+          console.log('Supabase INSERT result:', { error, inserted });
+          if (error || !inserted) {
+            throw error || new Error('Failed to insert lesson');
+          }
+          // Fetch the latest lesson from backend
+          const { data: freshLesson, error: fetchError } = await supabase
+            .from('module_lessons')
+            .select('*')
+            .eq('id', inserted.id)
+            .single();
+          if (fetchError || !freshLesson) {
+            throw fetchError || new Error('Failed to fetch new lesson');
+          }
+          savedLesson = { ...freshLesson, content: parseContent(freshLesson.content) };
+          lastContentRef.current = serializeContent(savedLesson.content);
+        } else {
+          // Update existing lesson
           const { error } = await supabase
             .from('module_lessons')
             .update({
               title: updatedLesson.title,
-              content: updatedLesson.content,
+              description: updatedLesson.description,
+              content: contentString,
               type: updatedLesson.type,
-              is_published: updatedLesson.is_published,
+              is_published: updatedLesson.is_published ?? false,
+              order: updatedLesson.order,
+              dueDate: updatedLesson.dueDate,
+              needsGrading: updatedLesson.needsGrading,
               updated_at: new Date().toISOString(),
             })
             .eq('id', updatedLesson.id);
-
+          console.log('Supabase UPDATE result:', { error, updatedLessonId: updatedLesson.id });
           if (error) {
             throw error;
           }
+          // Fetch the latest lesson from backend
+          const { data: freshLesson, error: fetchError } = await supabase
+            .from('module_lessons')
+            .select('*')
+            .eq('id', updatedLesson.id)
+            .single();
+          if (fetchError || !freshLesson) {
+            throw fetchError || new Error('Failed to fetch updated lesson');
+          }
+          savedLesson = { ...freshLesson, content: parseContent(freshLesson.content) };
+          lastContentRef.current = serializeContent(savedLesson.content);
         }
-
-        lastContentRef.current = updatedLesson.content;
         setSaveStatus('saved');
         setLastSaved(new Date());
-        
-        // Reset status after 2 seconds
+        // When calling onUpdate, cast content to string for Lesson type
+        onUpdate({ ...savedLesson, content: serializeContent(savedLesson.content) });
         setTimeout(() => setSaveStatus('idle'), 2000);
-        
       } catch (error: any) {
         console.error('Auto-save error:', error);
         setSaveStatus('error');
-        toast.error('Failed to save lesson: ' + error.message);
-        
-        // Reset status after 3 seconds
+        toast.error('Failed to save lesson: ' + (error?.message || error));
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
-    }, 1000); // 1 second debounce
-  }, [lesson.id, onUpdate, supabase]);
+    }, 1000);
+  }, [lesson.id, onUpdate, supabase, moduleId]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -126,8 +217,18 @@ const LessonEditor: FC<LessonEditorProps> = ({
     };
   }, []);
 
+  // Debounce save to parent after user stops typing
+  // REMOVE this effect entirely
+  // useEffect(() => {
+  //   if (!localLesson) return;
+  //   const timeout = setTimeout(() => {
+  //     onUpdate({ ...localLesson, content: serializeContent(localLesson.content) });
+  //   }, 500); // 500ms debounce
+  //   return () => clearTimeout(timeout);
+  // }, [localLesson, onUpdate]);
+
   const handleLessonUpdate = (updates: Partial<Lesson>) => {
-    const updatedLesson = { ...lesson, ...updates };
+    const updatedLesson = { ...localLesson, ...updates };
     debouncedSave(updatedLesson);
   };
 
@@ -167,7 +268,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
   // Auto-generate quiz from lesson content
   const handleAutoGenerateQuiz = async () => {
-    if (!lesson.content) {
+    if (!localLesson.content) {
       toast.error('Please add some lesson content first to generate a quiz');
       return;
     }
@@ -182,7 +283,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
         },
         body: JSON.stringify({
           action: 'quiz',
-          input: lesson.content,
+          input: localLesson.content,
           questionCount: 5,
         }),
       });
@@ -240,6 +341,28 @@ const LessonEditor: FC<LessonEditorProps> = ({
     }
   };
 
+  const [videoUrlInput, setVideoUrlInput] = useState(
+    typeof localLesson.content === 'object' && localLesson.content && 'src' in localLesson.content
+      ? String(localLesson.content.src)
+      : ''
+  );
+
+  useEffect(() => {
+    setVideoUrlInput(
+      typeof localLesson.content === 'object' && localLesson.content && 'src' in localLesson.content
+        ? String(localLesson.content.src)
+        : ''
+    );
+  }, [localLesson.content]);
+
+  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (localLesson.type === 'quiz' && typeof localLesson.content === 'object') {
+      setEditingQuiz(localLesson.content);
+    }
+  }, [localLesson.type, localLesson.content]);
+
   return (
     <div className="space-y-6">
       {/* Lesson Header */}
@@ -252,10 +375,20 @@ const LessonEditor: FC<LessonEditorProps> = ({
               </Label>
               <Input
                 id="lesson-title"
-                value={lesson.title}
-                onChange={(e) => handleLessonUpdate({ title: e.target.value })}
+                value={localLesson.title}
+                onChange={(e) => setLocalLesson(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Enter lesson title"
                 className="mt-1 text-lg font-semibold border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lesson-description" className="text-[#2C3E50]">Lesson Description <span className="text-xs text-gray-400">(optional)</span></Label>
+              <Input
+                id="lesson-description"
+                value={localLesson.description || ''}
+                onChange={e => setLocalLesson(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter a short description for this lesson (optional)"
+                className="mt-1 border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
               />
             </div>
             
@@ -265,9 +398,9 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   Lesson Type
                 </Label>
                 <Select
-                  value={lesson.type}
-                  onValueChange={(value: 'video' | 'text' | 'quiz') =>
-                    handleLessonUpdate({ type: value })
+                  value={localLesson.type}
+                  onValueChange={(value: 'video' | 'text' | 'quiz' | 'assignment') =>
+                    setLocalLesson(prev => ({ ...prev, type: value }))
                   }
                 >
                   <SelectTrigger className="mt-1 border-[#E5E8E8] focus:border-[#4ECDC4]">
@@ -277,6 +410,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                     <SelectItem value="text">📝 Text Lesson</SelectItem>
                     <SelectItem value="video">🎬 Video Lesson</SelectItem>
                     <SelectItem value="quiz">❓ Quiz</SelectItem>
+                    <SelectItem value="assignment">📄 Assignment</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -284,8 +418,8 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div className="flex items-center space-x-2">
                 <Switch
                   id="lesson-published"
-                  checked={lesson.is_published}
-                  onCheckedChange={(checked) => handleLessonUpdate({ is_published: checked })}
+                  checked={localLesson.is_published}
+                  onCheckedChange={(checked) => setLocalLesson(prev => ({ ...prev, is_published: checked }))}
                 />
                 <Label htmlFor="lesson-published" className="text-[#2C3E50] font-semibold">
                   Published
@@ -300,9 +434,13 @@ const LessonEditor: FC<LessonEditorProps> = ({
               selectedText={selectedText}
               onContentGenerated={handleAIContentGenerated}
               onQuizGenerated={handleAIQuizGenerated}
-              lessonType={lesson.type}
-              lessonTitle={lesson.title}
-              currentContent={lesson.content}
+              lessonType={
+                ['video', 'text', 'quiz'].includes(localLesson.type)
+                  ? (localLesson.type as 'video' | 'text' | 'quiz')
+                  : 'text'
+              }
+              lessonTitle={localLesson.title}
+              currentContent={localLesson.content}
             />
             
             {renderSaveStatus()}
@@ -321,20 +459,21 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
         {/* Status Badge */}
         <div className="flex items-center gap-2">
-          <Badge variant={lesson.is_published ? "default" : "secondary"}>
-            {lesson.is_published ? "Published" : "Draft"}
+          <Badge variant={localLesson.is_published ? "default" : "secondary"}>
+            {localLesson.is_published ? "Published" : "Draft"}
           </Badge>
           <Badge variant="outline">
-            {lesson.type === 'text' && '📝 Text'}
-            {lesson.type === 'video' && '🎬 Video'}
-            {lesson.type === 'quiz' && '❓ Quiz'}
+            {localLesson.type === 'text' && '📝 Text'}
+            {localLesson.type === 'video' && '🎬 Video'}
+            {localLesson.type === 'quiz' && '❓ Quiz'}
+            {localLesson.type === 'assignment' && '📄 Assignment'}
           </Badge>
         </div>
       </div>
 
       {/* Lesson Content */}
       <div className="bg-white rounded-lg border border-[#E5E8E8] shadow-sm overflow-hidden">
-        {lesson.type === 'text' && (
+        {localLesson.type === 'text' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <div className="flex items-center justify-between">
@@ -344,31 +483,11 @@ const LessonEditor: FC<LessonEditorProps> = ({
                     Create rich, engaging content using our block-based editor.
                   </p>
                 </div>
-                {lesson.content && (
-                  <Button
-                    onClick={handleAutoGenerateQuiz}
-                    disabled={isGeneratingQuiz}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                    size="sm"
-                  >
-                    {isGeneratingQuiz ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-4 h-4 mr-2" />
-                        Auto-Generate Quiz
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
             </div>
             <div className="p-0">
               <RichTextEditor
-                content={lesson.content}
+                content={localLesson.content}
                 onChange={handleContentChange}
                 placeholder="Start writing your lesson content. Use the toolbar to format text, add images, links, and more..."
               />
@@ -376,67 +495,50 @@ const LessonEditor: FC<LessonEditorProps> = ({
           </div>
         )}
 
-        {lesson.type === 'video' && (
+        {localLesson.type === 'video' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[#2C3E50]">Video Content</h3>
                   <p className="text-sm text-[#2C3E50]/60 mt-1">
-                    Upload or provide a video URL for this lesson.
+                    Provide a video URL for this lesson (YouTube, Vimeo, etc.).
                   </p>
                 </div>
-                {lesson.content?.src && (
-                  <Button
-                    onClick={handleAutoGenerateQuiz}
-                    disabled={isGeneratingQuiz}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                    size="sm"
-                  >
-                    {isGeneratingQuiz ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-4 h-4 mr-2" />
-                        Generate Quiz from Video
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
             </div>
             <div className="p-6 space-y-4">
-              {lesson.content?.src ? (
-                <div className="space-y-4">
-                  <VideoPlayer src={lesson.content.src} />
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleLessonUpdate({ content: null })}
-                      className="border-[#E5E8E8] hover:border-[#4ECDC4]"
-                    >
-                      Replace Video
-                    </Button>
-                    <span className="text-sm text-[#2C3E50]/60">
-                      Current video: {lesson.content.src}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <VideoUploader
-                  onUploadComplete={handleVideoUpload}
-                  onUploadError={handleVideoError}
-                />
-              )}
+              <Input
+                type="url"
+                placeholder="Paste video URL here (e.g. https://...)"
+                value={videoUrlInput}
+                onChange={e => setVideoUrlInput(e.target.value)}
+                onBlur={() => {
+                  handleLessonUpdate({
+                    content: { type: 'video', src: videoUrlInput },
+                    type: 'video',
+                  });
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    handleLessonUpdate({
+                      content: { type: 'video', src: videoUrlInput },
+                      type: 'video',
+                    });
+                    e.preventDefault();
+                  }
+                }}
+              />
+              {typeof localLesson.content === 'object' &&
+                localLesson.content &&
+                'src' in (localLesson.content as any) && (
+                  <VideoPlayer src={(localLesson.content as any).src} />
+                )}
             </div>
           </div>
         )}
 
-        {lesson.type === 'quiz' && (
+        {localLesson.type === 'quiz' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <div className="flex items-center justify-between">
@@ -503,9 +605,9 @@ const LessonEditor: FC<LessonEditorProps> = ({
             </div>
             <div className="p-6">
               <QuizBuilder
-                quiz={lesson.content || {
+                quiz={editingQuiz || {
                   id: `quiz-${Date.now()}`,
-                  title: lesson.title || 'New Quiz',
+                  title: localLesson.title || 'New Quiz',
                   questions: [],
                   passingScore: 70,
                   attemptsAllowed: 3,
@@ -513,8 +615,44 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   showCorrectAnswers: true,
                   showExplanations: true,
                 }}
-                onChange={handleQuizChange}
+                onChange={updatedQuiz => setEditingQuiz(updatedQuiz)}
+                onBlur={() => handleLessonUpdate({ content: editingQuiz, type: 'quiz' })}
               />
+            </div>
+          </div>
+        )}
+
+        {localLesson.type === 'assignment' && (
+          <div>
+            <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
+              <h3 className="text-lg font-semibold text-[#2C3E50]">Assignment Details</h3>
+              <p className="text-sm text-[#2C3E50]/60 mt-1">
+                Provide instructions and set a due date for this assignment.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <RichTextEditor
+                content={localLesson.content}
+                onChange={handleContentChange}
+                placeholder="Write assignment instructions here..."
+              />
+              <Input
+                type="date"
+                value={localLesson.dueDate ?? ''}
+                onChange={e => setLocalLesson(prev => ({ ...prev, dueDate: e.target.value }))}
+                className="w-64"
+                placeholder="Due date"
+              />
+              <div>
+                <Label>
+                  <input
+                    type="checkbox"
+                    checked={localLesson.needsGrading ?? false}
+                    onChange={e => setLocalLesson(prev => ({ ...prev, needsGrading: e.target.checked }))}
+                  />
+                  Needs Grading
+                </Label>
+              </div>
             </div>
           </div>
         )}

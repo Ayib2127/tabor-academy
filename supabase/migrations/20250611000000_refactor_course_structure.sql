@@ -12,7 +12,12 @@ DROP TABLE IF EXISTS course_categories CASCADE;
 DROP TABLE IF EXISTS lessons CASCADE;
 
 -- Add category column to courses table
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'courses' AND column_name = 'category') THEN
 ALTER TABLE courses ADD COLUMN category TEXT;
+    END IF;
+END $$;
 
 -- Create course_modules table
 CREATE TABLE IF NOT EXISTS course_modules (
@@ -46,6 +51,7 @@ ALTER TABLE module_lessons ENABLE ROW LEVEL SECURITY;
 
 -- Recreate policies for lessons (now module_lessons) and course_modules
 -- You might need to adjust these policies based on your specific security requirements
+DROP POLICY IF EXISTS "Anyone can view published module lessons" ON module_lessons;
 CREATE POLICY "Anyone can view published module lessons"
   ON module_lessons FOR SELECT
   USING (
@@ -57,6 +63,7 @@ CREATE POLICY "Anyone can view published module lessons"
     )
   );
 
+DROP POLICY IF EXISTS "Instructors can manage their own module lessons" ON module_lessons;
 CREATE POLICY "Instructors can manage their own module lessons"
   ON module_lessons FOR ALL
   USING (
@@ -67,11 +74,24 @@ CREATE POLICY "Instructors can manage their own module lessons"
     )
   );
 
+DROP POLICY IF EXISTS "Instructors can manage their own course modules" ON course_modules;
 CREATE POLICY "Instructors can manage their own course modules"
   ON course_modules FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM courses
       WHERE courses.id = course_modules.course_id AND courses.instructor_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Instructors can update lessons in published courses"
+  ON module_lessons FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM course_modules cm
+      JOIN courses c ON cm.course_id = c.id
+      WHERE cm.id = module_lessons.module_id
+        AND c.instructor_id = auth.uid()
+        AND c.status = 'published'
     )
   );

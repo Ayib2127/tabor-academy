@@ -12,6 +12,7 @@ interface ModuleEditorProps {
   onDelete: () => void;
   onAddLesson: () => void;
   onReorderLessons: (startIndex: number, endIndex: number) => void;
+  hasRealId: boolean;
 }
 
 const ModuleEditor: FC<ModuleEditorProps> = ({
@@ -20,6 +21,7 @@ const ModuleEditor: FC<ModuleEditorProps> = ({
   onDelete,
   onAddLesson,
   onReorderLessons,
+  hasRealId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -32,12 +34,14 @@ const ModuleEditor: FC<ModuleEditorProps> = ({
     <div className="border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex-1 space-y-2">
+          <label className="font-semibold text-[#2C3E50]">Module Title</label>
           <Input
             value={module.title}
             onChange={(e) => onUpdate({ ...module, title: e.target.value })}
             placeholder="Module Title"
             className="text-lg font-semibold"
           />
+          <label className="text-[#2C3E50]">Module Description <span className="text-xs text-gray-400">(optional)</span></label>
           <Textarea
             value={module.description || ''}
             onChange={(e) => onUpdate({ ...module, description: e.target.value })}
@@ -105,6 +109,7 @@ const ModuleEditor: FC<ModuleEditorProps> = ({
             size="sm"
             onClick={onAddLesson}
             className="w-full"
+            disabled={!hasRealId}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Lesson

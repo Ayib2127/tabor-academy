@@ -26,12 +26,14 @@ CREATE TABLE IF NOT EXISTS course_ratings (
 ALTER TABLE course_ratings ENABLE ROW LEVEL SECURITY;
 
 -- Policy for users to read all ratings
+DROP POLICY IF EXISTS "Anyone can read course ratings" ON course_ratings;
 CREATE POLICY "Anyone can read course ratings"
   ON course_ratings
   FOR SELECT
   USING (true);
 
 -- Policy for users to create their own ratings
+DROP POLICY IF EXISTS "Users can create their own ratings" ON course_ratings;
 CREATE POLICY "Users can create their own ratings"
   ON course_ratings
   FOR INSERT
@@ -39,6 +41,7 @@ CREATE POLICY "Users can create their own ratings"
   WITH CHECK (auth.uid() = user_id);
 
 -- Policy for users to update their own ratings
+DROP POLICY IF EXISTS "Users can update their own ratings" ON course_ratings;
 CREATE POLICY "Users can update their own ratings"
   ON course_ratings
   FOR UPDATE
@@ -47,6 +50,7 @@ CREATE POLICY "Users can update their own ratings"
   WITH CHECK (auth.uid() = user_id);
 
 -- Policy for users to delete their own ratings
+DROP POLICY IF EXISTS "Users can delete their own ratings" ON course_ratings;
 CREATE POLICY "Users can delete their own ratings"
   ON course_ratings
   FOR DELETE

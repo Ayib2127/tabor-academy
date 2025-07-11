@@ -3,9 +3,29 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-const courseCreationSchema = z.object({
+export const courseCreationSchema = z.object({
   title: z.string().min(1, 'Course title is required').max(100),
+  subtitle: z.string().max(150).optional(),
   description: z.string().min(10, 'Description must be at least 10 characters'),
+  language: z.string().max(50).optional(),
+  subtitles: z.array(z.string().max(50)).optional(),
+  video_hours: z.number().min(0).optional(),
+  resources: z.number().min(0).optional(),
+  certificate: z.boolean().optional(),
+  community: z.boolean().optional(),
+  lifetime_access: z.boolean().optional(),
+  learning_outcomes: z.array(z.string()).optional(),
+  requirements: z.array(z.string()).optional(),
+  success_stories: z.array(z.object({
+    name: z.string(),
+    photo: z.string().optional(),
+    outcome: z.string().optional(),
+    story: z.string(),
+  })).optional(),
+  faq: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).optional(),
   category: z.string().min(1, 'Category is required'),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   tags: z.array(z.string()).min(1, 'At least one tag is required'),
@@ -63,7 +83,19 @@ export async function POST(req: Request) {
     // Create the course with proper approval workflow
     const courseData = {
       title: validatedData.title,
+      subtitle: validatedData.subtitle,
       description: validatedData.description,
+      language: validatedData.language,
+      subtitles: validatedData.subtitles,
+      video_hours: validatedData.video_hours,
+      resources: validatedData.resources,
+      certificate: validatedData.certificate,
+      community: validatedData.community,
+      lifetime_access: validatedData.lifetime_access,
+      learning_outcomes: validatedData.learning_outcomes,
+      requirements: validatedData.requirements,
+      success_stories: validatedData.success_stories,
+      faq: validatedData.faq,
       category: validatedData.category,
       level: validatedData.level,
       tags: validatedData.tags,
@@ -75,10 +107,9 @@ export async function POST(req: Request) {
       end_date: validatedData.endDate,
       registration_deadline: validatedData.registrationDeadline,
       instructor_id: session.user.id,
-      // CRITICAL: Enforce approval workflow
-      status: 'draft', // All courses start as draft
-      content_type: contentType, // Set based on user role
-      is_published: false, // Never published until approved
+      status: 'draft',
+      content_type: contentType,
+      is_published: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

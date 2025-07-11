@@ -29,12 +29,18 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import { snakeToCamel } from "@/lib/utils/snakeToCamel";
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
   const [course, setCourse] = useState<any>(null);
+  const [modules, setModules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Move these up!
+  const [activeTab, setActiveTab] = useState("overview");
+  const [expandedModules, setExpandedModules] = useState<number[]>([]);
 
   useEffect(() => {
     async function fetchCourse() {
@@ -44,22 +50,39 @@ export default function CourseDetailsPage() {
         const response = await fetch(`/api/courses/${id}`);
         if (!response.ok) throw new Error('Course not found');
         const data = await response.json();
-        setCourse(data);
+        const courseDetails = {
+          ...data,
+          subtitles: data.subtitles ?? [],
+          videoHours: data.video_hours ?? 0,
+          lifetimeAccess: data.lifetime_access ?? false,
+        };
+        setCourse(snakeToCamel(courseDetails));
       } catch (err: any) {
         setError(err.message || 'Failed to load course');
       } finally {
         setLoading(false);
       }
     }
-    if (id) fetchCourse();
+    async function fetchModules() {
+      try {
+        const response = await fetch(`/api/courses/${id}/modules`);
+        if (!response.ok) throw new Error('Failed to fetch modules');
+        const data = await response.json();
+        setModules(data);
+      } catch (err) {
+        setModules([]);
+      }
+    }
+    if (id) {
+      fetchCourse();
+      fetchModules();
+    }
   }, [id]);
 
+  // Now you can do early returns
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
   if (!course) return null;
-
-  const [activeTab, setActiveTab] = useState("overview")
-  const [expandedModules, setExpandedModules] = useState<number[]>([])
 
   const toggleModule = (moduleIndex: number) => {
     setExpandedModules(prev =>
@@ -77,8 +100,8 @@ export default function CourseDetailsPage() {
       <section className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src={course.banner}
-            alt={course.title}
+            src={course.banner || "/default-banner.png"}
+            alt={course.title || "Course Banner"}
             fill
             className="object-cover opacity-20"
           />
@@ -89,7 +112,7 @@ export default function CourseDetailsPage() {
               <div className="flex items-center gap-2 text-sm">
                 <Globe className="h-4 w-4" />
                 <span>{course.language}</span>
-                {course.subtitles.length > 0 && (
+                {Array.isArray(course.subtitles) && course.subtitles.length > 0 && (
                   <span className="text-gray-400">
                     (Subtitles: {course.subtitles.join(", ")})
                   </span>
@@ -102,8 +125,8 @@ export default function CourseDetailsPage() {
               <div className="flex items-center gap-6 text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span>{course.rating.average}</span>
-                  <span className="text-gray-400">({course.rating.total} reviews)</span>
+                  <span>{course.rating?.average ?? "N/A"}</span>
+                  <span className="text-gray-400">({course.rating?.total ?? 0} reviews)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="h-5 w-5" />
@@ -117,15 +140,15 @@ export default function CourseDetailsPage() {
 
               <div className="flex items-center gap-4">
                 <Image
-                  src={course.instructor.photo}
-                  alt={course.instructor.name}
+                  src={typeof course.instructor?.avatar_url === "string" && course.instructor.avatar_url ? course.instructor.avatar_url : "/default-avatar.png"}
+                  alt={course.instructor?.full_name || "Instructor"}
                   width={40}
                   height={40}
                   className="rounded-full"
                 />
                 <div>
-                  <p className="font-medium">{course.instructor.name}</p>
-                  <p className="text-sm text-gray-400">{course.instructor.title}</p>
+                  <p className="font-medium">{course.instructor?.full_name ?? "Unknown"}</p>
+                  <p className="text-sm text-gray-400">{course.instructor?.title ?? ""}</p>
                 </div>
               </div>
             </div>
@@ -133,8 +156,8 @@ export default function CourseDetailsPage() {
             <Card className="p-6 bg-white/10 backdrop-blur-lg text-white">
               <div className="aspect-video relative rounded-lg overflow-hidden mb-6">
                 <Image
-                  src={course.banner}
-                  alt={course.title}
+                  src={typeof course.banner === "string" && course.banner ? course.banner : "/default-banner.png"}
+                  alt={course.title || "Course Banner"}
                   fill
                   className="object-cover"
                 />
@@ -239,12 +262,13 @@ export default function CourseDetailsPage() {
             </TabsTrigger>
           </TabsList>
 
+          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-8">
-            {/* Learning Outcomes */}
+            {/* What You'll Learn */}
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">What You'll Learn</h2>
               <div className="grid md:grid-cols-2 gap-4">
-                {course.learningOutcomes.map((outcome, index) => (
+                {Array.isArray(course.learningOutcomes) && course.learningOutcomes.map((outcome, index) => (
                   <div key={index} className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
                     <span>{outcome}</span>
@@ -257,22 +281,21 @@ export default function CourseDetailsPage() {
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">Requirements</h2>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                {course.requirements.map((req, index) => (
+                {Array.isArray(course.requirements) && course.requirements.map((req, index) => (
                   <li key={index}>{req}</li>
                 ))}
               </ul>
             </div>
 
             {/* Success Stories */}
-            <div className="space-y-4">
               <h2 className="text-2xl font-bold">Success Stories</h2>
               <div className="grid md:grid-cols-2 gap-6">
-                {course.successStories.map((story, index) => (
+                {Array.isArray(course.successStories) && course.successStories.map((story, index) => (
                   <Card key={index} className="p-6">
                     <div className="flex items-center gap-4 mb-4">
                       <Image
-                        src={story.photo}
-                        alt={story.name}
+                        src={typeof story.photo === "string" && story.photo ? story.photo : "/default-avatar.png"}
+                        alt={story.name || "Success Story"}
                         width={60}
                         height={60}
                         className="rounded-full"
@@ -285,7 +308,6 @@ export default function CourseDetailsPage() {
                     <p className="text-muted-foreground">{story.story}</p>
                   </Card>
                 ))}
-              </div>
             </div>
           </TabsContent>
 
@@ -293,16 +315,11 @@ export default function CourseDetailsPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">Course Content</h2>
               <div className="text-sm text-muted-foreground">
-                {course.curriculum.reduce((acc, module) => acc + module.lessons.length, 0)} lessons •{" "}
-                {course.curriculum.reduce((acc, module) => {
-                  const [hours] = module.duration.split(" ")
-                  return acc + parseInt(hours)
-                }, 0)} hours total
+                {modules.reduce((acc, module) => acc + (module.lessons?.filter((l:any) => l.is_published).length ?? 0), 0)} lessons
               </div>
             </div>
-
             <div className="space-y-4">
-              {course.curriculum.map((module, moduleIndex) => (
+              {modules.map((module, moduleIndex) => (
                 <Card key={moduleIndex} className="overflow-hidden">
                   <button
                     className="w-full p-4 flex items-center justify-between hover:bg-accent"
@@ -310,36 +327,27 @@ export default function CourseDetailsPage() {
                   >
                     <div className="flex items-center gap-2">
                       <ChevronRight
-                        className={`h-5 w-5 transition-transform ${
-                          expandedModules.includes(moduleIndex) ? "rotate-90" : ""
-                        }`}
+                        className={`h-5 w-5 transition-transform ${expandedModules.includes(moduleIndex) ? "rotate-90" : ""}`}
                       />
                       <h3 className="font-medium">{module.title}</h3>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {module.lessons.length} lessons • {module.duration}
+                      {module.lessons.filter((l:any) => l.is_published).length} lessons
                     </div>
                   </button>
-
                   {expandedModules.includes(moduleIndex) && (
                     <div className="border-t">
-                      {module.lessons.map((lesson, lessonIndex) => (
+                      {module.lessons.filter((lesson:any) => lesson.is_published).map((lesson:any, lessonIndex:number) => (
                         <div
                           key={lessonIndex}
                           className="p-4 flex items-center justify-between hover:bg-accent/50"
                         >
                           <div className="flex items-center gap-2">
-                            {lesson.preview ? (
-                              <Play className="h-4 w-4 text-primary" />
-                            ) : (
-                              <Lock className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <span className={lesson.preview ? "" : "text-muted-foreground"}>
-                              {lesson.title}
-                            </span>
+                            {lesson.type === 'video' ? <Play className="h-4 w-4 text-primary" /> : <Lock className="h-4 w-4 text-muted-foreground" />}
+                            <span>{lesson.title}</span>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {lesson.duration}
+                            {lesson.duration || ''}
                           </div>
                         </div>
                       ))}
@@ -353,34 +361,34 @@ export default function CourseDetailsPage() {
           <TabsContent value="instructor" className="space-y-8">
             <div className="flex items-start gap-6">
               <Image
-                src={course.instructor.photo}
-                alt={course.instructor.name}
+                src={typeof course.instructor?.avatar_url === "string" && course.instructor.avatar_url ? course.instructor.avatar_url : "/default-avatar.png"}
+                alt={course.instructor?.full_name || "Instructor"}
                 width={120}
                 height={120}
                 className="rounded-full"
               />
               <div>
-                <h2 className="text-2xl font-bold mb-2">{course.instructor.name}</h2>
-                <p className="text-lg text-muted-foreground mb-4">{course.instructor.title}</p>
+                <h2 className="text-2xl font-bold mb-2">{course.instructor?.full_name ?? "Unknown"}</h2>
+                <p className="text-lg text-muted-foreground mb-4">{course.instructor?.title ?? ""}</p>
                 <div className="flex gap-6 text-sm text-muted-foreground mb-6">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span>{course.instructor.rating} Instructor Rating</span>
+                    <span>{course.instructor?.rating ?? "N/A"} Instructor Rating</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    <span>{course.instructor.students.toLocaleString()} Students</span>
+                    <span>{course.instructor?.students?.toLocaleString() ?? "0"} Students</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <BookOpen className="h-4 w-4" />
-                    <span>{course.instructor.courses} Courses</span>
+                    <span>{course.instructor?.courses ?? "0"} Courses</span>
                   </div>
                 </div>
-                <p className="text-muted-foreground mb-4">{course.instructor.bio}</p>
+                <p className="text-muted-foreground mb-4">{course.instructor?.bio ?? ""}</p>
                 <div className="space-y-2">
                   <h3 className="font-semibold">Areas of Expertise:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {course.instructor.expertise.map((skill, index) => (
+                    {Array.isArray(course.instructor?.expertise) && course.instructor.expertise.map((skill, index) => (
                       <span
                         key={index}
                         className="px-3 py-1 bg-accent rounded-full text-sm"
@@ -395,61 +403,51 @@ export default function CourseDetailsPage() {
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-8">
-            <div className="grid md:grid-cols-2 gap-8">
+            <h2 className="text-2xl font-bold">Student Reviews</h2>
+            <div className="mb-4 flex items-center gap-2">
+              <Star className="h-6 w-6 text-yellow-400 fill-current" />
+              <span className="text-2xl font-bold">
+                {course.reviews?.average ?? "N/A"}
+              </span>
+              <span className="text-gray-400">({course.rating?.total ?? 0} reviews)</span>
+            </div>
+            <div className="space-y-6">
+              {Array.isArray(course.reviews) && course.reviews.map((review, index) => (
+                <Card key={index} className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Image
+                      src={typeof review.user?.avatar_url === "string" && review.user.avatar_url ? review.user.avatar_url : "/default-avatar.png"}
+                      alt={review.user?.name || "Student"}
+                      width={40}
+                      height={40}
+                      className="rounded-full"
+                    />
               <div>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="text-4xl font-bold">{course.rating.average}</div>
-                  <div>
-                    <div className="flex items-center">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`h-5 w-5 ${
-                            star <= course.rating.average
-                              ? "text-yellow-400 fill-current"
-                              : "text-gray-300"
-                          }`}
-                        />
+                      <p className="font-semibold">{review.user.name}</p>
+                      <div className="flex items-center gap-1">
+                        {[...Array(review.rating)].map((_, i) => (
+                          <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
                       ))}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Course Rating • {course.rating.total} Reviews
-                    </p>
+                      <span className="text-xs text-gray-400">{review.date}</span>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  {Object.entries(course.rating.breakdown)
-                    .reverse()
-                    .map(([stars, count]) => (
-                      <div key={stars} className="flex items-center gap-4">
-                        <div className="w-12 text-sm">{stars} stars</div>
-                        <Progress
-                          value={(count / course.rating.total) * 100}
-                          className="flex-1"
-                        />
-                        <div className="w-12 text-sm text-right">
-                          {((count / course.rating.total) * 100).toFixed(0)}%
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Student Feedback</h3>
-                {/* Add review list component here */}
-              </div>
+                  <p className="text-muted-foreground">{review.comment}</p>
+                </Card>
+              ))}
             </div>
           </TabsContent>
 
-          <TabsContent value="faq" className="space-y-6">
-            {course.faqs.map((faq, index) => (
-              <Card key={index} className="p-6">
-                <h3 className="font-semibold mb-2">{faq.question}</h3>
-                <p className="text-muted-foreground">{faq.answer}</p>
-              </Card>
-            ))}
+          <TabsContent value="faq" className="space-y-8">
+            <h2 className="text-2xl font-bold">Frequently Asked Questions</h2>
+            <div className="space-y-4">
+              {Array.isArray(course.faq) && course.faq.map((item, index) => (
+                <div key={index}>
+                  <h3 className="font-semibold">{item.question}</h3>
+                  <p className="text-muted-foreground">{item.answer}</p>
+                      </div>
+                    ))}
+                </div>
           </TabsContent>
         </Tabs>
       </section>

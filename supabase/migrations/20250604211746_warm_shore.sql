@@ -63,10 +63,12 @@ ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_tags ENABLE ROW LEVEL SECURITY;
 
 -- Category Policies
+DROP POLICY IF EXISTS "Anyone can view categories" ON categories;
 CREATE POLICY "Anyone can view categories" 
   ON categories FOR SELECT 
   USING (true);
 
+DROP POLICY IF EXISTS "Admins can manage categories" ON categories;
 CREATE POLICY "Admins can manage categories" 
   ON categories FOR ALL 
   USING (
@@ -77,10 +79,12 @@ CREATE POLICY "Admins can manage categories"
   );
 
 -- Course Categories Policies
+DROP POLICY IF EXISTS "Anyone can view course categories" ON course_categories;
 CREATE POLICY "Anyone can view course categories" 
   ON course_categories FOR SELECT 
   USING (true);
 
+DROP POLICY IF EXISTS "Instructors can manage their course categories" ON course_categories;
 CREATE POLICY "Instructors can manage their course categories" 
   ON course_categories FOR ALL 
   USING (
@@ -91,27 +95,33 @@ CREATE POLICY "Instructors can manage their course categories"
   );
 
 -- Reviews Policies
+DROP POLICY IF EXISTS "Anyone can view reviews" ON reviews;
 CREATE POLICY "Anyone can view reviews" 
   ON reviews FOR SELECT 
   USING (true);
 
+DROP POLICY IF EXISTS "Users can create their own reviews" ON reviews;
 CREATE POLICY "Users can create their own reviews" 
   ON reviews FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own reviews" ON reviews;
 CREATE POLICY "Users can update their own reviews" 
   ON reviews FOR UPDATE 
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own reviews" ON reviews;
 CREATE POLICY "Users can delete their own reviews" 
   ON reviews FOR DELETE 
   USING (auth.uid() = user_id);
 
 -- Tags Policies
+DROP POLICY IF EXISTS "Anyone can view tags" ON tags;
 CREATE POLICY "Anyone can view tags" 
   ON tags FOR SELECT 
   USING (true);
 
+DROP POLICY IF EXISTS "Admins can manage tags" ON tags;
 CREATE POLICY "Admins can manage tags" 
   ON tags FOR ALL 
   USING (
@@ -122,10 +132,12 @@ CREATE POLICY "Admins can manage tags"
   );
 
 -- Course Tags Policies
+DROP POLICY IF EXISTS "Anyone can view course tags" ON course_tags;
 CREATE POLICY "Anyone can view course tags" 
   ON course_tags FOR SELECT 
   USING (true);
 
+DROP POLICY IF EXISTS "Instructors can manage their course tags" ON course_tags;
 CREATE POLICY "Instructors can manage their course tags" 
   ON course_tags FOR ALL 
   USING (

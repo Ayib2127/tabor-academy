@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS assignments (
 ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 
 -- Policy for instructors to manage their assignments
+DROP POLICY IF EXISTS "Instructors can manage their assignments" ON assignments;
 CREATE POLICY "Instructors can manage their assignments"
   ON assignments
   FOR ALL
@@ -54,6 +55,7 @@ CREATE POLICY "Instructors can manage their assignments"
   USING (auth.uid() = instructor_id);
 
 -- Policy for students to read assignments for enrolled courses
+DROP POLICY IF EXISTS "Students can read assignments for enrolled courses" ON assignments;
 CREATE POLICY "Students can read assignments for enrolled courses"
   ON assignments
   FOR SELECT
@@ -84,6 +86,7 @@ CREATE TABLE IF NOT EXISTS student_questions (
 ALTER TABLE student_questions ENABLE ROW LEVEL SECURITY;
 
 -- Policy for instructors to manage questions for their courses
+DROP POLICY IF EXISTS "Instructors can manage questions for their courses" ON student_questions;
 CREATE POLICY "Instructors can manage questions for their courses"
   ON student_questions
   FOR ALL
@@ -91,6 +94,7 @@ CREATE POLICY "Instructors can manage questions for their courses"
   USING (auth.uid() = course_instructor_id);
 
 -- Policy for students to manage their own questions
+DROP POLICY IF EXISTS "Students can manage their own questions" ON student_questions;
 CREATE POLICY "Students can manage their own questions"
   ON student_questions
   FOR ALL

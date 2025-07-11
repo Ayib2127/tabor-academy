@@ -58,18 +58,21 @@ ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE funnel_progress ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for learning_activities
+DROP POLICY IF EXISTS "Users can view own learning activities" ON learning_activities;
 CREATE POLICY "Users can view own learning activities"
   ON learning_activities
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own learning activities" ON learning_activities;
 CREATE POLICY "Users can insert own learning activities"
   ON learning_activities
   FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own learning activities" ON learning_activities;
 CREATE POLICY "Users can update own learning activities"
   ON learning_activities
   FOR UPDATE
@@ -78,12 +81,14 @@ CREATE POLICY "Users can update own learning activities"
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policies for user_achievements
+DROP POLICY IF EXISTS "Users can view own achievements" ON user_achievements;
 CREATE POLICY "Users can view own achievements"
   ON user_achievements
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert achievements" ON user_achievements;
 CREATE POLICY "System can insert achievements"
   ON user_achievements
   FOR INSERT
@@ -91,18 +96,21 @@ CREATE POLICY "System can insert achievements"
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policies for funnel_progress
+DROP POLICY IF EXISTS "Users can view own funnel progress" ON funnel_progress;
 CREATE POLICY "Users can view own funnel progress"
   ON funnel_progress
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own funnel progress" ON funnel_progress;
 CREATE POLICY "Users can insert own funnel progress"
   ON funnel_progress
   FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own funnel progress" ON funnel_progress;
 CREATE POLICY "Users can update own funnel progress"
   ON funnel_progress
   FOR UPDATE

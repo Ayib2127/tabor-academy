@@ -25,52 +25,49 @@ const courses = [
   },
 ];
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
-  const supabase = createSupabaseServerClient();
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const cookieStore = await cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
-  // Require authentication
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Check enrollment
-  const { count: enrollmentCount, error: enrollmentError } = await supabase
-    .from('enrollments')
-    .select('*', { count: 'exact', head: true })
-    .eq('course_id', id)
-    .eq('user_id', user.id);
-
-  if (enrollmentError || !enrollmentCount || enrollmentCount === 0) {
-    return NextResponse.json({ error: 'Forbidden: Not enrolled in this course' }, { status: 403 });
-  }
-
-  try {
-    const { data: course, error } = await supabase
-      .from('courses')
-      .select(`
+  // Fetch course and join instructor info
+  const { data: course, error } = await supabase
+    .from('courses')
+    .select(`
+      *,
+      instructor:users (
+        id,
+        full_name,
+        avatar_url,
+        title,
+        bio,
+        expertise
+      ),
+      course_modules (
         *,
-        lessons (*),
-        users ( full_name, avatar_url )
-      `)
-      .eq('id', id)
-      .single();
+        module_lessons(*)
+      )
+    `)
+    .eq('id', params.id)
+    .single();
 
-    if (error || !course) {
-      console.error('Error fetching course details:', error);
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(course);
-
-  } catch (err) {
-    console.error('An unexpected error occurred:', err);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+  if (error || !course) {
+    return new Response(JSON.stringify({ error: 'Course not found' }), { status: 404 });
   }
+
+  // Transform modules for frontend compatibility
+  const modules = (course.course_modules || []).map((mod) => ({
+    ...mod,
+    description: mod.description ?? "",
+    lessons: mod.module_lessons || [],
+  }));
+
+  // Return all course details, including instructor info
+  return new Response(JSON.stringify({
+    ...course,
+    instructor: course.instructor,
+    modules,
+    // Optionally, map/rename other fields as needed for your frontend
+  }), { status: 200 });
 }
 
 export async function PUT(

@@ -1,31 +1,49 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { cookies as getCookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { courseCreationSchema } from '@/lib/validations/course';
+import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+
+// Helper to always resolve cookies
+async function resolveCookies() {
+  const maybePromise = getCookies();
+  if (typeof (maybePromise as any)?.then === 'function') {
+    return await maybePromise;
+  }
+  return maybePromise;
+}
 
 // --- Enhanced GET endpoint for fetching course details ---
 export async function GET(
   req: Request,
-  context: Promise<{ params: { id: string } }>
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
-  const { params } = await context;
+  // Await params if it's a Promise
+  const params = typeof (context.params as any)?.then === 'function' ? await (context.params as Promise<{ id: string }>) : (context.params as { id: string });
   const courseId = params.id;
 
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const cookieStore = await resolveCookies();
+    // Log all cookies for debugging
+    console.log('All cookies:', cookieStore.getAll());
+    const sessionCookie = cookieStore.get('sb-fmbakckfxuabratissxg-auth-token');
+    console.log('Session cookie:', sessionCookie);
 
-    // Check authentication
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    // Use standardized client for robust SSR/API support
+    const supabase = await createApiSupabaseClient(cookieStore);
 
-    if (sessionError || !session) {
+    // Use getUser for more reliable SSR session handling
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log('DEBUG: user:', user, 'userError:', userError);
+
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const instructorId = session.user.id;
+    const instructorId = user.id;
+    console.log("DEBUG: params:", params);
+    console.log("DEBUG: courseId:", courseId);
+    console.log("DEBUG: instructorId from user:", instructorId);
 
     // Verify course ownership
     const { data: course, error: courseError } = await supabase
@@ -33,7 +51,15 @@ export async function GET(
       .select(`
         id,
         title,
+        subtitle,
         description,
+        language,
+        subtitles,
+        video_hours,
+        resources,
+        certificate,
+        community,
+        lifetime_access,
         status,
         is_published,
         created_at,
@@ -43,11 +69,35 @@ export async function GET(
         rejection_reason,
         reviewed_at,
         reviewed_by,
-        instructor_id
+        instructor_id,
+        learning_outcomes,
+        requirements,
+        success_stories,
+        faq,
+        course_modules (
+          id,
+          title,
+          description,
+          order,
+          module_lessons (
+            id,
+            title,
+            type,
+            content,
+            order,
+            is_published,
+            content_json,
+            instructor_id,
+            created_at,
+            updated_at
+          )
+        )
       `)
       .eq('id', courseId)
       .eq('instructor_id', instructorId)
       .single();
+
+    console.log("DEBUG: course:", course, "courseError:", courseError);
 
     if (courseError || !course) {
       return NextResponse.json({ error: 'Course not found or access denied' }, { status: 404 });
@@ -71,13 +121,26 @@ export async function GET(
       { p_course_id: courseId }
     );
 
+    // Transform course_modules to modules for API response
+    const modules = (course.course_modules || []).map((mod) => ({
+      ...mod,
+      description: mod.description ?? "",
+      lessons: (mod.module_lessons || []),
+    }));
+
     const courseDetails = {
       ...course,
       students_count: students_count || 0,
       rating: averageRating || 0,
       completion_rate: completion_rate || 0,
+      learningOutcomes: course.learning_outcomes ?? [],
+      requirements: course.requirements ?? [],
+      successStories: course.success_stories ?? [],
+      faq: course.faq ?? [],
+      modules,
     };
 
+    console.log("GET course details:", courseDetails);
     return NextResponse.json(courseDetails);
 
   } catch (error: any) {
@@ -89,16 +152,14 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  console.log('--- API Call: /api/instructor/courses/[id] PATCH ---');
-  console.log('Course ID:', params.id);
+export async function PATCH(req: Request, context: { params: { id: string } | Promise<{ id: string }> }) {
+  const cookieStore = await resolveCookies();
+  // Await params if it's a Promise
+  const params = typeof (context.params as any)?.then === 'function' ? await (context.params as Promise<{ id: string }>) : (context.params as { id: string });
+  const courseId = params.id;
 
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const courseId = params.id;
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Get session
     const {
@@ -150,45 +211,83 @@ export async function PATCH(
     }
 
     // Parse and validate request body
-    const body = await req.json();
-    const validatedData = courseCreationSchema.parse(body);
-
-    // Check if changes require re-approval
-    const requiresReapproval = checkIfRequiresReapproval(course, validatedData);
-
-    // Determine if the course was rejected and is being edited
-    let editedSinceRejection = false;
-    if (course.status === 'rejected') {
-      editedSinceRejection = true;
+    let body;
+    try {
+      body = await req.json();
+      console.log("PATCH body received:", body);
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
     }
+
+    let validatedData;
+    try {
+      validatedData = courseCreationSchema.parse(body);
+    } catch (validationError: any) {
+      console.error('Validation error:', validationError);
+      return NextResponse.json(
+        { error: `Validation failed: ${validationError.message}` },
+        { status: 400 }
+      );
+    }
+
+    // Only update new fields if present in the request
+    const updateFields: any = {};
+    if ('subtitle' in body) updateFields.subtitle = body.subtitle;
+    if ('language' in body) updateFields.language = body.language;
+    if ('subtitles' in body) updateFields.subtitles = body.subtitles;
+    if ('video_hours' in body) updateFields.video_hours = body.video_hours;
+    if ('resources' in body) updateFields.resources = body.resources;
+    if ('certificate' in body) updateFields.certificate = body.certificate;
+    if ('community' in body) updateFields.community = body.community;
+    if ('lifetime_access' in body) updateFields.lifetime_access = body.lifetime_access;
+    if ('learning_outcomes' in body) updateFields.learning_outcomes = body.learning_outcomes;
+    if ('requirements' in body) updateFields.requirements = body.requirements;
+    if ('success_stories' in body) updateFields.success_stories = body.success_stories;
+    if ('faq' in body) updateFields.faq = body.faq;
+    console.log("PATCH updateFields:", updateFields);
 
     // Update course
     const { error: updateError } = await supabase
       .from('courses')
       .update({
-        ...validatedData,
-        status: requiresReapproval ? 'pending_review' : course.status,
+        ...updateFields,
         updated_at: new Date().toISOString(),
-        edited_since_rejection: editedSinceRejection,
+        edited_since_rejection: false, // Assuming no rejection means no edit since rejection
       })
       .eq('id', courseId);
 
     if (updateError) {
       console.error('Error updating course:', updateError);
-      throw updateError;
+      return NextResponse.json(
+        { error: `Database error: ${updateError.message}` },
+        { status: 500 }
+      );
     }
 
-    // Update modules and lessons
-    await updateModulesAndLessons(courseId, validatedData.modules);
+    // Update modules and lessons with better error handling
+    try {
+      const resolvedCookieStore = await resolveCookies();
+      await updateModulesAndLessons(courseId, validatedData.modules, resolvedCookieStore);
+    } catch (modErr: any) {
+      console.error('Error updating modules/lessons:', modErr);
+      return NextResponse.json(
+        { error: `Failed to update course structure: ${modErr.message}` },
+        { status: 500 }
+      );
+    }
 
     console.log('Course updated successfully:', {
       courseId,
-      requiresReapproval,
+      requiresReapproval: false, // No re-approval needed for this update
     });
 
     return NextResponse.json({
       message: 'Course updated successfully',
-      requiresReapproval,
+      requiresReapproval: false,
     });
   } catch (error: any) {
     console.error('Error updating course:', error);
@@ -212,65 +311,98 @@ function checkIfRequiresReapproval(currentCourse: any, newData: any): boolean {
   return majorChanges.some((field) => currentCourse[field] !== newData[field]);
 }
 
-async function updateModulesAndLessons(courseId: string, modules: any[]) {
-  const supabase = createRouteHandlerClient({ cookies });
+async function updateModulesAndLessons(courseId: string, modules: any[], cookieStore: any) {
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   try {
-    // Delete existing modules and lessons
-    const { error: deleteLessonsError } = await supabase
-      .from('lessons')
-      .delete()
-      .eq('module_id', courseId);
-
-    if (deleteLessonsError) {
-      console.error('Error deleting lessons:', deleteLessonsError);
-      throw deleteLessonsError;
+    // Validate modules array
+    if (!Array.isArray(modules)) {
+      throw new Error('Modules must be an array');
     }
 
-    const { error: deleteModulesError } = await supabase
-      .from('modules')
-      .delete()
+    // 1. Fetch all existing modules for this course
+    const { data: existingModules, error: fetchModulesError } = await supabase
+      .from('course_modules')
+      .select('id')
       .eq('course_id', courseId);
 
-    if (deleteModulesError) {
-      console.error('Error deleting modules:', deleteModulesError);
-      throw deleteModulesError;
+    if (fetchModulesError) {
+      console.error('Error fetching existing modules:', fetchModulesError);
+      throw new Error(`Failed to fetch existing modules: ${fetchModulesError.message}`);
     }
 
-    // Insert new modules and lessons
+    const moduleIds = (existingModules || []).map((m: any) => m.id);
+
+    // 2. Delete all lessons for these modules (if any exist)
+    if (moduleIds.length > 0) {
+      const { error: deleteLessonsError } = await supabase
+        .from('module_lessons')
+        .delete()
+        .in('module_id', moduleIds);
+
+      if (deleteLessonsError) {
+        console.error('Error deleting module lessons:', deleteLessonsError);
+        throw new Error(`Failed to delete existing lessons: ${deleteLessonsError.message}`);
+      }
+
+      // 3. Delete all modules for this course
+      const { error: deleteModulesError } = await supabase
+        .from('course_modules')
+        .delete()
+        .in('id', moduleIds);
+
+      if (deleteModulesError) {
+        console.error('Error deleting course modules:', deleteModulesError);
+        throw new Error(`Failed to delete existing modules: ${deleteModulesError.message}`);
+      }
+    }
+
+    // 4. Insert new modules and lessons
     for (const courseModule of modules) {
+      // Validate module data
+      if (!courseModule.title?.trim()) {
+        throw new Error('Module title is required');
+      }
+
       const { data: moduleData, error: moduleError } = await supabase
-        .from('modules')
+        .from('course_modules')
         .insert({
           course_id: courseId,
-          title: courseModule.title,
-          description: courseModule.description,
-          order: courseModule.order,
+          title: courseModule.title.trim(),
+          description: courseModule.description?.trim() || '',
+          order: courseModule.order || 0,
         })
         .select()
         .single();
 
       if (moduleError) {
-        console.error('Error creating module:', moduleError);
-        throw moduleError;
+        console.error('Error creating course module:', moduleError);
+        throw new Error(`Failed to create module "${courseModule.title}": ${moduleError.message}`);
       }
 
-      if (moduleData) {
-        const { error: lessonsError } = await supabase
-          .from('lessons')
-          .insert(
-            courseModule.lessons.map((lesson: any) => ({
-              module_id: moduleData.id,
-              title: lesson.title,
-              type: lesson.type,
-              duration: lesson.duration,
-              order: lesson.order,
-            }))
-          );
+      // Insert lessons for this module
+      if (moduleData && courseModule.lessons && Array.isArray(courseModule.lessons)) {
+        const lessonsToInsert = courseModule.lessons
+          .filter((lesson: any) => lesson.title?.trim()) // Only insert lessons with titles
+          .map((lesson: any) => ({
+            module_id: moduleData.id,
+            title: lesson.title.trim(),
+            type: lesson.type || 'text',
+            duration: lesson.duration || 0,
+            order: lesson.order || 0,
+            content: lesson.content || '',
+            is_published: lesson.is_published || false,
+          }));
 
-        if (lessonsError) {
-          console.error('Error creating lessons:', lessonsError);
-          throw lessonsError;
+        if (lessonsToInsert.length > 0) {
+          const { error: lessonsError } = await supabase
+            .from('module_lessons')
+            .insert(lessonsToInsert);
+
+          if (lessonsError) {
+            console.error('Error creating module lessons:', lessonsError);
+            throw new Error(`Failed to create lessons for module "${courseModule.title}": ${lessonsError.message}`);
+          }
         }
       }
     }
