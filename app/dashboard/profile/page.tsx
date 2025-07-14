@@ -37,11 +37,13 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { format } from "date-fns"
+import { useRef } from "react"
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [profileImage, setProfileImage] = useState("/logo.jpg")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Enhanced mock user data
   const userData = {
@@ -108,8 +110,28 @@ export default function ProfilePage() {
   }
 
   const handleImageUpload = () => {
-    // Image upload logic would go here
-    // This would typically open a file picker and handle the upload process
+    fileInputRef.current?.click();
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const response = await fetch('/api/instructor/images/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload image');
+      }
+      const data = await response.json();
+      setProfileImage(data.url);
+    } catch (error) {
+      // Optionally show a toast
+    }
   }
 
   return (
@@ -201,6 +223,13 @@ export default function ProfilePage() {
                     >
                       <Camera className="h-4 w-4" />
                     </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
                   </div>
                   <h2 className="text-xl font-semibold mb-1">{userData.name}</h2>
                   <p className="text-muted-foreground">{userData.title}</p>

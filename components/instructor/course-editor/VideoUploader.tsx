@@ -30,57 +30,20 @@ const VideoUploader: FC<VideoUploaderProps> = ({
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Create form data
+      // Upload video to backend (Cloudinary)
       const formData = new FormData();
       formData.append('video', file);
-
-      // Get presigned URL for upload
-      const presignedResponse = await fetch('/api/instructor/videos/presigned-url', {
+      const response = await fetch('/api/instructor/videos/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-        }),
+        body: formData,
       });
-
-      if (!presignedResponse.ok) {
-        throw new Error('Failed to get upload URL');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload video');
       }
-
-      const { uploadUrl, videoId } = await presignedResponse.json();
-
-      // Upload to storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload video');
-      }
-
-      // Start processing
-      const processResponse = await fetch('/api/instructor/videos/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ videoId }),
-      });
-
-      if (!processResponse.ok) {
-        throw new Error('Failed to process video');
-      }
-
-      const { videoUrl } = await processResponse.json();
-      setUploadedVideo(videoUrl);
-      onUploadComplete(videoUrl);
+      const data = await response.json();
+      setUploadedVideo(data.url);
+      onUploadComplete(data.url);
       toast.success('Video uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);

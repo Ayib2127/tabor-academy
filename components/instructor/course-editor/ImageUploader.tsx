@@ -34,51 +34,19 @@ const ImageUploader: FC<ImageUploaderProps> = ({
       const previewUrl = URL.createObjectURL(file);
       setPreview(previewUrl);
 
-      // Create form data
+      // Upload image to backend (Cloudinary)
       const formData = new FormData();
       formData.append('image', file);
-
-      // Get presigned URL for upload
-      const presignedResponse = await fetch('/api/instructor/images/presigned-url', {
+      const response = await fetch('/api/instructor/images/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-        }),
+        body: formData,
       });
-
-      if (!presignedResponse.ok) {
-        throw new Error('Failed to get upload URL');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload image');
       }
-
-      const { uploadUrl, imageId } = await presignedResponse.json();
-
-      // Upload to storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload image');
-      }
-
-      // Get the public URL
-      const { data: urlData } = await fetch('/api/instructor/images/get-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ imageId }),
-      }).then(res => res.json());
-
-      onUploadComplete(urlData.publicUrl);
+      const data = await response.json();
+      onUploadComplete(data.url);
       toast.success('Image uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);

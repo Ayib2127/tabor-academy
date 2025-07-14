@@ -24,12 +24,12 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     id: 'telebirr',
     name: 'TeleBirr',
     logo: '/payment-logos/telebirr.png', // You'll need to add these logos
-    accountNumber: '0911234567',
-    accountName: 'Tabor Academy',
+    accountNumber: '0910083733',
+    accountName: 'YIBELTAL EBABU DIRES',
     instructions: [
       'Open your TeleBirr app',
       'Select "Send Money" or "Transfer"',
-      'Enter the account number: 0911234567',
+      'Enter the account number: 0910083733',
       'Enter the exact amount shown above',
       'Complete the transaction',
       'Take a screenshot of the confirmation',
@@ -38,16 +38,16 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     color: 'bg-blue-600'
   },
   {
-    id: 'cbe',
-    name: 'Commercial Bank of Ethiopia',
-    logo: '/payment-logos/cbe.png',
-    accountNumber: '1000123456789',
-    accountName: 'Tabor Academy',
+    id: 'awash',
+    name: 'Awash Bank',
+    logo: '/payment-logos/awash.png',
+    accountNumber: '013201480291700',
+    accountName: 'YIBELTAL EBABU DIRES',
     instructions: [
-      'Visit CBE mobile app or nearest branch',
+      'Visit Awash Bank mobile app or nearest branch',
       'Select "Transfer" or "Send Money"',
-      'Enter account number: 1000123456789',
-      'Enter account name: Tabor Academy',
+      'Enter account number: 013201480291700',
+      'Enter account name: YIBELTAL EBABU DIRES',
       'Enter the exact amount shown above',
       'Complete the transaction',
       'Keep your transaction receipt',
@@ -59,13 +59,13 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     id: 'boa',
     name: 'Bank of Abyssinia',
     logo: '/payment-logos/boa.png',
-    accountNumber: '2000987654321',
-    accountName: 'Tabor Academy',
+    accountNumber: '130958176',
+    accountName: 'YIBELTAL EBABU DIRES',
     instructions: [
       'Open BOA mobile app or visit branch',
       'Select "Fund Transfer"',
-      'Enter account number: 2000987654321',
-      'Enter account name: Tabor Academy',
+      'Enter account number: 130958176',
+      'Enter account name: YIBELTAL EBABU DIRES',
       'Enter the exact amount shown above',
       'Complete the transaction',
       'Save your transaction receipt',
@@ -77,12 +77,12 @@ const ETHIOPIAN_PAYMENT_OPTIONS: EthiopianPaymentOption[] = [
     id: 'mpesa',
     name: 'M-PESA Ethiopia',
     logo: '/payment-logos/mpesa.png',
-    accountNumber: '0912345678',
-    accountName: 'Tabor Academy',
+    accountNumber: '0777188677',
+    accountName: 'YIBELTAL EBABU DIRES',
     instructions: [
       'Dial *665# or open M-PESA app',
       'Select "Send Money"',
-      'Enter phone number: 0912345678',
+      'Enter phone number: 0777188677',
       'Enter the exact amount shown above',
       'Enter your M-PESA PIN',
       'Confirm the transaction',
@@ -362,7 +362,7 @@ export function EthiopianPaymentOptions({
                     <label className="block text-sm font-medium text-[#2C3E50]/70 mb-2">
                       Payment Screenshot / Receipt *
                     </label>
-                    <div className="border-2 border-dashed border-[#E5E8E8] rounded-lg p-6 text-center">
+                    <div className="border-2 border-dashed border-[#E5E8E8] rounded-lg p-6 text-center relative">
                       {paymentProof ? (
                         <div className="space-y-2">
                           <Check className="w-8 h-8 text-green-500 mx-auto" />

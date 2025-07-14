@@ -138,6 +138,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-[#F7F9F9]">
+      <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 9999, background: 'red', color: 'white' }}>
+        ADMIN LAYOUT ACTIVE
+      </div>
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div

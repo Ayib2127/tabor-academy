@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import * as Sentry from '@sentry/nextjs';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -70,10 +77,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
     }
 
     // Validate payment amount
-    if (Math.abs(amount - course.price) > 0.01) {
-      return NextResponse.json({ 
-        error: 'Payment amount does not match course price' 
-      }, { status: 400 });
+    if (paymentMethod === 'stripe' || paymentMethod === 'card') {
+      if (Math.abs(amount - course.price) > 0.01) {
+        return NextResponse.json({ 
+          error: 'Payment amount does not match course price' 
+        }, { status: 400 });
+      }
     }
 
     // Check for duplicate transaction ID
@@ -90,21 +99,32 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
       }, { status: 400 });
     }
 
-    // Upload payment proof file
+    // Upload payment proof file to Cloudinary
     const fileExtension = paymentProof.name.split('.').pop();
     const fileName = `payment-proof-${session.user.id}-${courseId}-${Date.now()}.${fileExtension}`;
-    
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('payment-proofs')
-      .upload(fileName, paymentProof, {
-        contentType: paymentProof.type,
-        upsert: false
-      });
+    const arrayBuffer = await paymentProof.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    if (uploadError) {
-      console.error('File upload error:', uploadError);
-      return NextResponse.json({ 
-        error: 'Failed to upload payment proof' 
+    let cloudinaryResult;
+    try {
+      cloudinaryResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'tabor_academy/payment',
+            public_id: fileName,
+            resource_type: 'auto',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(buffer);
+      });
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      return NextResponse.json({
+        error: 'Failed to upload payment proof',
       }, { status: 500 });
     }
 
@@ -121,7 +141,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
         payment_method_name: paymentMethodName,
         account_number: accountNumber,
         transaction_id: transactionId,
-        payment_proof_url: uploadData.path,
+        payment_proof_url: cloudinaryResult.secure_url,
         status: 'pending_verification',
         submitted_at: new Date().toISOString()
       })
@@ -131,11 +151,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
     if (paymentError) {
       console.error('Payment record creation error:', paymentError);
       
-      // Clean up uploaded file if payment record creation fails
-      await supabase.storage
-        .from('payment-proofs')
-        .remove([fileName]);
-
       return NextResponse.json({ 
         error: 'Failed to create payment record' 
       }, { status: 500 });
@@ -186,31 +201,41 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
 }
 
 async function notifyAdminOfNewPayment(paymentRecord: any) {
-  // This function would send notifications to admins about new payments
-  // You can implement email notifications, Slack webhooks, etc.
-  
-  console.log('New Ethiopian payment submitted:', {
-    id: paymentRecord.id,
-    user_id: paymentRecord.user_id,
-    course_id: paymentRecord.course_id,
-    amount: paymentRecord.amount,
-    payment_method: paymentRecord.payment_method_name,
-    transaction_id: paymentRecord.transaction_id
-  });
-
-  // Example: Send webhook to admin dashboard
-  /*
-  try {
-    await fetch(process.env.ADMIN_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'new_ethiopian_payment',
-        data: paymentRecord
-      })
-    });
-  } catch (error) {
-    console.error('Admin webhook failed:', error);
+  // Fetch all admin users
+  const supabase = await createApiSupabaseClient();
+  const { data: admins, error } = await supabase
+    .from('users')
+    .select('id, full_name, email')
+    .eq('role', 'admin');
+  if (error) {
+    console.error('Failed to fetch admins for notification:', error);
+    return;
   }
-  */
+  if (!admins || admins.length === 0) return;
+  // Create a notification for each admin
+  const notifications = admins.map((admin: any) => ({
+    user_id: admin.id,
+    type: 'system_alert',
+    title: 'New Local Payment Submitted',
+    message: `A new Ethiopian/local payment for course "${paymentRecord.course_title}" requires verification.`,
+    data: {
+      payment_id: paymentRecord.id,
+      user_id: paymentRecord.user_id,
+      course_id: paymentRecord.course_id,
+      amount: paymentRecord.amount,
+      currency: paymentRecord.currency,
+      payment_method: paymentRecord.payment_method_name,
+      transaction_id: paymentRecord.transaction_id,
+      payment_proof_url: paymentRecord.payment_proof_url
+    },
+    read: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
+  const { error: notifError } = await supabase
+    .from('notifications')
+    .insert(notifications);
+  if (notifError) {
+    console.error('Failed to create admin notifications:', notifError);
+  }
 } 

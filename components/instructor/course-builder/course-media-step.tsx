@@ -11,6 +11,7 @@ interface CourseData {
   price: number
   thumbnailUrl: string
   promoVideoUrl: string
+  id: string // Added id to CourseData interface
 }
 
 interface CourseMediaStepProps {
@@ -39,19 +40,20 @@ export function CourseMediaStep({ courseData, updateCourseData, onNext }: Course
     setIsUploading(true)
     setThumbnailError("")
     const formData = new FormData()
-    formData.append("file", file)
-    formData.append("upload_preset", "Tabor-Academy")
+    formData.append("image", file)
+    // You may need to pass courseId from props or context; here we use courseData.id or similar
+    if (courseData.id) formData.append("courseId", courseData.id)
     try {
-      const res = await fetch("https://api.cloudinary.com/v1_1/dbn8jx8bh/image/upload", {
+      const res = await fetch("/api/courses/thumbnail/upload", {
         method: "POST",
         body: formData,
       })
       const data = await res.json()
-      if (data.secure_url) {
-        updateCourseData({ thumbnailUrl: data.secure_url })
-        setThumbnailPreview(data.secure_url)
+      if (res.ok && data.url) {
+        updateCourseData({ thumbnailUrl: data.url })
+        setThumbnailPreview(data.url)
       } else {
-        setThumbnailError("Image upload failed. Please try again.")
+        setThumbnailError(data.error || "Image upload failed. Please try again.")
       }
     } catch (err) {
       setThumbnailError("Image upload failed. Please try again.")

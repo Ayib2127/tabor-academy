@@ -189,7 +189,7 @@ export default function AdminDashboardPageClient({ user, role }: { user: any, ro
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 py-8 w-full">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/3"></div>
           <div className="grid md:grid-cols-4 gap-6">
@@ -209,7 +209,7 @@ export default function AdminDashboardPageClient({ user, role }: { user: any, ro
 
   if (!dashboardData) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 py-8 w-full">
         <div className="text-center py-12">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-[#2C3E50] mb-2">Failed to Load Dashboard</h3>
@@ -223,7 +223,7 @@ export default function AdminDashboardPageClient({ user, role }: { user: any, ro
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="px-4 py-8 w-full">
           {/* Search and Notifications Bar */}
           <div className="flex items-center justify-between mb-8">
             <div className="relative flex-1 max-w-md">

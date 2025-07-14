@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import {
   CreditCard,
   Search,
@@ -56,97 +57,35 @@ export default function AdminTransactionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [statusTab, setStatusTab] = useState<'pending_review' | 'published' | 'rejected' | 'all'>('pending_review');
+
+  // Fetch pending Ethiopian payments
+  const fetchPendingPayments = useCallback(async () => {
+    setPendingLoading(true);
+    try {
+      const res = await fetch('/api/admin/payments');
+      const data = await res.json();
+      setPendingPayments(data.payments || []);
+    } catch (err) {
+      toast.error('Failed to load pending payments');
+    } finally {
+      setPendingLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+    fetchPendingPayments();
+  }, [fetchPendingPayments]);
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      
-      // For MVP, we'll simulate transaction data since the actual payment webhook
-      // integration would depend on your payment provider (Stripe, PayPal, etc.)
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          transaction_id: 'txn_1234567890',
-          user_id: 'user_1',
-          course_id: 'course_1',
-          amount: 99.00,
-          currency: 'USD',
-          status: 'success',
-          payment_method: 'card',
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          user: {
-            full_name: 'John Doe',
-            email: 'john@example.com',
-          },
-          course: {
-            title: 'Digital Marketing Mastery',
-          },
-        },
-        {
-          id: '2',
-          transaction_id: 'txn_0987654321',
-          user_id: 'user_2',
-          course_id: 'course_2',
-          amount: 149.00,
-          currency: 'USD',
-          status: 'failed',
-          payment_method: 'card',
-          created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-          updated_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          user: {
-            full_name: 'Jane Smith',
-            email: 'jane@example.com',
-          },
-          course: {
-            title: 'E-commerce Strategy',
-          },
-        },
-        {
-          id: '3',
-          transaction_id: 'txn_1122334455',
-          user_id: 'user_3',
-          course_id: 'course_3',
-          amount: 79.00,
-          currency: 'USD',
-          status: 'pending',
-          payment_method: 'bank_transfer',
-          created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
-          updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          user: {
-            full_name: 'Mike Johnson',
-            email: 'mike@example.com',
-          },
-          course: {
-            title: 'No-Code Development',
-          },
-        },
-        {
-          id: '4',
-          transaction_id: 'txn_5566778899',
-          user_id: 'user_4',
-          course_id: 'course_1',
-          amount: 99.00,
-          currency: 'USD',
-          status: 'refunded',
-          payment_method: 'card',
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), // 12 hours ago
-          user: {
-            full_name: 'Sarah Wilson',
-            email: 'sarah@example.com',
-          },
-          course: {
-            title: 'Digital Marketing Mastery',
-          },
-        },
-      ];
-
-      setTransactions(mockTransactions);
+      const res = await fetch('/api/admin/transactions');
+      const data = await res.json();
+      setTransactions(data.transactions || []);
     } catch (error: any) {
       console.error('Error fetching transactions:', error);
       toast.error('Failed to load transactions');
@@ -155,38 +94,61 @@ export default function AdminTransactionsPage() {
     }
   };
 
+  const handlePaymentAction = async (id: string, action: 'approve' | 'reject') => {
+    try {
+      const res = await fetch('/api/admin/payments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update payment');
+      }
+      toast.success(`Payment ${action === 'approve' ? 'approved' : 'rejected'}!`);
+      fetchPendingPayments();
+    } catch (err) {
+      toast.error('Failed to update payment');
+    }
+  };
+
   const getFilteredTransactions = () => {
-    return transactions.filter(transaction => {
-      const matchesSearch = 
+    let filtered = transactions;
+
+    if (searchQuery) {
+      filtered = filtered.filter(transaction => 
         transaction.transaction_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.user?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.user?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.course?.title.toLowerCase().includes(searchQuery.toLowerCase());
+        transaction.course?.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(transaction => transaction.status === statusFilter);
+    }
+
+    let matchesDate = true;
+    if (dateFilter !== 'all') {
+      const transactionDate = new Date(filtered[0]?.created_at); // Assuming all transactions have the same date for filtering
+      const now = new Date();
       
-      const matchesStatus = statusFilter === 'all' || transaction.status === statusFilter;
-      
-      let matchesDate = true;
-      if (dateFilter !== 'all') {
-        const transactionDate = new Date(transaction.created_at);
-        const now = new Date();
-        
-        switch (dateFilter) {
-          case 'today':
-            matchesDate = transactionDate.toDateString() === now.toDateString();
-            break;
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            matchesDate = transactionDate >= weekAgo;
-            break;
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            matchesDate = transactionDate >= monthAgo;
-            break;
-        }
+      switch (dateFilter) {
+        case 'today':
+          matchesDate = transactionDate.toDateString() === now.toDateString();
+          break;
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          matchesDate = transactionDate >= weekAgo;
+          break;
+        case 'month':
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          matchesDate = transactionDate >= monthAgo;
+          break;
       }
-      
-      return matchesSearch && matchesStatus && matchesDate;
-    });
+    }
+    
+    return filtered.filter(transaction => matchesDate);
   };
 
   const getStatusBadge = (status: string) => {
@@ -338,7 +300,65 @@ export default function AdminTransactionsPage() {
         </Card>
       </div>
 
+      {/* Pending Ethiopian Payments Section */}
+      <div className="mb-10">
+        <h2 className="text-2xl font-bold text-[#2C3E50] mb-4">Pending Local Payments</h2>
+        {pendingLoading ? (
+          <div>Loading...</div>
+        ) : pendingPayments.length === 0 ? (
+          <div className="text-muted-foreground">No pending local payments.</div>
+        ) : (
+          <div className="space-y-6">
+            {pendingPayments.map(payment => (
+              <Card key={payment.id} className="border-[#E5E8E8]">
+                <CardContent className="p-4 flex flex-col md:flex-row gap-6 items-center justify-between">
+                  <div className="flex-1">
+                    <div className="mb-2 text-[#2C3E50] font-semibold">{payment.course_title}</div>
+                    <div className="mb-1 text-sm">User ID: <span className="font-mono">{payment.user_id}</span></div>
+                    <div className="mb-1 text-sm">Amount: <span className="font-mono">{payment.amount} {payment.currency}</span></div>
+                    <div className="mb-1 text-sm">Payment Method: {payment.payment_method_name}</div>
+                    <div className="mb-1 text-sm">Transaction ID: <span className="font-mono">{payment.transaction_id}</span></div>
+                    <div className="mb-1 text-sm">Submitted: {formatDate(payment.submitted_at)}</div>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <a href={payment.payment_proof_url} target="_blank" rel="noopener noreferrer" className="block mb-2">
+                      <img src={payment.payment_proof_url} alt="Receipt" className="w-32 h-32 object-contain border rounded" />
+                    </a>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="bg-green-600 text-white" onClick={() => handlePaymentAction(payment.id, 'approve')}>Approve</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handlePaymentAction(payment.id, 'reject')}>Reject</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Filters */}
+      <div className="flex gap-2 mb-4">
+        {[
+          { label: 'Pending', value: 'pending_review' },
+          { label: 'Approved', value: 'published' },
+          { label: 'Rejected', value: 'rejected' },
+          { label: 'All', value: 'all' },
+        ].map(tab => (
+          <button
+            key={tab.value}
+            className={`px-4 py-2 rounded-full font-medium transition ${
+              statusTab === tab.value
+                ? 'bg-[#4ECDC4] text-white'
+                : 'bg-[#F7F9F9] text-[#2C3E50] hover:bg-[#E5E8E8]'
+            }`}
+            onClick={() => setStatusTab(tab.value as any)}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <Card className="border-[#E5E8E8] mb-6">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -354,19 +374,6 @@ export default function AdminTransactionsPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 border-[#E5E8E8]">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="success">Success</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={dateFilter} onValueChange={setDateFilter}>
                 <SelectTrigger className="w-32 border-[#E5E8E8]">
                   <Calendar className="w-4 h-4 mr-2" />

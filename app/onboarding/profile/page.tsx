@@ -28,17 +28,44 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRef } from "react"
 
 export default function ProfileCompletionPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [profileImage, setProfileImage] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleComplete = async () => {
     setIsLoading(true)
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500))
     router.push("/dashboard")
+  }
+
+  const handlePhotoButtonClick = () => {
+    fileInputRef.current?.click();
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const response = await fetch('/api/instructor/images/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload image');
+      }
+      const data = await response.json();
+      setProfileImage(data.url);
+    } catch (error) {
+      // Optionally show a toast
+    }
   }
 
   return (
@@ -142,7 +169,14 @@ export default function ProfileCompletionPage() {
                       ) : (
                         <div className="text-center">
                           <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                          <Button variant="outline">Upload Photo</Button>
+                          <Button variant="outline" onClick={handlePhotoButtonClick}>Upload Photo</Button>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleFileChange}
+                          />
                           <p className="text-sm text-muted-foreground mt-2">
                             PNG, JPG up to 5MB
                           </p>

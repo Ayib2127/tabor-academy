@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { toast } from "react-hot-toast"
 
 // Mock assignment data
 const assignment = {
@@ -163,21 +164,10 @@ export default function AssignmentSubmissionPage() {
 
   const handleFiles = (newFiles: File[]) => {
     setFiles(prev => [...prev, ...newFiles])
-    simulateUpload()
+    // simulateUpload() // Removed simulateUpload
   }
 
-  const simulateUpload = () => {
-    setUploadProgress(0)
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 500)
-  }
+  // Removed simulateUpload function
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index))
@@ -185,10 +175,31 @@ export default function AssignmentSubmissionPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setIsSubmitting(false)
-    // Handle submission success
+    try {
+      const formData = new FormData();
+      // These would be dynamic in a real app
+      formData.append('courseId', assignment.course);
+      formData.append('assignmentId', assignment.id.toString());
+      files.forEach((file) => formData.append('files', file));
+      const response = await fetch('/api/assignments/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload assignment files');
+      }
+      const data = await response.json();
+      // Optionally: Show uploaded file URLs or update UI
+      setFiles([]);
+      setUploadProgress(100);
+      toast.success('Assignment submitted successfully!');
+    } catch (error) {
+      console.error('Assignment upload error:', error);
+      toast.error('Failed to submit assignment');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (

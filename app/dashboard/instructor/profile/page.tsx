@@ -135,8 +135,26 @@ export default function InstructorProfilePage() {
               accept="image/*"
               className="hidden"
               onChange={async (e) => {
-                // TODO: handle image upload, setProfile({ ...profile, photo: uploadedUrl })
-                toast("Image upload not implemented in demo.");
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('image', file);
+                try {
+                  const response = await fetch('/api/instructor/images/upload', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to upload image');
+                  }
+                  const data = await response.json();
+                  setProfile((prev) => ({ ...prev, photo: data.url }));
+                  setChanged(true);
+                  toast.success('Profile photo updated!');
+                } catch (error) {
+                  toast.error('Failed to upload image');
+                }
               }}
             />
           </label>

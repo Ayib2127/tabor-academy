@@ -51,6 +51,8 @@ export function EnrollmentButton({
   const [showPaymentOptions, setShowPaymentOptions] = useState(false)
   const [showEthiopianPayment, setShowEthiopianPayment] = useState(false)
   const [locationLoading, setLocationLoading] = useState(true)
+  const [etbRate, setEtbRate] = useState<number | null>(null);
+  const [etbAmount, setEtbAmount] = useState<number | null>(null);
 
   // Detect user location on component mount
   useEffect(() => {
@@ -161,10 +163,33 @@ export function EnrollmentButton({
     }
   }
 
-  const handleEthiopianPayment = () => {
-    setShowPaymentOptions(false)
-    setShowEthiopianPayment(true)
-  }
+  const handleEthiopianPayment = async () => {
+    setShowPaymentOptions(false);
+    let rate = null;
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      const data = await res.json();
+      console.log('Exchange rate API response:', data);
+      if (data && data.rates && data.rates.ETB) {
+        rate = data.rates.ETB;
+        console.log('Fetched ETB rate:', rate);
+      } else {
+        throw new Error('ETB rate not found in API response');
+      }
+    } catch (err) {
+      // Fallback for local/dev or if API fails
+      rate = 136.61;
+      console.warn('Using fallback ETB rate:', rate);
+    }
+    if (rate) {
+      setEtbRate(rate);
+      setEtbAmount(Math.round(price * rate));
+    } else {
+      setEtbRate(null);
+      setEtbAmount(null);
+    }
+    setShowEthiopianPayment(true);
+  };
 
   const handleEthiopianPaymentSubmitted = () => {
     setShowEthiopianPayment(false)
@@ -319,8 +344,8 @@ export function EnrollmentButton({
               <Badge className="ml-2 bg-white/20 text-white">International</Badge>
             </Button>
 
-            {/* Ethiopian Payment Options */}
-            {userLocation?.isEthiopia && (
+            {/* Ethiopian Payment Options (conditional or fallback) */}
+            {userLocation?.isEthiopia ? (
               <Button
                 onClick={handleEthiopianPayment}
                 variant="outline"
@@ -328,7 +353,25 @@ export function EnrollmentButton({
               >
                 <Globe className="h-5 w-5 mr-2" />
                 Ethiopian Payment Methods
+                <span className="ml-2">🇪🇹</span>
                 <Badge className="ml-2 bg-[#4ECDC4]/10 text-[#4ECDC4]">Local</Badge>
+              </Button>
+            ) : (
+              <Button
+                onClick={handleEthiopianPayment}
+                variant="ghost"
+                className="w-full h-12 text-[#4ECDC4] border border-dashed border-[#4ECDC4]/40 transition-all duration-300 relative overflow-hidden group"
+              >
+                <span className="mr-2 text-xl">🇪🇹</span>
+                <span className="relative z-10">Local Payment Methods (for Ethiopians)</span>
+                {/* Animated gradient background on hover */}
+                <span
+                  className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(90deg, #E92B2B 0%, #FFD600 50%, #1EB53A 100%)',
+                    animation: 'gradient-move 2s linear infinite',
+                  }}
+                />
               </Button>
             )}
 
@@ -356,11 +399,27 @@ export function EnrollmentButton({
       {/* Ethiopian Payment Dialog */}
       <Dialog open={showEthiopianPayment} onOpenChange={setShowEthiopianPayment}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Ethiopian Payment Options</DialogTitle>
+          </DialogHeader>
+          {/* Show ETB amount preview or error */}
+         <div className="mb-4 text-center text-lg font-bold text-[#E92B2B]">
+           Amount: {etbAmount ? `${etbAmount} ETB` : 'Unavailable'}
+           {etbRate && (
+             <span className="ml-2 text-xs text-gray-500">(Exchange rate: 1 USD = {etbRate} ETB)</span>
+           )}
+           {!etbAmount && (
+             <div className="text-sm text-red-600 mt-2">
+               Unable to fetch the current ETB exchange rate. Using fallback or contact support.<br />
+               <span className="text-xs text-gray-500">Local payment amount unavailable.</span>
+             </div>
+           )}
+         </div>
           <EthiopianPaymentOptions
             courseId={courseId}
             courseTitle={courseTitle}
-            amount={price}
-            currency="USD"
+            amount={etbAmount || price}
+            currency={etbAmount ? 'ETB' : 'USD'}
             onPaymentSubmitted={handleEthiopianPaymentSubmitted}
             onCancel={() => setShowEthiopianPayment(false)}
           />
