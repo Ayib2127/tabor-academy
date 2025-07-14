@@ -3,8 +3,17 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
+import { Callout } from './tiptap-callout';
+import { Collapsible } from './tiptap-collapsible';
 import { Button } from '@/components/ui/button';
 import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Code, Quote, Undo, Redo, Heading1, Heading2, Heading3, Type, AlignLeft, AlignCenter, AlignRight, SeparatorVertical as Separator } from 'lucide-react';
+import { HighlightBlock } from './tiptap-highlight-block';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 
 interface RichTextEditorProps {
   content: any; // Tiptap JSON content
@@ -47,6 +56,18 @@ const RichTextEditor: FC<RichTextEditorProps> = ({
           class: 'text-[#4ECDC4] hover:text-[#4ECDC4]/80 underline cursor-pointer',
         },
       }),
+      Callout,
+      Collapsible,
+      HighlightBlock,
+      TaskList,
+      TaskItem,
+      Table.configure({
+        resizable: true,
+        lastColumnResizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content || {
       type: 'doc',
@@ -264,6 +285,112 @@ const RichTextEditor: FC<RichTextEditorProps> = ({
             title="Add Image"
           >
             <ImageIcon className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Callouts */}
+        <div className="flex items-center gap-1 pr-2 border-r border-[#E5E8E8]">
+          {['info', 'tip', 'warning', 'success'].map(type => (
+            <Button
+              key={type}
+              variant="ghost"
+              size="sm"
+              onClick={() => editor.chain().focus().setCallout(type).run()}
+              className={`h-8 w-8 p-0 ${
+                editor.isActive('callout', { type }) ? 'bg-[#4ECDC4]/20 text-[#4ECDC4]' : 'text-[#2C3E50] hover:bg-[#4ECDC4]/10'
+              }`}
+              title={type.charAt(0).toUpperCase() + type.slice(1) + ' Callout'}
+            >
+              {type === 'info' && 'ℹ️'}
+              {type === 'tip' && '💡'}
+              {type === 'warning' && '⚠️'}
+              {type === 'success' && '✅'}
+            </Button>
+          ))}
+        </div>
+
+        {/* Collapsible Sections */}
+        <div className="flex items-center gap-1 pr-2 border-r border-[#E5E8E8]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const summary = window.prompt('Section title (e.g. FAQ, More Info):', 'Details');
+              if (summary) editor.chain().focus().setCollapsible(summary).run();
+            }}
+            className={`h-8 w-8 p-0 text-[#2C3E50] hover:bg-[#4ECDC4]/10`}
+            title="Add Collapsible Section"
+          >
+            <span className="text-lg">🔽</span>
+          </Button>
+        </div>
+
+        {/* Highlight Block */}
+        <div className="flex items-center gap-1 pr-2 border-r border-[#E5E8E8]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const label = window.prompt('Label for highlight (e.g. Key Point, Summary):', 'Key Point');
+              if (label) editor.chain().focus().setHighlightBlock(label).run();
+            }}
+            className="h-8 w-8 p-0 text-[#FF6B35] hover:bg-[#FF6B35]/10"
+            title="Add Highlight Block"
+          >
+            <span className="font-bold text-lg">★</span>
+          </Button>
+        </div>
+
+        {/* Checklists */}
+        <div className="flex items-center gap-1 pr-2 border-r border-[#E5E8E8]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            className={`h-8 w-8 p-0 ${editor.isActive('taskList') ? 'bg-[#4ECDC4]/20 text-[#4ECDC4]' : 'text-[#2C3E50] hover:bg-[#4ECDC4]/10'}`}
+            title="Checklist"
+          >
+            <span className="text-lg">☑️</span>
+          </Button>
+        </div>
+
+        {/* Tables */}
+        <div className="flex items-center gap-1 pr-2 border-r border-[#E5E8E8]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            className="h-8 w-8 p-0 text-[#2C3E50] hover:bg-[#4ECDC4]/10"
+            title="Insert Table"
+          >
+            <span className="text-lg">🔲</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+            className="h-8 w-8 p-0 text-[#2C3E50] hover:bg-[#4ECDC4]/10"
+            title="Add Column"
+          >
+            <span className="text-lg">➕↔️</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+            className="h-8 w-8 p-0 text-[#2C3E50] hover:bg-[#4ECDC4]/10"
+            title="Add Row"
+          >
+            <span className="text-lg">➕↕️</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            className="h-8 w-8 p-0 text-[#FF6B35] hover:bg-[#FF6B35]/10"
+            title="Delete Table"
+          >
+            <span className="text-lg">❌</span>
           </Button>
         </div>
 

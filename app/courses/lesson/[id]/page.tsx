@@ -35,7 +35,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { supabase } from '@/lib/supabase/client';
 import Link from "next/link"
 
 import LessonContent from '@/components/course-player/LessonContent';
@@ -50,7 +50,6 @@ export default function LessonPlayerPage() {
   const router = useRouter();
   const [currentLessonId, setCurrentLessonId] = useState<string>(initialLessonId);
   const [allModules, setAllModules] = useState<any[]>([]);
-  const supabase = createClientComponentClient();
   const [lessonData, setLessonData] = useState<any | null>(null);
   const [error, setError] = useState<any | null>(null);
   const [courseTitle, setCourseTitle] = useState<string | null>(null);
@@ -269,6 +268,12 @@ export default function LessonPlayerPage() {
     // Implementation would handle actual video download
   }
 
+  // Helper to flatten all lessons in order
+  const allLessons = allModules.flatMap((m) => m.lessons || []);
+  const currentLessonIndex = allLessons.findIndex((l) => l.id === currentLessonId);
+  const prevLesson = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
+  const nextLesson = currentLessonIndex < allLessons.length - 1 ? allLessons[currentLessonIndex + 1] : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -300,23 +305,8 @@ export default function LessonPlayerPage() {
 
             {/* Main content on the right */}
             <div>
-              {/* --- Lesson Title/Header --- */}
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold text-[#2C3E50] mb-2 flex items-center gap-2">
-                  {/* Optional: Add a Lucide icon for lesson type */}
-                  {lesson.type === "video" && <Play className="h-7 w-7 text-[#FF6B35]" />}
-                  {lesson.type === "quiz" && <HelpCircle className="h-7 w-7 text-[#4ECDC4]" />}
-                  {lesson.type === "assignment" && <FileText className="h-7 w-7 text-[#2C3E50]" />}
-                  {lesson.title}
-                </h1>
-                <div className="flex items-center gap-4 text-sm text-[#6E6C75]">
-                  <span>
-                    <Clock className="h-4 w-4 inline-block mr-1" />
-                    {lesson.duration ?? ""}
-                  </span>
-                  {/* Add more meta info if needed */}
-                </div>
-              </div>
+              {/* --- Top Info: Title, Type, Duration, Bookmark, Share --- */}
+              {/* This block is now moved inside the Card */}
 
               {/* --- Video Player Card --- */}
               {lesson.type === "video" && (
@@ -345,57 +335,90 @@ export default function LessonPlayerPage() {
 
               {/* --- Text, Quiz, Assignment, etc. --- */}
               {/* Wrap each in a Card with padding, shadow, and rounded corners */}
-              {lesson.type === "text" && (
-                <Card className="mb-8 p-6 rounded-2xl shadow-lg bg-white">
-                  {/* ...render text content... */}
-                  <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
-                </Card>
-              )}
-              {lesson.type === "quiz" && (
-                <Card className="mb-8 p-6 rounded-2xl shadow-lg bg-white">
-                  {/* ...render quiz content... */}
-                  <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
-                </Card>
-              )}
-              {lesson.type === "assignment" && (
-                <Card className="mb-8 p-6 rounded-2xl shadow-lg bg-white">
-                  {/* ...render assignment content... */}
-                  <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
-                </Card>
-              )}
-
-              {/* --- Action Buttons --- */}
-              <div className="flex gap-4 mt-8">
-                <Button className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-lg">
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Complete Lesson
-                </Button>
-                <Button variant="outline" className="border-[#4ECDC4] text-[#4ECDC4] font-bold">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Take Notes
-                </Button>
-                <Button variant="outline" className="border-[#FF6B35] text-[#FF6B35] font-bold">
-                  <Download className="h-5 w-5 mr-2" />
-                  Resources
-                </Button>
-              </div>
-
-              {/* Lesson Information */}
-              <div className="mt-6 space-y-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold mb-2">{lesson.title}</h1>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>{lesson.duration ?? ''}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>{Math.round((currentTime / duration) * 100)}% Complete</span>
-                      </div>
+              {["text", "quiz", "assignment"].includes(lesson.type) && (
+                <Card className={`mb-8 ${lesson.type === "video" ? "p-0" : "p-6"} rounded-2xl shadow-lg bg-white`}>
+                  {/* Info block (title, type, duration, bookmark, share) */}
+                  <div className="flex justify-end items-center mb-2">
+                    <Button variant="outline" size="icon" className="ml-2">
+                      <Bookmark className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="ml-2">
+                      <Share2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-col items-center mb-6">
+                    <h1
+                      className="text-3xl font-extrabold mb-4 text-center"
+                      style={{
+                        background: "linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {lesson.title}
+                    </h1>
+                    <div className="flex flex-row items-center gap-4">
+                      <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#4ECDC4] font-semibold text-base">
+                        {lesson.type === "video" ? "🎬 Video" : lesson.type === "quiz" ? "❓ Quiz" : lesson.type === "assignment" ? "📄 Assignment" : "📖 Article"}
+                      </span>
+                      <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#6E6C75] font-semibold text-base">
+                        ⏱️ {lesson.duration} min read
+                      </span>
                     </div>
                   </div>
+                  {/* The actual lesson content */}
+                  {lesson.type === "video" ? (
+                    <div className="relative">
+                      <CustomVideoPlayer
+                        src={(() => {
+                          if (lesson.content && typeof lesson.content === 'object') {
+                            return lesson.content.url || lesson.content.src || '';
+                          } else if (typeof lesson.content === 'string') {
+                            try {
+                              const parsed = JSON.parse(lesson.content);
+                              return parsed.url || parsed.src || '';
+                            } catch {
+                              return lesson.content;
+                            }
+                          }
+                          return '';
+                        })()}
+                        poster={lesson.thumbnail_url}
+                      />
+                    </div>
+                  ) : (
+                    <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
+                  )}
+
+                  {/* Navigation Buttons */}
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto border-2 border-[#4ECDC4]/30 text-[#2C3E50] hover:border-[#4ECDC4] flex items-center justify-center"
+                      disabled={!prevLesson}
+                      onClick={() => prevLesson && router.push(`/courses/lesson/${prevLesson.id}`)}
+                    >
+                      <ChevronLeft className="h-5 w-5 mr-2 text-[#4ECDC4]" />
+                      Previous Lesson
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white flex items-center justify-center"
+                      disabled={!nextLesson}
+                      onClick={() => nextLesson && router.push(`/courses/lesson/${nextLesson.id}`)}
+                    >
+                      Continue Learning
+                      <ChevronRight className="h-5 w-5 ml-2 text-white" />
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Lesson Information */}
+              {/* 
+              <div className="mt-6 space-y-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div />
                   <div className="flex gap-2">
                     <Button variant="outline" size="icon">
                       <Bookmark className="h-5 w-5" />
@@ -405,74 +428,29 @@ export default function LessonPlayerPage() {
                     </Button>
                   </div>
                 </div>
-
-                {/* Resources */}
-                <Card className="p-6">
-                  <h2 className="text-lg font-semibold mb-4">Lesson Resources</h2>
-                  <div className="space-y-4">
-                    {(lesson.resources ?? []).map((resource, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{resource.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {resource.type} • {resource.size}
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    ))}
+                <div className="flex flex-col items-center mb-6">
+                  <h1
+                    className="text-3xl font-extrabold mb-4 text-center"
+                    style={{
+                      background: "linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {lesson.title}
+                  </h1>
+                  <div className="flex flex-row items-center gap-4">
+                    <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#4ECDC4] font-semibold text-base">
+                      📖 Article
+                    </span>
+                    <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#6E6C75] font-semibold text-base">
+                      ⏱️ {lesson.duration} min read
+                    </span>
                   </div>
-                </Card>
-
-                {/* Notes Section */}
-                <Card className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">My Notes</h2>
-                    <Button variant="outline" size="sm" onClick={() => setShowNotes(!showNotes)}>
-                      {showNotes ? "Hide" : "Show"} Notes
-                    </Button>
-                  </div>
-
-                  {showNotes && (
-                    <div className="space-y-4">
-                      <div className="flex gap-2">
-                        <Input
-                          value={noteInput}
-                          onChange={(e) => setNoteInput(e.target.value)}
-                          placeholder="Add a note..."
-                        />
-                        <Button onClick={addNote}>Add Note</Button>
-                      </div>
-
-                      <div className="space-y-4">
-                        {(notes).map((note) => (
-                          <div key={note.id} className="flex items-start gap-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSeek(note.timestamp)}
-                            >
-                              {formatTime(note.timestamp)}
-                            </Button>
-                            <div className="flex-1">
-                              <p>{note.content}</p>
-                            </div>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </Card>
+                </div>
               </div>
+              */}
             </div>
           </div>
         </div>

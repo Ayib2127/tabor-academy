@@ -1,7 +1,7 @@
 import { FC, useState } from "react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
-import { Rocket, BarChart, Video, HelpCircle, FileText, Lock, CheckCircle, Play } from "lucide-react";
+import { Rocket, BarChart, Video, HelpCircle, FileText, Lock, CheckCircle, Play, Hourglass } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -49,10 +49,22 @@ const lessonTypeIcon = (type: LessonType) => {
 };
 
 const lessonStateIcon = (lesson: Lesson, isCurrent: boolean) => {
-  if (lesson.locked) return <Lock className="h-5 w-5 text-[#FF6B35] ml-2" />;
-  if (lesson.completed) return <CheckCircle className="h-5 w-5 text-[#4ECDC4] ml-2" />;
-  if (isCurrent) return <Play className="h-5 w-5 text-[#FF6B35] ml-2" />;
-  return null;
+  if (lesson.locked) {
+    return <Lock className="h-5 w-5 text-[#FF6B35] ml-2" />;
+  }
+  if (lesson.completed) {
+    return <CheckCircle className="h-5 w-5 text-[#4ECDC4] ml-2" />;
+  }
+  if (isCurrent) {
+    return <Play className="h-5 w-5 text-[#FF6B35] ml-2" />;
+  }
+  // Waiting/available but not completed/current/locked
+  return (
+    // If Lucide Hourglass is not available, use emoji or another icon
+    <span className="ml-2 text-[#6E6C75] text-lg" role="img" aria-label="waiting">
+      ⏳
+    </span>
+  );
 };
 
 // Add a simple circular progress ring component
@@ -114,6 +126,39 @@ export const CoursePlayerSidebar: FC<CoursePlayerSidebarProps & { courseTitle?: 
   // Mobile sidebar toggle
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // --- Find the current module index (first not fully completed) ---
+  const currentModuleIdx = modules.findIndex(
+    (module) => module.lessons.some((lesson) => !lesson.completed)
+  );
+
+  // Helper for lesson state icon
+  const lessonStateIcon = (lesson, isCurrent, moduleIdx) => {
+    if (moduleIdx < currentModuleIdx) {
+      // Past module: all completed
+      return <CheckCircle className="h-5 w-5 text-[#4ECDC4] ml-2" />;
+    }
+    if (moduleIdx > currentModuleIdx) {
+      // Future module: all locked
+      return <Lock className="h-5 w-5 text-[#FF6B35] ml-2" />;
+    }
+    // Current module
+    if (lesson.completed) {
+      return <CheckCircle className="h-5 w-5 text-[#4ECDC4] ml-2" />;
+    }
+    if (isCurrent) {
+      return <Play className="h-5 w-5 text-[#FF6B35] ml-2" />;
+    }
+    // Waiting (not completed, not current)
+    return (
+      <span className="ml-2 text-[#6E6C75] text-lg" role="img" aria-label="waiting">
+        ⏳
+      </span>
+    );
+  };
+
+  // Helper for lesson row disabled state
+  const isLessonLocked = (moduleIdx) => moduleIdx > currentModuleIdx;
+
   return (
     <>
       {/* Mobile toggle button */}
@@ -168,21 +213,22 @@ export const CoursePlayerSidebar: FC<CoursePlayerSidebarProps & { courseTitle?: 
                 <ul className="space-y-3">
                   {module.lessons.map((lesson) => {
                     const isCurrent = lesson.id === currentLessonId;
+                    const locked = isLessonLocked(mIdx);
                     return (
                       <li key={lesson.id}>
                         <div
                           className={`flex items-center justify-between rounded-xl border transition-all shadow-sm px-4 py-3 cursor-pointer
                             ${isCurrent ? "bg-gradient-to-r from-[#FF6B35]/90 to-[#4ECDC4]/90 text-white border-transparent shadow-lg" : "bg-[#F7F9F9] border-[#E5E8E8] hover:bg-[#FF6B35]/10"}
-                            ${lesson.locked ? "opacity-60 cursor-not-allowed" : ""}
+                            ${locked ? "opacity-60 cursor-not-allowed" : ""}
                           `}
-                          tabIndex={lesson.locked ? -1 : 0}
+                          tabIndex={locked ? -1 : 0}
                           aria-current={isCurrent ? "page" : undefined}
                           aria-label={lesson.title}
                           aria-selected={isCurrent}
                           role="button"
-                          onClick={() => !lesson.locked && onNavigate?.(lesson.id)}
+                          onClick={() => !locked && onNavigate?.(lesson.id)}
                           onKeyDown={e => {
-                            if (!lesson.locked && (e.key === "Enter" || e.key === " ")) {
+                            if (!locked && (e.key === "Enter" || e.key === " ")) {
                               e.preventDefault();
                               onNavigate?.(lesson.id);
                             }
@@ -196,7 +242,7 @@ export const CoursePlayerSidebar: FC<CoursePlayerSidebarProps & { courseTitle?: 
                             {lesson.duration && (
                               <span className={`text-xs ${isCurrent ? "text-white/80" : "text-[#6E6C75]"}`}>{lesson.duration}</span>
                             )}
-                            {lessonStateIcon(lesson, isCurrent)}
+                            {lessonStateIcon(lesson, isCurrent, mIdx)}
                           </span>
                         </div>
                       </li>

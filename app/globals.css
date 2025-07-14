@@ -371,11 +371,11 @@
 }
 
 .prose-editor .ProseMirror ul {
-  @apply list-disc list-inside mb-4 space-y-2;
+  @apply list-disc list-outside mb-4 space-y-2;
 }
 
 .prose-editor .ProseMirror ol {
-  @apply list-decimal list-inside mb-4 space-y-2;
+  @apply list-decimal list-outside mb-4 space-y-2;
 }
 
 .prose-editor .ProseMirror li {
@@ -459,4 +459,138 @@
 }
 *::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #4ECDC4 0%, #FF6B35 100%);
+}
+
+/* --- Tiptap Callout Styles --- */
+.tiptap-callout[data-type="info"] {
+  background: #E5E8E8;
+  color: #2C3E50;
+}
+.tiptap-callout[data-type="tip"] {
+  background: #4ECDC41A;
+  color: #2C3E50;
+}
+.tiptap-callout[data-type="warning"] {
+  background: #FF6B351A;
+  color: #FF6B35;
+}
+.tiptap-callout[data-type="success"] {
+  background: #4ECDC433;
+  color: #2C3E50;
+}
+.tiptap-callout {
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+/* --- Collapsible Styles --- */
+details {
+  background: #F7F9F9;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  transition: box-shadow 0.2s;
+}
+details[open] {
+  box-shadow: 0 2px 8px 0 #4ECDC433;
+}
+details > summary {
+  font-weight: 600;
+  color: #4ECDC4;
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 0.5rem;
+}
+
+/* --- Highlight Block Styles --- */
+.tiptap-highlight-block {
+  background: #fff7e6;
+  border-left: 4px solid #FF6B35;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  position: relative;
+  box-shadow: 0 2px 8px 0 #FF6B3522;
+}
+.tiptap-highlight-label {
+  display: inline-block;
+  font-size: 0.9em;
+  font-weight: 700;
+  color: #FF6B35;
+  margin-bottom: 0.5em;
+  margin-right: 0.75em;
+  letter-spacing: 0.03em;
+}
+
+/* --- Tiptap Checklist Styles --- */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 1rem;
+}
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+ul[data-type="taskList"] input[type="checkbox"] {
+  accent-color: #4ECDC4;
+  margin-right: 0.75em;
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* --- Tiptap Table Styles --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px 0 #2C3E5011;
+}
+th, td {
+  border: 1px solid #E5E8E8;
+  padding: 0.75em 1em;
+  text-align: left;
+  font-size: 1em;
+}
+th {
+  background: #F7F9F9;
+  color: #2C3E50;
+  font-weight: 700;
+}
+td {
+  color: #2C3E50;
+}
+
+ul[data-type="taskList"] {
+  background: #F7F9F9;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  list-style: none;
+}
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+ul[data-type="taskList"] input[type="checkbox"] {
+  accent-color: #4ECDC4;
+  margin-right: 0.75em;
+  width: 1.25em;
+  height: 1.25em;
+  border-radius: 0.375em;
+  border: 1.5px solid #E5E8E8;
+  transition: box-shadow 0.2s;
+}
+ul[data-type="taskList"] input[type="checkbox"]:hover,
+ul[data-type="taskList"] input[type="checkbox"]:focus {
+  box-shadow: 0 0 0 2px #4ECDC4;
 }

@@ -67,6 +67,7 @@ import { snakeToCamel } from "@/lib/utils/snakeToCamel";
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import Draggable from 'react-draggable';
+import { supabase } from '@/lib/supabase/client'; // or createSupabaseClient if you use a function
 
 interface Lesson {
   id: string;
@@ -450,8 +451,10 @@ interface ModuleAccordionCardProps {
   addLessonState: { open: boolean, title: string, type: 'text' | 'video' | 'quiz' };
   setAddLessonState: React.Dispatch<React.SetStateAction<{ [moduleId: string]: { open: boolean, title: string, type: 'text' | 'video' | 'quiz' } }>>;
   deleteModule: (moduleId: string) => void;
+  onSave: (updatedModule: Module) => void;
+  onClose: () => void;
 }
-function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, handleModuleUpdate, addLesson, deleteLesson, handleLessonTitleChange, setEditingLesson, addLessonState, setAddLessonState, deleteModule }: ModuleAccordionCardProps) {
+function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, handleModuleUpdate, addLesson, deleteLesson, handleLessonTitleChange, setEditingLesson, addLessonState, setAddLessonState, deleteModule, onSave, onClose }: ModuleAccordionCardProps) {
   const [open, setOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editedTitle, setEditedTitle] = useState(module.title);
@@ -465,10 +468,8 @@ function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, hand
   const newLessonType = addLessonState.type;
 
   const handleSave = () => {
-    handleModuleTitleChange(module.id, editedTitle);
-    handleModuleUpdate(module.id, { description: editedDescription });
-    if (isCohort) handleModuleUpdate(module.id, { unlocks_on_week: editedWeek });
-    setShowEditModal(false);
+    onSave({ ...module, title: editedTitle, description: editedDescription });
+    setShowEditModal(false); // <-- Ensure this is called
   };
 
   const handleAddLesson = () => {
@@ -477,6 +478,8 @@ function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, hand
       setAddLessonState(prev => ({ ...prev, [module.id]: { open: false, title: '', type: 'text' } }));
     }
   };
+
+  const closeModal = () => setShowEditModal(false);
 
   return (
     <div className="mb-6">
@@ -723,7 +726,7 @@ export default function CourseContentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<{ moduleId: string, lesson: Lesson } | null>(null);
-  const [selectedModule, setSelectedModule] = useState<{ module: Module } | null>(null);
+  const [selectedModule, setSelectedModule] = useState(null);
   const [activeView, setActiveView] = useState<'structure' | 'live-sessions' | 'drip-content'>('structure');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -851,7 +854,7 @@ export default function CourseContentPage() {
   }, [addLessonState]);
 
   const updateCourseData = (updates: Partial<CourseData>) => {
-    setCourseData((prev) => (prev ? { ...prev, ...updates } : null));
+    setCourseData(prev => prev ? { ...prev, ...updates } : prev);
   };
 
   const [addingModule, setAddingModule] = useState(false);
@@ -1071,6 +1074,7 @@ export default function CourseContentPage() {
           .insert({
             course_id: courseData.id,
             title: moduleData.title,
+            description: moduleData.description, // <-- Add this line
             weekly_sprint_goal: moduleData.weekly_sprint_goal,
             unlocks_on_week: moduleData.unlocks_on_week,
             order: moduleIndex,
@@ -1306,6 +1310,22 @@ export default function CourseContentPage() {
       window.removeEventListener('touchend', handleMouseUp);
     };
   }, [dragging]);
+
+  // Inside CourseContentPage component
+  const handleModuleSave = (updatedModule) => {
+    setCourseData(prev =>
+      prev
+        ? {
+            ...prev,
+            modules: prev.modules.map(m =>
+              m.id === updatedModule.id ? updatedModule : m
+            ),
+          }
+        : prev
+    );
+  };
+
+  const closeModal = () => setSelectedModule(null);
 
   // Refactored conditional rendering
   let content;
@@ -1673,6 +1693,8 @@ export default function CourseContentPage() {
                           addLessonState={addLessonState[module.id] || { open: false, title: '', type: 'text' }}
                           setAddLessonState={setAddLessonState}
                           deleteModule={deleteModule}
+                          onSave={handleModuleSave}
+                          onClose={closeModal}
                               />
                             ))}
                           </div>
@@ -1692,6 +1714,8 @@ export default function CourseContentPage() {
                       addLessonState={addLessonState[module.id] || { open: false, title: '', type: 'text' }}
                       setAddLessonState={setAddLessonState}
                       deleteModule={deleteModule}
+                      onSave={handleModuleSave}
+                      onClose={closeModal}
                     />
                   ))
                 )}
@@ -1798,6 +1822,13 @@ export default function CourseContentPage() {
       )}
       {showVersionHistory && (
         <div className="fixed inset-0 bg-black/50 z-50" />
+      )}
+      {selectedModule && (
+        <EditModuleModal
+          module={selectedModule}
+          onSave={handleModuleSave}
+          onClose={closeModal}
+        />
       )}
     </div>
   );
