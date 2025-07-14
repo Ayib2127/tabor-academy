@@ -363,12 +363,6 @@ export default function LessonPlayerPage() {
                   <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
                 </Card>
               )}
-              {lesson.type === "video" && (
-                <Card className="mb-8 p-6 rounded-2xl shadow-lg bg-white">
-                  {/* ...render video content... */}
-                  <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
-                </Card>
-              )}
 
               {/* --- Action Buttons --- */}
               <div className="flex gap-4 mt-8">
