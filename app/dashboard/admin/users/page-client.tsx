@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { WelcomeEmailManager } from '@/components/admin/welcome-email-manager';
 
 interface User {
   id: string;
@@ -245,6 +246,8 @@ export default function AdminUsersPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Welcome Email Manager */}
+      <WelcomeEmailManager className="mb-8" />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">User Management</h1>

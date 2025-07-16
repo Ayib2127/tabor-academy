@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Play } from 'lucide-react'
 import Image from 'next/image'
+import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
 
 interface Course {
   id: number;
@@ -23,7 +24,7 @@ export function CourseCard({ course, onContinue }: CourseCardProps) {
     <Card className="card-hover gradient-border">
       <div className="relative h-48">
         <Image
-          src={course.image}
+          src={withDefault(course.image, DEFAULT_BANNER_URL)}
           alt={course.title}
           fill
           className="object-cover rounded-t-lg"

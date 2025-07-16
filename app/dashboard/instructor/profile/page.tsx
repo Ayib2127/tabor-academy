@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Camera, User as UserIcon, X } from "lucide-react";
 import Image from "next/image";
+import { withDefault, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
 export default function InstructorProfilePage() {
   const [profile, setProfile] = useState({
@@ -117,7 +118,7 @@ export default function InstructorProfilePage() {
         <div className="relative w-28 h-28 mb-2 group">
           {profile.photo ? (
             <Image
-              src={profile.photo}
+              src={withDefault(profile.photo, DEFAULT_AVATAR_URL)}
               alt="Avatar"
               width={112}
               height={112}
@@ -244,7 +245,7 @@ export default function InstructorProfilePage() {
         <div className="flex items-center gap-4 mb-2">
           {profile.photo ? (
             <Image
-              src={profile.photo}
+              src={withDefault(profile.photo, DEFAULT_AVATAR_URL)}
               alt="Avatar"
               width={64}
               height={64}

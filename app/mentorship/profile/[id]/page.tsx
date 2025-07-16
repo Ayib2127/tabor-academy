@@ -30,6 +30,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { withDefault, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
 export default async function MentorshipProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

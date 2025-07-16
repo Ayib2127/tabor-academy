@@ -14,6 +14,7 @@ import QuizBuilder from './QuizBuilder';
 import AIAssistant from './AIAssistant';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
+import DynamicListInput from '@/components/DynamicListInput';
 
 // Local lesson type for UI editing (content can be object or string)
 type LocalLesson = Omit<Lesson, 'content'> & { content?: any };
@@ -121,10 +122,17 @@ const LessonEditor: FC<LessonEditorProps> = ({
               type: updatedLesson.type,
               is_published: updatedLesson.is_published ?? false,
               order: updatedLesson.order,
-              dueDate: updatedLesson.dueDate,
+              duedate: updatedLesson.dueDate,
               duration: updatedLesson.duration,
-              needsGrading: updatedLesson.needsGrading,
+              needsgrading: updatedLesson.needsGrading,
               updated_at: new Date().toISOString(),
+              brief: updatedLesson.brief,
+              requirements: updatedLesson.requirements,
+              guidelines: updatedLesson.guidelines,
+              grading_criteria: updatedLesson.grading_criteria,
+              points: updatedLesson.points,
+              allow_late: updatedLesson.allow_late,
+              resources: updatedLesson.resources,
             })
             .select()
             .single();
@@ -154,10 +162,17 @@ const LessonEditor: FC<LessonEditorProps> = ({
               type: updatedLesson.type,
               is_published: updatedLesson.is_published ?? false,
               order: updatedLesson.order,
-              dueDate: updatedLesson.dueDate,
+              duedate: updatedLesson.dueDate,
               duration: updatedLesson.duration,
-              needsGrading: updatedLesson.needsGrading,
+              needsgrading: updatedLesson.needsGrading,
               updated_at: new Date().toISOString(),
+              brief: updatedLesson.brief,
+              requirements: updatedLesson.requirements,
+              guidelines: updatedLesson.guidelines,
+              grading_criteria: updatedLesson.grading_criteria,
+              points: updatedLesson.points,
+              allow_late: updatedLesson.allow_late,
+              resources: updatedLesson.resources,
             })
             .eq('id', updatedLesson.id);
           console.log('Supabase UPDATE result:', { error, updatedLessonId: updatedLesson.id });
@@ -182,7 +197,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
         onUpdate({ ...savedLesson, content: serializeContent(savedLesson.content) });
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error: any) {
-        console.error('Auto-save error:', error);
+        console.error('Auto-save error:', error, JSON.stringify(error, null, 2));
         setSaveStatus('error');
         toast.error('Failed to save lesson: ' + (error?.message || error));
         setTimeout(() => setSaveStatus('idle'), 3000);
@@ -652,28 +667,149 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 Provide instructions and set a due date for this assignment.
               </p>
             </div>
-            <div className="p-6 space-y-4">
-              <RichTextEditor
-                content={localLesson.content}
-                onChange={handleContentChange}
-                placeholder="Write assignment instructions here..."
-              />
-              <Input
-                type="date"
-                value={localLesson.dueDate ?? ''}
-                onChange={e => setLocalLesson(prev => ({ ...prev, dueDate: e.target.value }))}
-                className="w-64"
-                placeholder="Due date"
-              />
+            <div className="p-6 space-y-6">
+
+              {/* Brief/Description */}
+              <div>
+                <Label htmlFor="assignment-brief" className="text-[#2C3E50] font-semibold">Brief / Description</Label>
+                <Input
+                  id="assignment-brief"
+                  value={localLesson.brief ?? ''}
+                  onChange={e => {
+                    setLocalLesson(prev => ({ ...prev, brief: e.target.value }));
+                    handleLessonUpdate({ brief: e.target.value });
+                  }}
+                  placeholder="Short summary of the assignment"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Main Instructions */}
+              <div>
+                <Label className="text-[#2C3E50] font-semibold">Main Instructions</Label>
+                <RichTextEditor
+                  content={localLesson.content}
+                  onChange={handleContentChange}
+                  placeholder="Write assignment instructions here..."
+                />
+              </div>
+
+              {/* Requirements (dynamic list) */}
+              <div>
+                <Label className="text-[#2C3E50] font-semibold">Requirements</Label>
+                <DynamicListInput
+                  items={localLesson.requirements ?? []}
+                  onChange={items => {
+                    setLocalLesson(prev => ({ ...prev, requirements: items }));
+                    handleLessonUpdate({ requirements: items });
+                  }}
+                  placeholder="Add a requirement (e.g., Upload PDF, Submit video, etc.)"
+                />
+              </div>
+
+              {/* Submission Guidelines */}
+              <div>
+                <Label className="text-[#2C3E50] font-semibold">Submission Guidelines</Label>
+                <DynamicListInput
+                  items={localLesson.guidelines ?? []}
+                  onChange={items => {
+                    setLocalLesson(prev => ({ ...prev, guidelines: items }));
+                    handleLessonUpdate({ guidelines: items });
+                  }}
+                  placeholder="Add a guideline (e.g., Use APA format, Max 10MB, etc.)"
+                />
+              </div>
+
+              {/* Grading Criteria */}
+              <div>
+                <Label className="text-[#2C3E50] font-semibold">Grading Criteria</Label>
+                <DynamicListInput
+                  items={localLesson.grading_criteria ?? []}
+                  onChange={items => {
+                    setLocalLesson(prev => ({ ...prev, grading_criteria: items }));
+                    handleLessonUpdate({ grading_criteria: items });
+                  }}
+                  placeholder="Add a grading criterion (e.g., Clarity, Originality, etc.)"
+                />
+              </div>
+
+              {/* Points/Weight */}
+              <div>
+                <Label htmlFor="assignment-points" className="text-[#2C3E50] font-semibold">Points / Weight</Label>
+                <Input
+                  id="assignment-points"
+                  type="number"
+                  min={0}
+                  value={localLesson.points ?? ''}
+                  onChange={e => {
+                    setLocalLesson(prev => ({ ...prev, points: Number(e.target.value) }));
+                    handleLessonUpdate({ points: Number(e.target.value) });
+                  }}
+                  placeholder="e.g. 100"
+                  className="w-32"
+                />
+              </div>
+
+              {/* Due Date */}
+              <div>
+                <Label htmlFor="assignment-due-date" className="text-[#2C3E50] font-semibold">Due Date</Label>
+                <Input
+                  id="assignment-due-date"
+                  type="date"
+                  value={localLesson.duedate ?? ''}
+                  onChange={e => {
+                    setLocalLesson(prev => ({ ...prev, duedate: e.target.value }));
+                    handleLessonUpdate({ duedate: e.target.value });
+                  }}
+                  className="w-64"
+                  placeholder="Due date"
+                />
+                <p className="text-xs text-[#6E6C75] mt-1">
+                  Set the deadline for students to submit this assignment.
+                </p>
+              </div>
+
+              {/* Needs Grading */}
               <div>
                 <Label>
                   <input
                     type="checkbox"
-                    checked={localLesson.needsGrading ?? false}
-                    onChange={e => setLocalLesson(prev => ({ ...prev, needsGrading: e.target.checked }))}
+                    checked={localLesson.needsgrading ?? false}
+                    onChange={e => {
+                      setLocalLesson(prev => ({ ...prev, needsgrading: e.target.checked }));
+                      handleLessonUpdate({ needsgrading: e.target.checked });
+                    }}
                   />
                   Needs Grading
                 </Label>
+              </div>
+
+              {/* Allow Late Submissions */}
+              <div>
+                <Label>
+                  <input
+                    type="checkbox"
+                    checked={localLesson.allow_late ?? false}
+                    onChange={e => {
+                      setLocalLesson(prev => ({ ...prev, allow_late: e.target.checked }));
+                      handleLessonUpdate({ allow_late: e.target.checked });
+                    }}
+                  />
+                  Allow Late Submissions
+                </Label>
+              </div>
+
+              {/* Attachments/Resources */}
+              <div>
+                <Label className="text-[#2C3E50] font-semibold">Attachments / Resources</Label>
+                <DynamicListInput
+                  items={localLesson.resources ?? []}
+                  onChange={items => {
+                    setLocalLesson(prev => ({ ...prev, resources: items }));
+                    handleLessonUpdate({ resources: items });
+                  }}
+                  placeholder="Add a link or file description"
+                />
               </div>
             </div>
           </div>

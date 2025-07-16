@@ -11,8 +11,8 @@ export async function withAuth(
   try {
     const { session, supabase } = await getAuthenticatedUser();
 
-    // Rate limiting
-    const clientId = session.user.id || request.ip || 'unknown';
+    // Enforce rate limiting for all environments
+    const clientId = session.user?.id || 'unknown';
     if (!checkRateLimit(clientId)) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }

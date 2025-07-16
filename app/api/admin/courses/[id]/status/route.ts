@@ -17,7 +17,7 @@ export async function POST(
   const courseId = params.id;
 
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Check authentication

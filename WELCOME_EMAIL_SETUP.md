@@ -140,3 +140,95 @@ If you encounter issues:
 2. Check server logs for API errors
 3. Verify Resend dashboard for email status
 4. Test with admin panel for manual sending 
+
+---
+
+## 1. **401 Unauthorized on `/api/admin/welcome-email`**
+
+**Error:**
+```
+:3000/api/admin/welcome-email:1   Failed to load resource: the server responded with a status of 401 (Unauthorized)
+Error fetching users: Error: Failed to fetch users
+```
+
+**Root Cause:**  
+Your admin dashboard is trying to fetch users who haven’t received welcome emails, but the API is returning a 401 Unauthorized error.  
+This means the request is not authenticated as an admin, or the session/cookie is not being read correctly.
+
+**What to Check:**
+- Are you logged in as an admin? (You appear to be, but double-check your session.)
+- Is your API route for `/api/admin/welcome-email` correctly checking for admin privileges and reading the session/cookie asynchronously?  
+  (See the error: `cookies().get(...) should be awaited before using its value.`)
+
+---
+
+## 2. **Next.js Dynamic API Error**
+
+**Error:**
+```
+Server Error: Route "/dashboard/admin/users" used `cookies().get('sb-...-auth-token')`. `cookies()` should be awaited before using its value.
+```
+
+**Root Cause:**  
+In Next.js 13+ (app directory), the `cookies()` API is now asynchronous and must be awaited.  
+If you use `cookies().get(...)` synchronously, it will break in server components and API routes.
+
+**How to Fix:**
+- Update all usages of `cookies().get(...)` to:
+  ```js
+  const cookieStore = await cookies();
+  const token = cookieStore.get('sb-...-auth-token');
+  ```
+- Make sure your API route and any server components/pages that use cookies are `async`.
+
+---
+
+## 3. **Content Security Policy (CSP) Errors**
+
+**Error:**
+```
+Refused to load the script 'https://www.googletagmanager.com/gtag/js?id=' because it violates the following Content Security Policy directive: ...
+```
+
+**Root Cause:**  
+Your CSP does not allow loading scripts from Google Tag Manager, Vercel Analytics, etc.  
+This is not critical for the welcome email feature, but if you want analytics, you need to update your CSP.
+
+---
+
+## 4. **Supabase Auth Rate Limiting (429)**
+
+**Error:**
+```
+Failed to load resource: the server responded with a status of 429 ()
+AuthApiError: Request rate limit reached
+```
+
+**Root Cause:**  
+You are hitting Supabase’s rate limits for authentication requests.  
+This can happen if you refresh/login too often in a short period.
+
+**How to Fix:**
+- Wait a few minutes and try again.
+- Avoid rapid repeated login attempts.
+
+---
+
+## **What to Do Next (Step-by-Step)**
+
+1. **Fix the `cookies()` usage in your API and server components:**
+   - Make all cookie access asynchronous (`await cookies()`).
+   - Update `/api/admin/welcome-email` and any related code.
+
+2. **Test the admin dashboard again:**
+   - After fixing, reload `/dashboard/admin/users`.
+   - You should now see users with `welcome_email_sent = false` and be able to send welcome emails.
+
+3. **(Optional) Update your CSP if you want analytics scripts to load.**
+
+4. **Wait for Supabase rate limits to reset if you hit 429 errors.**
+
+---
+
+### **Would you like step-by-step code instructions to fix the async cookies issue in your admin API route?**  
+Or do you want to see exactly where to update the code? 

@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send welcome email on first login (don't await to avoid blocking the response)
+    // After successful login, trigger welcome email (non-blocking)
     if (data.user) {
       handleWelcomeEmail(data.user.id).catch(error => {
         console.error('Welcome email error (non-blocking):', error);

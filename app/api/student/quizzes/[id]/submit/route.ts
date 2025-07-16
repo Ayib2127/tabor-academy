@@ -2,10 +2,9 @@ import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { QuizResults } from '@/types/quiz';
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, context: Promise<{ params: { id: string } }>) {
+  const { params } = await context;
+  console.log("DEBUG: params in quiz submit route:", params);
   try {
     const supabase = await createApiSupabaseClient();
     
@@ -21,7 +20,9 @@ export async function POST(
       );
     }
 
+    // Log the incoming payload for debugging
     const results: QuizResults = await req.json();
+    console.log("Quiz submission payload:", JSON.stringify(results, null, 2));
 
     // Get quiz details
     const { data: quiz, error: quizError } = await supabase
@@ -73,9 +74,10 @@ export async function POST(
       passed: results.score >= quiz.passingScore,
     });
   } catch (error: any) {
+    // Log the full error stack for debugging
     console.error('Error submitting quiz:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to submit quiz' },
+      { error: error.message || 'Failed to submit quiz', details: error.stack },
       { status: 500 }
     );
   }

@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
 
 export default function BookmarksPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -244,7 +245,7 @@ export default function BookmarksPage() {
                       <div className="flex gap-4">
                         <div className="w-48 h-32 relative rounded-lg overflow-hidden">
                           <Image
-                            src={item.thumbnail}
+                            src={withDefault(item.thumbnail, DEFAULT_BANNER_URL)}
                             alt={item.title}
                             fill
                             className="object-cover"

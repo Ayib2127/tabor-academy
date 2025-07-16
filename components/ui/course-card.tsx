@@ -13,6 +13,7 @@ import {
   Play,
   CheckCircle,
 } from 'lucide-react';
+import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
 
 interface CourseCardProps {
   course: {
@@ -96,15 +97,11 @@ const CourseCard: FC<CourseCardProps> = ({
           <div className="flex items-start gap-4">
             {/* Thumbnail */}
             <div className="w-16 h-16 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              {course.thumbnail_url ? (
-                <img
-                  src={course.thumbnail_url}
-                  alt={course.title}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <BookOpen className="w-6 h-6 text-[#4ECDC4]" />
-              )}
+              <img
+                src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
+                alt={course.title}
+                className="w-full h-full object-cover rounded-lg"
+              />
             </div>
 
             {/* Content */}
@@ -151,17 +148,11 @@ const CourseCard: FC<CourseCardProps> = ({
     <Card className="border-[#E5E8E8] shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
       {/* Thumbnail */}
       <div className="relative h-48 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20">
-        {course.thumbnail_url ? (
-          <img
-            src={course.thumbnail_url}
-            alt={course.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <BookOpen className="w-16 h-16 text-[#4ECDC4]" />
-          </div>
-        )}
+        <img
+          src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
+          alt={course.title}
+          className="w-full h-full object-cover"
+        />
         
         {/* Content Type Badge */}
         <div className="absolute top-3 left-3">

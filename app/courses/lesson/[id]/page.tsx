@@ -44,6 +44,7 @@ import CoursePlayerSidebar from "@/components/course-player/CoursePlayerSidebar"
 import Player from '@vimeo/player';
 import type PlayerType from '@vimeo/player';
 import { useId } from 'react';
+import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
 
 export default function LessonPlayerPage() {
   const { id: initialLessonId, courseId } = useParams<{ id: string, courseId: string }>();
@@ -274,6 +275,15 @@ export default function LessonPlayerPage() {
   const prevLesson = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
   const nextLesson = currentLessonIndex < allLessons.length - 1 ? allLessons[currentLessonIndex + 1] : null;
 
+  async function refetchModules() {
+    if (!courseId) return;
+    const response = await fetch(`/api/courses/${courseId}/modules`);
+    if (response.ok) {
+      const modules = await response.json();
+      setAllModules(modules);
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -327,7 +337,7 @@ export default function LessonPlayerPage() {
                         }
                         return '';
                       })()}
-                      poster={lesson.thumbnail_url}
+                      poster={withDefault(lesson.thumbnail_url, DEFAULT_BANNER_URL)}
                     />
                   </div>
                 </Card>
@@ -384,11 +394,14 @@ export default function LessonPlayerPage() {
                           }
                           return '';
                         })()}
-                        poster={lesson.thumbnail_url}
+                        poster={withDefault(lesson.thumbnail_url, DEFAULT_BANNER_URL)}
                       />
                     </div>
                   ) : (
-                    <LessonContent lesson={lesson} completed={lesson.completed ?? false} />
+                    <LessonContent
+                      lesson={lessonData}
+                      onLessonCompleted={refetchModules}
+                    />
                   )}
 
                   {/* Navigation Buttons */}

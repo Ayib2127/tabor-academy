@@ -29,6 +29,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { useRef } from "react"
+import { withDefault, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
 export default function ProfileCompletionPage() {
   const router = useRouter()
@@ -152,7 +153,7 @@ export default function ProfileCompletionPage() {
                       {profileImage ? (
                         <div className="relative w-32 h-32">
                           <Image
-                            src={profileImage}
+                            src={withDefault(profileImage, DEFAULT_AVATAR_URL)}
                             alt="Profile"
                             fill
                             className="rounded-full object-cover"

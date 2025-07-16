@@ -262,78 +262,101 @@ const QuizPlayer: FC<QuizPlayerProps> = ({ quiz, onComplete, onExit }) => {
             )}
           </div>
         </>
-      ) : results && (
-        <Card className="border-[#E5E8E8] shadow-sm">
-          <CardHeader className="pb-3 bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5">
-            <CardTitle className="text-[#2C3E50]">Quiz Results</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm text-[#2C3E50]/60">Score</p>
-                <p className="text-2xl font-bold text-[#2C3E50]">
-                  {results.score.toFixed(1)}%
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-[#2C3E50]/60">Correct Answers</p>
-                <p className="text-2xl font-bold text-[#2C3E50]">
-                  {results.correctAnswers} / {results.totalQuestions}
-                </p>
-              </div>
-              {quiz.timeLimit && (
+      ) : (
+        <>
+          <Card className="border-[#E5E8E8] shadow-sm">
+            <CardHeader className="pb-3 bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5">
+              <CardTitle className="text-[#2C3E50]">Quiz Results</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <p className="text-sm text-[#2C3E50]/60">Time Spent</p>
+                  <p className="text-sm text-[#2C3E50]/60">Score</p>
                   <p className="text-2xl font-bold text-[#2C3E50]">
-                    {Math.floor(results.timeSpent / 60)}m {results.timeSpent % 60}s
+                    {results.score.toFixed(1)}%
                   </p>
                 </div>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-[#2C3E50]/60">Correct Answers</p>
+                  <p className="text-2xl font-bold text-[#2C3E50]">
+                    {results.correctAnswers} / {results.totalQuestions}
+                  </p>
+                </div>
+                {quiz.timeLimit && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-[#2C3E50]/60">Time Spent</p>
+                    <p className="text-2xl font-bold text-[#2C3E50]">
+                      {Math.floor(results.timeSpent / 60)}m {results.timeSpent % 60}s
+                    </p>
+                  </div>
+                )}
+              </div>
 
-            <div className="space-y-4">
-              <h3 className="font-semibold text-[#2C3E50]">Question Review</h3>
-              {quiz.questions.map((question, index) => {
-                const answer = results.answers[index];
-                return (
-                  <Card key={question.id} className="border-[#E5E8E8]">
-                    <CardContent className="pt-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-[#2C3E50]">Question {index + 1}</p>
-                          {answer.isCorrect ? (
-                            <CheckCircle className="h-5 w-5 text-[#4ECDC4]" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-[#FF6B35]" />
+              <div className="space-y-4">
+                <h3 className="font-semibold text-[#2C3E50]">Question Review</h3>
+                {quiz.questions.map((question, index) => {
+                  const answer = results.answers[index];
+                  return (
+                    <Card key={question.id} className="border-[#E5E8E8]">
+                      <CardContent className="pt-6">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-[#2C3E50]">Question {index + 1}</p>
+                            {answer.isCorrect ? (
+                              <CheckCircle className="h-5 w-5 text-[#4ECDC4]" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-[#FF6B35]" />
+                            )}
+                          </div>
+                          <p className="text-[#2C3E50]">{question.question}</p>
+                          {quiz.showCorrectAnswers && (
+                            <div className="space-y-1">
+                              <p className="text-sm text-[#2C3E50]/60">
+                                Your answer: {answer.userAnswer || 'Not answered'}
+                              </p>
+                              <p className="text-sm text-[#2C3E50]/60">
+                                Correct answer: {question.correctAnswer}
+                              </p>
+                            </div>
+                          )}
+                          {quiz.showExplanations && question.explanation && (
+                            <Alert className="bg-[#4ECDC4]/5 border-[#4ECDC4]/20">
+                              <AlertCircle className="h-4 w-4 text-[#4ECDC4]" />
+                              <AlertDescription className="text-[#2C3E50]">
+                                {question.explanation}
+                              </AlertDescription>
+                            </Alert>
                           )}
                         </div>
-                        <p className="text-[#2C3E50]">{question.question}</p>
-                        {quiz.showCorrectAnswers && (
-                          <div className="space-y-1">
-                            <p className="text-sm text-[#2C3E50]/60">
-                              Your answer: {answer.userAnswer || 'Not answered'}
-                            </p>
-                            <p className="text-sm text-[#2C3E50]/60">
-                              Correct answer: {question.correctAnswer}
-                            </p>
-                          </div>
-                        )}
-                        {quiz.showExplanations && question.explanation && (
-                          <Alert className="bg-[#4ECDC4]/5 border-[#4ECDC4]/20">
-                            <AlertCircle className="h-4 w-4 text-[#4ECDC4]" />
-                            <AlertDescription className="text-[#2C3E50]">
-                              {question.explanation}
-                            </AlertDescription>
-                          </Alert>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons: Complete Lesson, Take Notes */}
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
+            <button
+              className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
+              onClick={() => {
+                if (onExit) onExit();
+              }}
+            >
+              <CheckCircle className="h-5 w-5 mr-2" />
+              Complete Lesson
+            </button>
+            <button
+              className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
+              onClick={() => {
+                // TODO: Open notes panel/modal if available
+              }}
+            >
+              Take Notes
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

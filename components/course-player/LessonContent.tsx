@@ -16,6 +16,7 @@ interface LessonContentProps {
   lesson: Lesson;
   isPreview?: boolean;
   completed?: boolean; // Added prop for completion status
+  onLessonCompleted?: () => void; // <-- add this
 }
 
 const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, completed = false }) => {
@@ -72,6 +73,8 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
       setTimeout(() => {
         setShowCompletionAnim(false);
       }, 1500);
+
+      if (onLessonCompleted) onLessonCompleted(); // <-- call this
     } catch (err) {
       toast.error("Could not complete lesson.");
     } finally {
@@ -269,21 +272,130 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
         );
       }
 
-      case 'assignment':
+      case 'assignment': {
+        // Example: parse assignment content if it's JSON, otherwise fallback to HTML
+        let assignment = null;
+        if (typeof lesson.content === 'object' && lesson.content !== null) {
+          assignment = lesson.content;
+        } else if (typeof lesson.content === 'string') {
+          try {
+            assignment = JSON.parse(lesson.content);
+          } catch {
+            assignment = null;
+          }
+        }
+
         return (
           <div className="assignment-container">
-            {lesson.content ? (
-              <div className="prose max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+            {/* Assignment Title & Badges */}
+            <div className="flex flex-col items-center mb-6">
+              <h1 className="text-3xl font-extrabold mb-2 text-center"
+                style={{
+                  background: "linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                {lesson.title}
+              </h1>
+              <div className="flex flex-row items-center gap-4">
+                <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#FF6B35] font-semibold text-base">
+                  📄 Assignment
+                </span>
+                {assignment?.dueDate && (
+                  <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#6E6C75] font-semibold text-base">
+                    ⏰ Due: {assignment.dueDate}
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="flex flex-col items-center text-gray-500">
-                Assignment content not available
-                <BackToCourseButton courseId={lesson['course_id']} />
+            </div>
+
+            {/* Assignment Sections */}
+            <div className="space-y-8">
+              {/* Project Brief */}
+              {assignment?.brief && (
+                <div>
+                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Project Brief</h2>
+                  <p className="text-[#2C3E50]">{assignment.brief}</p>
+                </div>
+              )}
+
+              {/* Requirements */}
+              {assignment?.requirements && (
+                <div>
+                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Requirements</h2>
+                  <ul className="list-disc list-inside text-[#2C3E50]">
+                    {assignment.requirements.map((req, idx) => (
+                      <li key={idx}>{req}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Guidelines */}
+              {assignment?.guidelines && (
+                <div>
+                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Submission Guidelines</h2>
+                  <ul className="list-disc list-inside text-[#2C3E50]">
+                    {assignment.guidelines.map((g, idx) => (
+                      <li key={idx}>{g}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Grading Criteria */}
+              {assignment?.grading && (
+                <div>
+                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Grading Criteria</h2>
+                  <ul className="list-disc list-inside text-[#2C3E50]">
+                    {assignment.grading.map((c, idx) => (
+                      <li key={idx}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Submission Area */}
+              <div className="border-2 border-dashed border-[#4ECDC4] rounded-lg p-8 text-center mb-6 bg-[#F7F9F9]">
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl mb-2">🚀</span>
+                  <p className="text-[#2C3E50] font-semibold mb-2">
+                    Ready to launch your campaign? Upload your presentation, assets, and video pitch
+                  </p>
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-4">
+                    <button
+                      className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
+                    >
+                      Submit Campaign
+                    </button>
+                    <button
+                      className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
+                    >
+                      Save Draft
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
+              <button
+                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
+              >
+                Complete Lesson
+              </button>
+              <button
+                className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
+              >
+                Take Notes
+              </button>
+            </div>
           </div>
         );
+      }
 
       default:
         return (

@@ -38,6 +38,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { format } from "date-fns"
 import { useRef } from "react"
+import { withDefault, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
@@ -210,9 +211,10 @@ export default function ProfilePage() {
                 <div className="text-center mb-6">
                   <div className="relative w-32 h-32 mx-auto mb-4">
                     <Image
-                      src={profileImage}
-                      alt={userData.name}
-                      fill
+                      src={withDefault(profileImage, DEFAULT_AVATAR_URL)}
+                      alt="Profile"
+                      width={128}
+                      height={128}
                       className="rounded-full object-cover"
                     />
                     <Button

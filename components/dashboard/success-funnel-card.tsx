@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowRight, Target, Lightbulb, Rocket, TrendingUp, CheckCircle, Clock } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
 
 interface NextStepCourse {
   title: string;
@@ -206,17 +207,13 @@ export function SuccessFunnelCard({
             
             <div className="flex items-start gap-4">
               <div className="w-20 h-20 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                {nextStep.course.thumbnail_url ? (
-                  <Image
-                    src={nextStep.course.thumbnail_url}
-                    alt={nextStep.course.title}
-                    width={80}
-                    height={80}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <Target className="w-10 h-10 text-[#4ECDC4]" />
-                )}
+                <Image
+                  src={withDefault(nextStep.course?.thumbnail_url, DEFAULT_BANNER_URL)}
+                  alt={nextStep.course?.title || "Course Thumbnail"}
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               
               <div className="flex-1 min-w-0">

@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
@@ -25,31 +25,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If registration was successful and we have a user
     if (authData.user) {
-      // Create a profile in the users table
+      // Create a profile in the users table (no custom confirmation fields)
       const { error: profileError } = await supabase
-        .from('users')
+        .from("users")
         .insert({
           id: authData.user.id,
           email: email,
           full_name: fullName || null,
-          role: 'student'
+          role: "student",
         });
 
       if (profileError) {
-        console.error('Error creating user profile:', profileError);
-        // We don't return an error here because the auth account was created successfully
+        console.error("Error creating user profile:", profileError);
       }
     }
 
     return NextResponse.json({
       user: authData.user,
-      session: authData.session
+      session: authData.session,
+      message: "Registration successful! Please check your email to confirm your account.",
     });
   } catch (error) {
     return NextResponse.json(
-      { error: 'An unexpected error occurred' },
+      { error: "An unexpected error occurred" },
       { status: 500 }
     );
   }

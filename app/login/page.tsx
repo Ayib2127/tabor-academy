@@ -35,6 +35,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState("")
   const countries = getCountries()
 
   const {
@@ -226,6 +228,45 @@ export default function LoginPage() {
                       <p className="text-sm text-red-500">{emailErrors.password.message as string}</p>
                     )}
                   </div>
+
+                  {/* --- Resend Confirmation Email Button --- */}
+                  <div className="flex items-center justify-between mt-2">
+                    <button
+                      type="button"
+                      className="text-xs text-orange-500 hover:underline"
+                      disabled={resendLoading}
+                      onClick={async () => {
+                        setResendLoading(true);
+                        setResendMessage("");
+                        try {
+                          const emailValue = (document.getElementById("email") as HTMLInputElement)?.value;
+                          if (!emailValue) {
+                            setResendMessage("Please enter your email above first.");
+                            setResendLoading(false);
+                            return;
+                          }
+                          const { error } = await supabase.auth.resend({
+                            type: "signup",
+                            email: emailValue,
+                          });
+                          if (error) {
+                            setResendMessage("Failed to resend confirmation email. " + error.message);
+                          } else {
+                            setResendMessage("If your account exists and is not confirmed, a new confirmation email has been sent.");
+                          }
+                        } catch (err) {
+                          setResendMessage("Something went wrong. Please try again.");
+                        }
+                        setResendLoading(false);
+                      }}
+                    >
+                      {resendLoading ? "Sending..." : "Resend confirmation email"}
+                    </button>
+                  </div>
+                  {resendMessage && (
+                    <div className="text-xs text-muted-foreground mt-1">{resendMessage}</div>
+                  )}
+                  {/* --- End Resend Confirmation Email Button --- */}
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
