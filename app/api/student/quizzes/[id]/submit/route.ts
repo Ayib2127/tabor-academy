@@ -2,9 +2,9 @@ import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { QuizResults } from '@/types/quiz';
 
-export async function POST(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
-  console.log("DEBUG: params in quiz submit route:", params);
+export async function POST(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
+  console.log("Quiz submit: params.id =", params.id);
   try {
     const supabase = await createApiSupabaseClient();
     
@@ -28,11 +28,20 @@ export async function POST(req: Request, context: Promise<{ params: { id: string
     const { data: quiz, error: quizError } = await supabase
       .from('quizzes')
       .select('*')
-      .eq('id', params.id)
+      .eq('lesson_id', params.id)
       .single();
+    console.log("Quiz submit: quiz =", quiz, "quizError =", quizError);
 
     if (quizError || !quiz) {
       throw new Error('Quiz not found');
+    }
+
+    // Defensive check for attemptsAllowed
+    if (typeof quiz.attemptsallowed !== 'number' || isNaN(quiz.attemptsallowed)) {
+      return NextResponse.json(
+        { error: 'Quiz configuration error: attemptsAllowed missing or invalid' },
+        { status: 500 }
+      );
     }
 
     // Check if student has exceeded attempts
@@ -46,7 +55,7 @@ export async function POST(req: Request, context: Promise<{ params: { id: string
       throw attemptsError;
     }
 
-    if (attempts.length >= quiz.attemptsAllowed) {
+    if (attempts.length >= quiz.attemptsallowed) {
       return NextResponse.json(
         { error: 'Maximum attempts exceeded' },
         { status: 400 }
@@ -57,7 +66,7 @@ export async function POST(req: Request, context: Promise<{ params: { id: string
     const { error: saveError } = await supabase
       .from('quiz_attempts')
       .insert({
-        quiz_id: params.id,
+        quiz_id: quiz.id, // Use the actual quiz PK from the fetched quiz row
         student_id: session.user.id,
         score: results.score,
         answers: results.answers,

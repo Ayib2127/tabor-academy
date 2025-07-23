@@ -45,6 +45,7 @@ import Player from '@vimeo/player';
 import type PlayerType from '@vimeo/player';
 import { useId } from 'react';
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
+import { toast } from 'react-hot-toast';
 
 export default function LessonPlayerPage() {
   const { id: initialLessonId, courseId } = useParams<{ id: string, courseId: string }>();
@@ -73,6 +74,13 @@ export default function LessonPlayerPage() {
   const [isOffline, setIsOffline] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [currentChapter, setCurrentChapter] = useState(0)
+
+  const [completing, setCompleting] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [originalNotes, setOriginalNotes] = useState('');
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [showResourcesModal, setShowResourcesModal] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerRef = useRef<HTMLDivElement>(null)
@@ -112,20 +120,36 @@ export default function LessonPlayerPage() {
   useEffect(() => {
     (async () => {
       if (!currentLessonId) return;
+      // Get user id from Supabase auth
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('module_lessons')
         .select('id, title, type, content, is_published, module_id, duration, order')
         .eq('id', currentLessonId)
         .single();
+      let completed = false;
+      if (user) {
+        const { data: progressRow } = await supabase
+          .from('progress')
+          .select('completed')
+          .eq('lesson_id', currentLessonId)
+          .eq('user_id', user.id)
+          .maybeSingle(); // Use maybeSingle for robustness
+        completed = !!progressRow?.completed;
+      }
       if (!error) {
         let parsedContent = data.content;
         if (data.type === 'video' || data.type === 'assignment' || data.type === 'text') {
+          // No parsing needed
         } else if (data.type === 'quiz') {
           try {
-            parsedContent = JSON.parse(data.content);
-          } catch { parsedContent = null; }
+            parsedContent = data.content && data.content.trim() ? JSON.parse(data.content) : null;
+          } catch (e) {
+            console.error('Invalid quiz content for lesson', data.id, e);
+            parsedContent = null;
+          }
         }
-        setLessonData({ ...data, content: parsedContent });
+        setLessonData({ ...data, content: parsedContent, completed });
       } else setError(error);
     })();
   }, [currentLessonId]);
@@ -275,13 +299,99 @@ export default function LessonPlayerPage() {
   const prevLesson = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
   const nextLesson = currentLessonIndex < allLessons.length - 1 ? allLessons[currentLessonIndex + 1] : null;
 
-  async function refetchModules() {
+  async function refetchModulesAndLesson() {
     if (!courseId) return;
+    // Re-fetch modules (for sidebar/progress)
     const response = await fetch(`/api/courses/${courseId}/modules`);
     if (response.ok) {
       const modules = await response.json();
       setAllModules(modules);
     }
+    // Re-fetch the current lesson data (for completion state)
+    if (currentLessonId) {
+      // Get user id from Supabase auth
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from('module_lessons')
+        .select('id, title, type, content, is_published, module_id, duration, order')
+        .eq('id', currentLessonId)
+        .single();
+      let completed = false;
+      if (user) {
+        const { data: progressRow } = await supabase
+          .from('progress')
+          .select('completed')
+          .eq('lesson_id', currentLessonId)
+          .eq('user_id', user.id)
+          .single();
+        completed = !!progressRow?.completed;
+      }
+      if (!error) {
+        let parsedContent = data.content;
+        if (data.type === 'video' || data.type === 'assignment' || data.type === 'text') {
+        } else if (data.type === 'quiz') {
+          try {
+            parsedContent = JSON.parse(data.content);
+          } catch { parsedContent = null; }
+        }
+        setLessonData({ ...data, content: parsedContent, completed });
+      }
+    }
+  }
+
+  const handleCompleteContinue = async () => {
+    setCompleting(true);
+    try {
+      const res = await fetch(`/api/lessons/${lesson.id}/complete`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to complete lesson");
+      toast.success("Lesson marked as complete!");
+      // Optionally refetch lesson progress here
+      if (typeof refetchModulesAndLesson === 'function') refetchModulesAndLesson();
+    } catch (err) {
+      toast.error("Could not complete lesson.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  const handleTakeNotes = () => setShowNotesPanel(true);
+  const handleCloseNotes = () => setShowNotesPanel(false);
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      const res = await fetch(`/api/lessons/${lesson.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      if (!res.ok) throw new Error("Failed to save notes");
+      toast.success("Notes saved!");
+      setOriginalNotes(notes);
+    } catch (err) {
+      localStorage.setItem(`lesson-notes-${lesson.id}`, notes);
+      toast.success("Notes saved locally!");
+      setOriginalNotes(notes);
+    } finally {
+      setSavingNotes(false);
+      setShowNotesPanel(false);
+    }
+  };
+
+  const handleResources = () => {
+    if (lesson.resources && lesson.resources.length > 0) {
+      setShowResourcesModal(true);
+    } else {
+      toast("No resources available for this lesson.");
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500">
+        {typeof error === 'string' ? error : 'Lesson not found or has been removed.'}
+      </div>
+    );
   }
 
   return (
@@ -321,8 +431,40 @@ export default function LessonPlayerPage() {
               {/* --- Video Player Card --- */}
               {lesson.type === "video" && (
                 <Card className="mb-8 p-0 overflow-hidden rounded-2xl shadow-lg bg-gradient-to-br from-[#FF6B35]/10 to-[#4ECDC4]/10">
+                  {/* --- Bookmark and Share Buttons --- */}
+                  <div className="flex justify-end items-center mb-2 p-4">
+                    <Button variant="outline" size="icon" className="ml-2">
+                      <Bookmark className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="ml-2">
+                      <Share2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  {/* --- Add Title and Duration Here --- */}
+                  <div className="flex flex-col items-center mb-6">
+                    <h1
+                      className="text-3xl font-extrabold mb-4 text-center"
+                      style={{
+                        background: "linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {lesson.title}
+                    </h1>
+                    <div className="flex flex-row items-center gap-4">
+                      <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#4ECDC4] font-semibold text-base">
+                        🎬 Video
+                      </span>
+                      {lesson.duration && (
+                        <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#6E6C75] font-semibold text-base">
+                          ⏱️ {Math.floor(lesson.duration / 60)}m {lesson.duration % 60}s
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div className="relative">
-                    {/* Unified Custom Video Player */}
                     <CustomVideoPlayer
                       src={(() => {
                         if (lesson.content && typeof lesson.content === 'object') {
@@ -340,12 +482,75 @@ export default function LessonPlayerPage() {
                       poster={withDefault(lesson.thumbnail_url, DEFAULT_BANNER_URL)}
                     />
                   </div>
+                  {/* --- Action Buttons Row (Complete Lesson, Take Notes, Resources) --- */}
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
+                    <Button
+                      className={`px-6 py-3 rounded-lg font-bold shadow-md flex items-center gap-2 transition-transform duration-200
+                        ${lessonData?.completed ? 'bg-[#E5E8E8] text-[#6E6C75] cursor-not-allowed' : 'bg-[#FF6B35] text-white hover:scale-105'}`}
+                      onClick={handleCompleteContinue}
+                      disabled={completing || lessonData?.completed}
+                    >
+                      {lessonData?.completed ? (
+                        <>
+                          <CheckCircle className="h-5 w-5 mr-2" />
+                          Lesson Completed
+                        </>
+                      ) : completing ? (
+                        <>
+                          <span>Completing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-5 w-5 mr-2" />
+                          Complete Lesson
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
+                      onClick={handleTakeNotes}
+                    >
+                      Take Notes
+                    </Button>
+                    <Button
+                      className="px-6 py-3 rounded-lg border-2 border-[#FF6B35] text-[#FF6B35] font-bold bg-white hover:bg-[#FF6B35]/10 transition flex items-center gap-2"
+                      onClick={handleResources}
+                      disabled={!lesson.resources || lesson.resources.length === 0}
+                    >
+                      <Download className="h-5 w-5" />
+                      Resources
+                    </Button>
+                  </div>
+                  {/* --- Navigation Buttons Row (Previous Lesson, Continue Learning) --- */}
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto border-2 border-[#4ECDC4]/30 text-[#2C3E50] hover:border-[#4ECDC4] flex items-center justify-center"
+                      disabled={!prevLesson}
+                      onClick={() => prevLesson && router.push(`/courses/lesson/${prevLesson.id}`)}
+                    >
+                      <ChevronLeft className="h-5 w-5 mr-2 text-[#4ECDC4]" />
+                      Previous Lesson
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white flex items-center justify-center"
+                      disabled={!nextLesson}
+                      onClick={() => nextLesson && router.push(`/courses/lesson/${nextLesson.id}`)}
+                    >
+                      Continue Learning
+                      <ChevronRight className="h-5 w-5 ml-2 text-white" />
+                    </Button>
+                  </div>
                 </Card>
               )}
 
               {/* --- Text, Quiz, Assignment, etc. --- */}
               {/* Wrap each in a Card with padding, shadow, and rounded corners */}
-              {["text", "quiz", "assignment"].includes(lesson.type) && (
+              {[
+                "text",
+                "quiz",
+                "assignment"
+              ].includes(lesson.type) && (
                 <Card className={`mb-8 ${lesson.type === "video" ? "p-0" : "p-6"} rounded-2xl shadow-lg bg-white`}>
                   {/* Info block (title, type, duration, bookmark, share) */}
                   <div className="flex justify-end items-center mb-2">
@@ -400,7 +605,8 @@ export default function LessonPlayerPage() {
                   ) : (
                     <LessonContent
                       lesson={lessonData}
-                      onLessonCompleted={refetchModules}
+                      completed={lessonData?.completed}
+                      onLessonCompleted={refetchModulesAndLesson}
                     />
                   )}
 
@@ -468,6 +674,79 @@ export default function LessonPlayerPage() {
           </div>
         </div>
       </main>
+      {showNotesPanel && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="fixed inset-0 bg-black/30" onClick={handleCloseNotes} />
+          <div className="mr-auto w-full max-w-md h-full bg-white shadow-xl p-8 flex flex-col animate-slide-in-left relative">
+            <button
+              className="absolute top-4 right-4 text-[#FF6B35] text-2xl font-bold"
+              onClick={handleCloseNotes}
+              aria-label="Close notes panel"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold mb-4 text-[#2C3E50]">Lesson Notes</h2>
+            {loadingNotes ? (
+              <div className="flex-1 flex items-center justify-center">
+                <span className="text-[#4ECDC4] font-semibold">Loading...</span>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  className="w-full h-64 p-3 border border-[#E5E8E8] rounded-lg focus:outline-none focus:border-[#4ECDC4] resize-none mb-4"
+                  placeholder="Write your notes here..."
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  disabled={savingNotes}
+                />
+                <button
+                  className="mt-auto px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 disabled:opacity-60"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes || notes === originalNotes}
+                >
+                  {savingNotes ? "Saving..." : "Save Notes"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showResourcesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/30" onClick={() => setShowResourcesModal(false)} />
+          <div className="relative bg-white rounded-lg shadow-lg p-8 max-w-lg w-full z-10">
+            <button
+              className="absolute top-4 right-4 text-[#FF6B35] text-2xl font-bold"
+              onClick={() => setShowResourcesModal(false)}
+              aria-label="Close resources modal"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold mb-4 text-[#2C3E50]">Lesson Resources</h2>
+            <ul className="space-y-4">
+              {lesson.resources && lesson.resources.length > 0 ? (
+                lesson.resources.map((res, idx) => (
+                  <li key={idx}>
+                    <a
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-[#FF6B35] hover:underline"
+                      download
+                    >
+                      <Download className="h-5 w-5" />
+                      {res.name || res.url}
+                    </a>
+                  </li>
+                ))
+              ) : (
+                <li className="text-[#6E6C75]">No resources available.</li>
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,38 +8,25 @@ export async function POST(
 ) {
   const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-  const lessonId = params.id;
-
-  // Log the lessonId
-  console.log("Completing lesson:", lessonId);
-
-  // Get the authenticated user
-  const { data: { user }, error: sessionError } = await supabase.auth.getUser();
-  console.log("User:", user);
-  if (sessionError || !user) {
-    console.error("Auth error:", sessionError);
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  // Log the upsert payload
-  const upsertPayload = {
-    lesson_id: lessonId,
-    user_id: user.id,
-    completed: true,
-    updated_at: new Date().toISOString()
-  };
-  console.log("Upsert payload:", upsertPayload);
-
-  // Upsert progress for this lesson and user
-  const { error } = await supabase
+  const userId = userData.user.id;
+  const lessonId = params.id;
+  console.log('[DEBUG] Marking lesson complete:', { userId, lessonId });
+  const upsertPayload = { user_id: userId, lesson_id: lessonId, completed: true };
+  console.log('[DEBUG] Upsert payload:', upsertPayload);
+  const { data, error } = await supabase
     .from('progress')
-    .upsert([upsertPayload], { onConflict: ['lesson_id', 'user_id'] });
+    .upsert([upsertPayload], { onConflict: 'lesson_id,user_id' });
+  console.log('[DEBUG] Upsert result:', { data, error });
 
   if (error) {
     console.error("Supabase upsert error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  console.log("Lesson marked as complete for user:", user.id);
+  console.log("Lesson marked as complete for user:", userData.user.id);
   return NextResponse.json({ success: true });
 } 

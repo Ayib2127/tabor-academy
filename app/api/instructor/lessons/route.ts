@@ -130,3 +130,115 @@ export async function PATCH(req: Request, context: Promise<{ params: { id: strin
     }, { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  const supabase = await createApiSupabaseClient();
+
+  // Get session
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    console.log('[LESSON API] Incoming POST body:', JSON.stringify(body, null, 2));
+    const {
+      module_id,
+      title,
+      type,
+      content,
+      order,
+      duration,
+      is_published,
+      attemptsAllowed, // <-- Add this to destructure from body
+      questionType,    // <-- Add this if your frontend sends it
+      // ...add other fields as needed
+    } = body;
+
+    // Default attempts mapping
+    const DEFAULT_ATTEMPTS = {
+      true_false: 1,
+      multiple_choice: 2,
+      short_answer: 3,
+    };
+
+    // Validation
+    const errors = [];
+    if (!module_id || typeof module_id !== 'string') errors.push('module_id (string) is required');
+    if (!title || typeof title !== 'string') errors.push('title (string) is required');
+    if (!type || !['text', 'video', 'quiz', 'assignment'].includes(type)) errors.push('type (text, video, quiz, assignment) is required');
+    if (order === undefined || typeof order !== 'number') errors.push('order (number) is required');
+    // content can be empty, but must be present
+    if (content === undefined) errors.push('content is required');
+
+    if (errors.length > 0) {
+      console.error('[LESSON API] Validation errors:', errors);
+      return NextResponse.json({ error: 'Validation failed', details: errors }, { status: 400 });
+    }
+
+    let quizId = null;
+    let quiz = null;
+
+    if (type === 'quiz') {
+      // Determine attemptsAllowed: instructor value or default by questionType
+      const attempts =
+        attemptsAllowed !== undefined
+          ? attemptsAllowed
+          : (questionType && DEFAULT_ATTEMPTS[questionType]) || 1;
+
+      // Create the quiz
+      const { data: quizData, error: quizError } = await supabase
+        .from('quizzes')
+        .insert({
+          title,
+          passing_score: 70,            // <-- snake_case
+          attemptsallowed: attempts,    // <-- already fixed
+          shuffle_questions: false,     // <-- snake_case
+          show_correct_answers: true,   // <-- snake_case
+          show_explanations: true,      // <-- snake_case
+          questions: [],                // <-- if this is a JSON/array column
+        })
+        .select()
+        .single();
+      if (quizError) {
+        console.error('[LESSON API] Quiz creation error:', quizError.message);
+        return NextResponse.json({ error: quizError.message }, { status: 500 });
+      }
+      quizId = quizData.id;
+      quiz = quizData;
+    }
+
+    // Insert the lesson
+    const { data: lesson, error: lessonError } = await supabase
+      .from('module_lessons')
+      .insert({
+        module_id,
+        title,
+        type,
+        content,
+        order,
+        duration,
+        is_published,
+        quiz_id: quizId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // ...add other fields as needed
+      })
+      .select()
+      .single();
+
+    if (lessonError) {
+      console.error('[LESSON API] Lesson insert error:', lessonError.message);
+      return NextResponse.json({ error: lessonError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ lesson, quiz });
+  } catch (error: any) {
+    console.error('[LESSON API] Error creating lesson:', error, error?.stack);
+    return NextResponse.json({ error: error.message || 'Failed to create lesson' }, { status: 500 });
+  }
+}

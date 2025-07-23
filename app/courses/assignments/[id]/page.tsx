@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -119,7 +119,8 @@ const assignment = {
     required: 2,
     completed: 0,
     deadline: "2024-03-20T23:59:59"
-  }
+  },
+  submission_types: ['file', 'text', 'link'] // Added for dynamic submission types
 }
 
 export default function AssignmentSubmissionPage() {
@@ -134,6 +135,26 @@ export default function AssignmentSubmissionPage() {
     plagiarism: false,
     final: false
   })
+  const [linkValue, setLinkValue] = useState("") // Added for link submission
+
+  // Restore draft on mount
+  useEffect(() => {
+    const draft = localStorage.getItem(`assignment-submission-draft-${assignment.id}`);
+    if (draft) {
+      const { text, link, files: savedFiles } = JSON.parse(draft);
+      setEditorContent(text || '');
+      setLinkValue(link || '');
+      // File restoration is limited by browser security, so only restore text/link
+    }
+  }, [assignment.id]);
+
+  // Auto-save on change
+  useEffect(() => {
+    localStorage.setItem(
+      `assignment-submission-draft-${assignment.id}`,
+      JSON.stringify({ text: editorContent, link: linkValue })
+    );
+  }, [editorContent, linkValue, assignment.id]);
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -194,6 +215,7 @@ export default function AssignmentSubmissionPage() {
       setFiles([]);
       setUploadProgress(100);
       toast.success('Assignment submitted successfully!');
+      localStorage.removeItem(`assignment-submission-draft-${assignment.id}`);
     } catch (error) {
       console.error('Assignment upload error:', error);
       toast.error('Failed to submit assignment');
@@ -272,170 +294,165 @@ export default function AssignmentSubmissionPage() {
               </Card>
 
               {/* File Upload */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold mb-4">Submit Your Work</h2>
-                
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 ${
-                    isDragging ? 'border-primary bg-primary/5' : 'border-border'
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-2">
-                    Drag and drop your files here, or{" "}
-                    <button
-                      className="text-primary hover:underline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      browse
-                    </button>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Supported formats: PDF, DOCX, PPT, JPG, PNG (max 10MB)
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    multiple
-                    onChange={handleFileInput}
-                  />
-                </div>
-
-                {/* Uploaded Files */}
-                {files.length > 0 && (
-                  <div className="space-y-4 mb-6">
-                    {files.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-accent rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{file.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeFile(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="space-y-2 mb-6">
-                    <div className="flex justify-between text-sm">
-                      <span>Uploading...</span>
-                      <span>{uploadProgress}%</span>
-                    </div>
-                    <Progress value={uploadProgress} />
-                  </div>
-                )}
-
-                {/* Submission Checklist */}
-                <div className="space-y-4 mb-6">
-                  <h3 className="font-semibold">Before Submitting</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="requirements"
-                        checked={checklist.requirements}
-                        onCheckedChange={(checked) =>
-                          setChecklist(prev => ({ ...prev, requirements: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="requirements" className="leading-none">
-                        I have reviewed all requirements and included all necessary files
-                      </Label>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="plagiarism"
-                        checked={checklist.plagiarism}
-                        onCheckedChange={(checked) =>
-                          setChecklist(prev => ({ ...prev, plagiarism: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="plagiarism" className="leading-none">
-                        I confirm this is my own work and I have cited all sources
-                      </Label>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="final"
-                        checked={checklist.final}
-                        onCheckedChange={(checked) =>
-                          setChecklist(prev => ({ ...prev, final: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="final" className="leading-none">
-                        I understand this is my final submission
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <Button
-                    className="flex-1"
-                    onClick={handleSubmit}
-                    disabled={
-                      isSubmitting ||
-                      files.length === 0 ||
-                      !Object.values(checklist).every(Boolean)
-                    }
-                  >
-                    {isSubmitting ? "Submitting..." : "Submit Assignment"}
-                  </Button>
-                  <Button variant="outline" className="flex-1">
-                    Save as Draft
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Previous Submissions */}
-              {assignment.submissions.length > 0 && (
+              {assignment.submission_types?.includes('file') && (
                 <Card className="p-6">
-                  <h2 className="text-xl font-bold mb-4">Previous Submissions</h2>
-                  <div className="space-y-4">
-                    {assignment.submissions.map((submission) => (
-                      <div
-                        key={submission.id}
-                        className="flex items-center justify-between p-4 bg-accent rounded-lg"
+                  <h2 className="text-xl font-bold mb-4">Submit Your Work</h2>
+                  
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 ${
+                      isDragging ? 'border-primary bg-primary/5' : 'border-border'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-2">
+                      Drag and drop your files here, or{" "}
+                      <button
+                        className="text-primary hover:underline"
+                        onClick={() => fileInputRef.current?.click()}
                       >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{submission.filename}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Submitted {new Date(submission.uploadedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                        browse
+                      </button>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Supported formats: PDF, DOCX, PPT, JPG, PNG (max 10MB)
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      multiple
+                      onChange={handleFileInput}
+                    />
                   </div>
+
+                  {/* Uploaded Files */}
+                  {files.length > 0 && (
+                    <div className="space-y-4 mb-6">
+                      {files.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 bg-accent rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">{file.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFile(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="space-y-2 mb-6">
+                      <div className="flex justify-between text-sm">
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <Progress value={uploadProgress} />
+                    </div>
+                  )}
                 </Card>
               )}
+
+              {assignment.submission_types?.includes('text') && (
+                <Card className="p-6">
+                  <h2 className="text-xl font-bold mb-4">Text Entry</h2>
+                  <Label className="text-[#2C3E50] font-semibold">Text Entry</Label>
+                  <textarea
+                    className="textarea textarea-bordered w-full"
+                    value={editorContent}
+                    onChange={e => setEditorContent(e.target.value)}
+                    placeholder="Type or paste your answer here..."
+                    rows={6}
+                  />
+                </Card>
+              )}
+
+              {assignment.submission_types?.includes('link') && (
+                <Card className="p-6">
+                  <h2 className="text-xl font-bold mb-4">Link Submission</h2>
+                  <Label className="text-[#2C3E50] font-semibold">Link Submission</Label>
+                  <Input
+                    type="url"
+                    className="input input-bordered w-full"
+                    value={linkValue}
+                    onChange={e => setLinkValue(e.target.value)}
+                    placeholder="Paste your submission link (e.g., Google Docs, YouTube, etc.)"
+                  />
+                </Card>
+              )}
+
+              {/* Submission Checklist */}
+              <div className="space-y-4 mb-6">
+                <h3 className="font-semibold">Before Submitting</h3>
+                <div className="space-y-2">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="requirements"
+                      checked={checklist.requirements}
+                      onCheckedChange={(checked) =>
+                        setChecklist(prev => ({ ...prev, requirements: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="requirements" className="leading-none">
+                      I have reviewed all requirements and included all necessary files
+                    </Label>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="plagiarism"
+                      checked={checklist.plagiarism}
+                      onCheckedChange={(checked) =>
+                        setChecklist(prev => ({ ...prev, plagiarism: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="plagiarism" className="leading-none">
+                      I confirm this is my own work and I have cited all sources
+                    </Label>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="final"
+                      checked={checklist.final}
+                      onCheckedChange={(checked) =>
+                        setChecklist(prev => ({ ...prev, final: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="final" className="leading-none">
+                      I understand this is my final submission
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  className="flex-1"
+                  onClick={handleSubmit}
+                  disabled={
+                    isSubmitting ||
+                    files.length === 0 ||
+                    !Object.values(checklist).every(Boolean)
+                  }
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Assignment"}
+                </Button>
+                <Button variant="outline" className="flex-1">
+                  Save as Draft
+                </Button>
+              </div>
             </div>
 
             {/* Sidebar */}

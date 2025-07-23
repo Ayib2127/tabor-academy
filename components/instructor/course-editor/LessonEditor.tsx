@@ -26,6 +26,10 @@ interface LessonEditorProps {
   onDelete: () => void;
   isVisible?: boolean;
   onSave?: () => void;
+  // New props for lifting save status
+  onSaveStatusChange?: (status: 'idle' | 'saving' | 'saved' | 'error', lastSaved: Date | null) => void;
+  saveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  lastSaved?: Date | null;
 }
 
 const LessonEditor: FC<LessonEditorProps> = ({
@@ -35,6 +39,9 @@ const LessonEditor: FC<LessonEditorProps> = ({
   onDelete,
   isVisible = true,
   onSave,
+  onSaveStatusChange,
+  saveStatus: externalSaveStatus,
+  lastSaved: externalLastSaved,
 }) => {
   if (!isVisible || !lesson) return null;
 
@@ -81,8 +88,8 @@ const LessonEditor: FC<LessonEditorProps> = ({
     return JSON.stringify(content);
   }
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(externalSaveStatus || 'idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(externalLastSaved || null);
   const [selectedText, setSelectedText] = useState<string>('');
   const [showAIQuizGenerator, setShowAIQuizGenerator] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
@@ -94,27 +101,25 @@ const LessonEditor: FC<LessonEditorProps> = ({
   const lastContentRef = useRef<any>(lesson.content);
 
   const debouncedSave = useCallback(async (updatedLesson: LocalLesson) => {
-    console.log("debouncedSave called", updatedLesson);
-
+    // Cancel any existing pending save
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
+
+    // Schedule new save in ~1s
     saveTimeoutRef.current = setTimeout(async () => {
       const contentString = serializeContent(updatedLesson.content);
 
-      // Only compare serialized strings
-      if (lastContentRef.current === contentString) return;
-
       try {
         setSaveStatus('saving');
-        let savedLesson = { ...updatedLesson, content: updatedLesson.content };
-        // If temp ID, insert new lesson
+
+        // ------- 1. NEW LESSON (temporary id) -------
         if (updatedLesson.id.startsWith('temp-')) {
           const module_id = (updatedLesson as any).module_id || moduleId;
           if (!module_id) throw new Error('Module ID is required to create a new lesson');
-          const { data: inserted, error } = await supabase
-            .from('module_lessons')
-            .insert({
+
+          // Build insert payload dynamically so we only send defined columns
+          const insertData: Record<string, any> = {
               module_id,
               title: updatedLesson.title,
               description: updatedLesson.description,
@@ -122,97 +127,129 @@ const LessonEditor: FC<LessonEditorProps> = ({
               type: updatedLesson.type,
               is_published: updatedLesson.is_published ?? false,
               order: updatedLesson.order,
-              duedate: updatedLesson.dueDate,
-              duration: updatedLesson.duration,
-              needsgrading: updatedLesson.needsGrading,
-              updated_at: new Date().toISOString(),
-              brief: updatedLesson.brief,
-              requirements: updatedLesson.requirements,
-              guidelines: updatedLesson.guidelines,
-              grading_criteria: updatedLesson.grading_criteria,
-              points: updatedLesson.points,
-              allow_late: updatedLesson.allow_late,
-              resources: updatedLesson.resources,
-            })
+            duration: (updatedLesson as any).duration,
+            duedate: (updatedLesson as any).duedate,
+            needsgrading: (updatedLesson as any).needsgrading,
+            brief: (updatedLesson as any).brief,
+            requirements: (updatedLesson as any).requirements,
+            guidelines: (updatedLesson as any).guidelines,
+            grading_criteria: (updatedLesson as any).grading_criteria,
+            points: (updatedLesson as any).points,
+            allow_late: (updatedLesson as any).allow_late,
+            resources: (updatedLesson as any).resources,
+          };
+
+          // Remove undefined values to avoid column errors
+          Object.keys(insertData).forEach((key) => insertData[key] === undefined && delete insertData[key]);
+
+          const { data: inserted, error } = await supabase
+            .from('module_lessons')
+            .insert(insertData)
             .select()
             .single();
-          console.log('Supabase INSERT result:', { error, inserted });
-          if (error || !inserted) {
-            throw error || new Error('Failed to insert lesson');
-          }
-          // Fetch the latest lesson from backend
-          const { data: freshLesson, error: fetchError } = await supabase
-            .from('module_lessons')
-            .select('*')
-            .eq('id', inserted.id)
-            .single();
-          if (fetchError || !freshLesson) {
-            throw fetchError || new Error('Failed to fetch new lesson');
-          }
-          savedLesson = { ...freshLesson, content: parseContent(freshLesson.content) };
-          lastContentRef.current = serializeContent(savedLesson.content);
-        } else {
-          // Update existing lesson
-          const { error } = await supabase
-            .from('module_lessons')
-            .update({
-              title: updatedLesson.title,
-              description: updatedLesson.description,
+
+          if (error || !inserted) throw error || new Error('Failed to insert lesson');
+
+          const savedLesson = { ...inserted, content: parseContent(inserted.content) };
+          lastContentRef.current = contentString;
+          setSaveStatus('saved');
+          setLastSaved(new Date());
+          onUpdate({ ...savedLesson, content: serializeContent(savedLesson.content) });
+          setTimeout(() => setSaveStatus('idle'), 2000);
+          return;
+        }
+
+        // ------- 2. EXISTING LESSONS -------
+        if (updatedLesson.type === 'quiz') {
+          // QUIZ lessons still go through API route so that related quiz rows are updated correctly
+          const patchRes = await fetch(`/api/instructor/lessons/${updatedLesson.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               content: contentString,
               type: updatedLesson.type,
+              title: updatedLesson.title,
               is_published: updatedLesson.is_published ?? false,
-              order: updatedLesson.order,
-              duedate: updatedLesson.dueDate,
-              duration: updatedLesson.duration,
-              needsgrading: updatedLesson.needsGrading,
-              updated_at: new Date().toISOString(),
-              brief: updatedLesson.brief,
-              requirements: updatedLesson.requirements,
-              guidelines: updatedLesson.guidelines,
-              grading_criteria: updatedLesson.grading_criteria,
-              points: updatedLesson.points,
-              allow_late: updatedLesson.allow_late,
-              resources: updatedLesson.resources,
-            })
-            .eq('id', updatedLesson.id);
-          console.log('Supabase UPDATE result:', { error, updatedLessonId: updatedLesson.id });
-          if (error) {
-            throw error;
+            }),
+          });
+
+          if (!patchRes.ok) {
+            const err = await patchRes.json();
+            throw new Error(err?.error || 'Failed to save lesson');
           }
-          // Fetch the latest lesson from backend
-          const { data: freshLesson, error: fetchError } = await supabase
+        } else {
+          // TEXT, VIDEO, ASSIGNMENT etc. → direct Supabase update with dynamic payload
+          const updateData: Record<string, any> = {
+            updated_at: new Date().toISOString(),
+            content: contentString,
+            type: updatedLesson.type,
+          };
+
+          // Conditionally add other columns if they exist on the lesson object
+          [
+            'title',
+            'description',
+            'is_published',
+            'order',
+            'duration',
+            'duedate',
+            'needsgrading',
+            'brief',
+            'requirements',
+            'guidelines',
+            'grading_criteria',
+            'points',
+            'allow_late',
+            'resources',
+          ].forEach((key) => {
+            const value = (updatedLesson as any)[key];
+            if (value !== undefined) updateData[key] = value;
+          });
+
+          const { error: updateError } = await supabase
             .from('module_lessons')
-            .select('*')
-            .eq('id', updatedLesson.id)
-            .single();
-          if (fetchError || !freshLesson) {
-            throw fetchError || new Error('Failed to fetch updated lesson');
-          }
-          savedLesson = { ...freshLesson, content: parseContent(freshLesson.content) };
-          lastContentRef.current = serializeContent(savedLesson.content);
+            .update(updateData)
+            .eq('id', updatedLesson.id);
+
+          if (updateError) throw updateError;
         }
+
+        lastContentRef.current = contentString;
         setSaveStatus('saved');
         setLastSaved(new Date());
-        // When calling onUpdate, cast content to string for Lesson type
-        onUpdate({ ...savedLesson, content: serializeContent(savedLesson.content) });
+        onUpdate({ ...updatedLesson, content: contentString });
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error: any) {
-        console.error('Auto-save error:', error, JSON.stringify(error, null, 2));
+        console.error('Auto-save error:', error);
         setSaveStatus('error');
         toast.error('Failed to save lesson: ' + (error?.message || error));
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     }, 1000);
-  }, [lesson.id, onUpdate, supabase, moduleId]);
+  }, [onUpdate, supabase, moduleId]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+        // Flush the debounced save with the latest state
+        debouncedSave(localLesson);
       }
     };
-  }, []);
+  }, [localLesson, debouncedSave]);
+
+  // Sync local saveStatus/lastSaved with parent if provided
+  useEffect(() => {
+    if (typeof externalSaveStatus === 'string') setSaveStatus(externalSaveStatus);
+  }, [externalSaveStatus]);
+  useEffect(() => {
+    if (externalLastSaved !== undefined) setLastSaved(externalLastSaved);
+  }, [externalLastSaved]);
+  // Notify parent on change
+  useEffect(() => {
+    if (onSaveStatusChange) onSaveStatusChange(saveStatus, lastSaved);
+  }, [saveStatus, lastSaved, onSaveStatusChange]);
 
   // Handle text selection for AI assistance
   useEffect(() => {
@@ -246,6 +283,8 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
   const handleLessonUpdate = (updates: Partial<Lesson>) => {
     const updatedLesson = { ...localLesson, ...updates };
+    // Keep local state in sync so the UI immediately reflects changes
+    setLocalLesson(updatedLesson as LocalLesson);
     debouncedSave(updatedLesson);
   };
 
@@ -328,36 +367,6 @@ const LessonEditor: FC<LessonEditorProps> = ({
     }
   };
 
-  const renderSaveStatus = () => {
-    switch (saveStatus) {
-      case 'saving':
-        return (
-          <div className="flex items-center gap-2 text-blue-600" aria-live="polite">
-            <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-xs">Saving...</span>
-          </div>
-        );
-      case 'saved':
-        return (
-          <div className="flex items-center gap-2 text-green-600" aria-live="polite">
-            <CheckCircle className="w-3 h-3" />
-            <span className="text-xs">
-              Saved {lastSaved ? `at ${lastSaved.toLocaleTimeString()}` : ''}
-            </span>
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex items-center gap-2 text-red-600" aria-live="polite">
-            <AlertCircle className="w-3 h-3" />
-            <span className="text-xs">Save failed</span>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   const [videoUrlInput, setVideoUrlInput] = useState(
     typeof localLesson.content === 'object' && localLesson.content && 'src' in localLesson.content
       ? String(localLesson.content.src)
@@ -397,7 +406,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 placeholder="Enter lesson title"
                 className="mt-1 text-lg font-semibold border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
               />
-            </div>
+          </div>
             <div>
               <Label htmlFor="lesson-description" className="text-[#2C3E50]">Lesson Description <span className="text-xs text-gray-400">(optional)</span></Label>
               <Input
@@ -480,15 +489,13 @@ const LessonEditor: FC<LessonEditorProps> = ({
               currentContent={localLesson.content}
             />
             
-            {renderSaveStatus()}
-            
             <Button
               variant="ghost"
               size="icon"
-              onClick={onDelete}
+            onClick={onDelete}
               className="text-red-500 hover:text-red-600 hover:bg-red-50"
               title="Delete lesson"
-            >
+          >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -652,8 +659,10 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   showCorrectAnswers: true,
                   showExplanations: true,
                 }}
-                onChange={updatedQuiz => setEditingQuiz(updatedQuiz)}
-                onBlur={() => handleLessonUpdate({ content: editingQuiz, type: 'quiz' })}
+                onChange={updatedQuiz => {
+                  setEditingQuiz(updatedQuiz);
+                  handleLessonUpdate({ content: updatedQuiz, type: 'quiz' });
+                }}
               />
             </div>
           </div>

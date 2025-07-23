@@ -11,6 +11,12 @@ import { Play, Download, Bookmark, Share2, CheckCircle } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 import { Button } from '@/components/ui/button';
 import { useRouter } from "next/navigation";
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Upload } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
 
 interface LessonContentProps {
   lesson: Lesson;
@@ -31,6 +37,15 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
   const videoRef = useRef<HTMLVideoElement>(null);
   const [completing, setCompleting] = useState(false);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
+  const [quizAttempts, setQuizAttempts] = useState<number | null>(null);
+  const [quizAttemptsAllowed, setQuizAttemptsAllowed] = useState<number | null>(null);
+  const [quizCheckLoading, setQuizCheckLoading] = useState(false);
+  const [quizCheckError, setQuizCheckError] = useState<string | null>(null);
+  const [isCompleted, setIsCompleted] = useState(completed);
+
+  useEffect(() => {
+    setIsCompleted(completed);
+  }, [completed]);
 
   useEffect(() => {
     if (videoStarted && videoRef.current) {
@@ -60,6 +75,40 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
     }
   }, [showNotesPanel, lesson.id]);
 
+  useEffect(() => {
+    if (lesson.type !== 'quiz' || !lesson.id) return;
+    let isMounted = true;
+    setQuizCheckLoading(true);
+    setQuizCheckError(null);
+    (async () => {
+      try {
+        // Fetch quiz config
+        const { data: quiz, error: quizError } = await supabase
+          .from('quizzes')
+          .select('id, attemptsallowed')
+          .eq('lesson_id', lesson.id)
+          .single();
+        if (quizError || !quiz) throw new Error('Quiz not found');
+        if (!isMounted) return;
+        setQuizAttemptsAllowed(quiz.attemptsallowed ?? null);
+        // Fetch user attempts
+        const { data: attempts, error: attemptsError } = await supabase
+          .from('quiz_attempts')
+          .select('id')
+          .eq('quiz_id', quiz.id);
+        if (attemptsError) throw new Error('Failed to fetch attempts');
+        if (!isMounted) return;
+        setQuizAttempts(attempts.length);
+      } catch (err: any) {
+        if (!isMounted) return;
+        setQuizCheckError(err.message || 'Failed to check quiz attempts');
+      } finally {
+        if (isMounted) setQuizCheckLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [lesson.type, lesson.id]);
+
   const handleCompleteContinue = async () => {
     setCompleting(true);
     try {
@@ -67,14 +116,13 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
       const res = await fetch(`/api/lessons/${lesson.id}/complete`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to complete lesson");
       toast.success("Lesson marked as complete!");
-
+      setIsCompleted(true);
       // Show completion animation
       setShowCompletionAnim(true);
       setTimeout(() => {
         setShowCompletionAnim(false);
       }, 1500);
-
-      if (onLessonCompleted) onLessonCompleted(); // <-- call this
+      if (onLessonCompleted) onLessonCompleted();
     } catch (err) {
       toast.error("Could not complete lesson.");
     } finally {
@@ -116,6 +164,48 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
     }
   };
 
+  // --- Action Buttons (shared for all lesson types) ---
+  const ActionButtons = (
+    <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
+      <button
+        className={`px-6 py-3 rounded-lg font-bold shadow-md flex items-center gap-2 transition-transform duration-200
+          ${isCompleted ? 'bg-[#E5E8E8] text-[#6E6C75] cursor-not-allowed' : 'bg-[#FF6B35] text-white hover:scale-105'}`}
+        onClick={handleCompleteContinue}
+        disabled={completing || isCompleted}
+      >
+        {isCompleted ? (
+          <>
+            <CheckCircle className="h-5 w-5 mr-2" />
+            Lesson Completed
+          </>
+        ) : completing ? (
+          <>
+            <span>Completing...</span>
+          </>
+        ) : (
+          <>
+            <CheckCircle className="h-5 w-5 mr-2" />
+            Complete Lesson
+          </>
+        )}
+      </button>
+      <button
+        className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
+        onClick={handleTakeNotes}
+      >
+        Take Notes
+      </button>
+      <button
+        className="px-6 py-3 rounded-lg border-2 border-[#FF6B35] text-[#FF6B35] font-bold bg-white hover:bg-[#FF6B35]/10 transition flex items-center gap-2"
+        onClick={handleResources}
+        disabled={!lesson.resources || lesson.resources.length === 0}
+      >
+        <Download className="h-5 w-5" />
+        Resources
+      </button>
+    </div>
+  );
+
   const renderContent = () => {
     switch (lesson.type) {
       case 'video': {
@@ -131,21 +221,42 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
             videoUrl = lesson.content;
           }
         }
-        console.log('LessonContent videoUrl:', videoUrl, 'lesson.content:', lesson.content);
         return (
-          <div className="video-container aspect-video bg-black rounded-lg overflow-hidden relative flex items-center justify-center">
-            {videoUrl ? (
-              <VideoPlayer src={videoUrl} poster={`/api/thumbnails/${lesson.id}`} />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-white">
-                Video content not available
-                <BackToCourseButton courseId={lesson['course_id']} />
-              </div>
-            )}
-          </div>
+          <>
+            {/* Add lesson title and duration for video lessons */}
+            <div className="flex flex-col items-center mb-6">
+              <h1 className="text-4xl font-extrabold mb-2 text-center"
+                style={{
+                  background: "linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                {lesson.title}
+              </h1>
+              {typeof lesson.duration === 'number' && (
+                <div className="flex flex-row items-center gap-4 mt-2">
+                  <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#FF6B35] font-semibold text-base">
+                    ⏱ {Math.floor(lesson.duration / 60)}m {lesson.duration % 60}s
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="video-container aspect-video bg-black rounded-lg overflow-hidden relative flex items-center justify-center">
+              {videoUrl ? (
+                <VideoPlayer src={videoUrl} poster={`/api/thumbnails/${lesson.id}`} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-white">
+                  Video content not available
+                  <BackToCourseButton courseId={lesson['course_id']} />
+                </div>
+              )}
+            </div>
+            {ActionButtons}
+          </>
         );
       }
-
       case 'text': {
         if (!lesson.content) {
           return (
@@ -164,52 +275,8 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
             if (parsed && parsed.type === 'doc') tiptapContent = parsed;
           } catch {}
         }
-
-        // --- Action Buttons ---
-        const ActionButtons = (
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
-            <button
-              className="px-6 py-3 rounded-lg bg-[#FF6B35] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
-              onClick={handleCompleteContinue}
-              disabled={completing}
-            >
-              {completing ? (
-                <>
-                  <span>Completing...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Complete Lesson
-                </>
-              )}
-            </button>
-            <button
-              className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
-              onClick={handleTakeNotes}
-            >
-              Take Notes
-            </button>
-            <button
-              className="px-6 py-3 rounded-lg border-2 border-[#FF6B35] text-[#FF6B35] font-bold bg-white hover:bg-[#FF6B35]/10 transition flex items-center gap-2"
-              onClick={handleResources}
-              disabled={!lesson.resources || lesson.resources.length === 0}
-            >
-              <Download className="h-5 w-5" /> {/* Download icon on the left */}
-              Resources
-            </button>
-          </div>
-        );
-
-        const cardClass =
-          "bg-gradient-to-br from-[#FF6B35]/5 to-[#4ECDC4]/5 " +
-          "rounded-xl border border-[#E5E8E8] p-8 shadow-sm " +
-          "hover:shadow-lg hover:scale-[1.01] transition-all duration-200 " +
-          "font-sans";
-
-        // Only render the content and action buttons at the bottom
         return (
-          <div className={cardClass}>
+          <div className="text-container">
             {tiptapContent ? (
               <LessonContentDisplay content={tiptapContent} type="text" />
             ) : (
@@ -221,7 +288,6 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
           </div>
         );
       }
-
       case 'quiz': {
         let quizContent = null;
         if (typeof lesson.content === 'object' && lesson.content !== null) {
@@ -231,35 +297,86 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
             quizContent = JSON.parse(lesson.content);
           } catch { quizContent = null; }
         }
+        if (quizCheckLoading) {
+          return <div className="flex flex-col items-center text-gray-500">Checking quiz attempts...</div>;
+        }
+        if (quizCheckError) {
+          return <div className="flex flex-col items-center text-red-500">{quizCheckError}</div>;
+        }
+        if (
+          quizAttemptsAllowed !== null &&
+          quizAttempts !== null &&
+          quizAttempts >= quizAttemptsAllowed
+        ) {
+          // Instead of just showing a message, show the results page
+          // Try to get saved results from localStorage
+          const savedResults = localStorage.getItem(`quiz-results-${lesson.id}`);
+          if (savedResults) {
+            return (
+              <>
+                <QuizPlayer
+                  quiz={quizContent}
+                  onComplete={() => {}}
+                />
+                {ActionButtons}
+              </>
+            );
+          } else {
+            // Generate a default results object with all answers incorrect
+            const defaultResults = {
+              score: 0,
+              correctAnswers: 0,
+              totalQuestions: quizContent?.questions?.length || 0,
+              timeSpent: 0,
+              answers: (quizContent?.questions || []).map((q: any) => ({
+                questionId: q.id,
+                userAnswer: '',
+                isCorrect: false,
+              })),
+            };
+            return (
+              <>
+                <QuizPlayer
+                  quiz={quizContent}
+                  onComplete={() => {}}
+                  // @ts-ignore
+                  forceShowResults={true}
+                  // @ts-ignore
+                  forcedResults={defaultResults}
+                />
+                {ActionButtons}
+              </>
+            );
+          }
+        }
         return (
+          <>
           <div className="quiz-container">
             {quizContent ? (
               <QuizPlayer
                 quiz={quizContent}
-                onComplete={async (results: QuizResults) => {
-                  try {
-                    const response = await fetch(`/api/student/quizzes/${lesson.id}/submit`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(results),
-                    });
-
-                    if (!response.ok) {
-                      throw new Error('Failed to submit quiz');
-                    }
-
+                onComplete={(results: QuizResults) => {
+                  // Show results immediately (QuizPlayer does this)
+                  // Submit to API in the background
+                  fetch(`/api/student/quizzes/${lesson.id}/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(results),
+                  }).then(async (response) => {
                     const data = await response.json();
+                    if (!response.ok) {
+                      toast.error(data.error || 'Failed to submit quiz');
+                      return;
+                    }
                     if (data.passed) {
                       toast.success('Congratulations! You passed the quiz!');
                     } else {
                       toast.error('You did not pass the quiz. Please try again.');
                     }
-                  } catch (error) {
+                  }).catch((error) => {
                     console.error('Error submitting quiz:', error);
                     toast.error('Failed to submit quiz');
-                  }
+                  });
                 }}
               />
             ) : (
@@ -269,11 +386,11 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
               </div>
             )}
           </div>
+          {/* Do NOT render ActionButtons here for quiz question page */}
+          </>
         );
       }
-
       case 'assignment': {
-        // Example: parse assignment content if it's JSON, otherwise fallback to HTML
         let assignment = null;
         if (typeof lesson.content === 'object' && lesson.content !== null) {
           assignment = lesson.content;
@@ -284,127 +401,216 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
             assignment = null;
           }
         }
-
+        const isTiptapDoc = assignment && assignment.type === 'doc' && Array.isArray(assignment.content);
         return (
-          <div className="assignment-container">
-            {/* Assignment Title & Badges */}
-            <div className="flex flex-col items-center mb-6">
-              <h1 className="text-3xl font-extrabold mb-2 text-center"
-                style={{
-                  background: "linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                {lesson.title}
-              </h1>
-              <div className="flex flex-row items-center gap-4">
-                <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#FF6B35] font-semibold text-base">
-                  📄 Assignment
-                </span>
-                {assignment?.dueDate && (
-                  <span className="flex items-center px-4 py-1 rounded-full bg-[#F7F9F9] text-[#6E6C75] font-semibold text-base">
-                    ⏰ Due: {assignment.dueDate}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Assignment Sections */}
-            <div className="space-y-8">
-              {/* Project Brief */}
-              {assignment?.brief && (
-                <div>
-                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Project Brief</h2>
-                  <p className="text-[#2C3E50]">{assignment.brief}</p>
-                </div>
+          <>
+          <div className="assignment-container space-y-8">
+            {/* Project Brief */}
+            {assignment?.brief && (
+              <Card className="p-6">
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: '#FF6B35' }}>Project Brief</h2>
+                  <p className="text-[#2C3E50] text-lg">{assignment.brief}</p>
+                </Card>
               )}
 
-              {/* Requirements */}
-              {assignment?.requirements && (
-                <div>
-                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Requirements</h2>
-                  <ul className="list-disc list-inside text-[#2C3E50]">
-                    {assignment.requirements.map((req, idx) => (
-                      <li key={idx}>{req}</li>
+              {/* Render Tiptap content if present */}
+              {isTiptapDoc && (
+                <Card className="p-6">
+                  <LessonContentDisplay content={assignment} type="text" />
+              </Card>
+            )}
+
+            {/* Requirements */}
+              {assignment?.requirements && Array.isArray(assignment.requirements) && assignment.requirements.length > 0 && (
+              <Card className="p-6">
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: '#FF6B35' }}>Requirements</h2>
+                  <ul className="list-disc list-inside text-[#2C3E50] text-lg space-y-1">
+                    {assignment.requirements.map((req: string, idx: number) => (
+                    <li key={idx}>{req}</li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            {/* Submission Guidelines */}
+              {assignment?.guidelines && Array.isArray(assignment.guidelines) && assignment.guidelines.length > 0 && (
+              <Card className="p-6">
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: '#FF6B35' }}>Submission Guidelines</h2>
+                  <ul className="list-disc list-inside text-[#2C3E50] text-lg space-y-1">
+                    {assignment.guidelines.map((g: string, idx: number) => (
+                    <li key={idx}>{g}</li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            {/* Grading Rubric */}
+              {assignment?.rubric && Array.isArray(assignment.rubric) && assignment.rubric.length > 0 && (
+              <Card className="p-6">
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: '#FF6B35' }}>Grading Criteria</h2>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-[#2C3E50] text-lg">
+                    <thead>
+                      <tr>
+                        <th className="text-left font-semibold p-2">Criterion</th>
+                        <th className="text-left font-semibold p-2">Weight (%)</th>
+                        <th className="text-left font-semibold p-2">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                        {assignment.rubric.map((row: any, idx: number) => (
+                        <tr key={idx} className="border-t">
+                          <td className="p-2">{row.criterion}</td>
+                          <td className="p-2">{row.weight}</td>
+                          <td className="p-2">{row.description}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+
+              {/* Resources Section */}
+              {assignment?.resources && Array.isArray(assignment.resources) && assignment.resources.length > 0 && (
+                <Card className="p-6">
+                  <h2 className="text-2xl font-bold mb-4" style={{ color: '#FF6B35' }}>Resources</h2>
+                  <ul className="space-y-2">
+                    {assignment.resources.map((res: any, idx: number) => (
+                      <li key={idx} className="flex items-center gap-2">
+                        <Download className="h-5 w-5 text-[#4ECDC4]" />
+                        <a
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#2C3E50] hover:underline"
+                        >
+                          {res.name} <span className="text-xs text-[#6E6C75]">({res.type}, {res.size})</span>
+                        </a>
+                      </li>
                     ))}
                   </ul>
-                </div>
+                </Card>
               )}
 
-              {/* Guidelines */}
-              {assignment?.guidelines && (
-                <div>
-                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Submission Guidelines</h2>
-                  <ul className="list-disc list-inside text-[#2C3E50]">
-                    {assignment.guidelines.map((g, idx) => (
-                      <li key={idx}>{g}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Grading Criteria */}
-              {assignment?.grading && (
-                <div>
-                  <h2 className="text-2xl font-bold text-[#FF6B35] mb-2">Grading Criteria</h2>
-                  <ul className="list-disc list-inside text-[#2C3E50]">
-                    {assignment.grading.map((c, idx) => (
-                      <li key={idx}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
+              {/* Peer Review Section */}
+              {assignment?.peerReviews && (
+            <Card className="p-6">
+                  <h2 className="text-2xl font-bold mb-4" style={{ color: '#FF6B35' }}>Peer Reviews</h2>
+                  <div className="space-y-4">
+                    <p className="text-lg text-[#2C3E50]">
+                      You need to complete <b>{assignment.peerReviews.required}</b> peer reviews
+                      by <b>{assignment.peerReviews.deadline ? new Date(assignment.peerReviews.deadline).toLocaleDateString() : ''}</b>.
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span>Reviews Completed</span>
+                      <span>
+                        {assignment.peerReviews.completed}/{assignment.peerReviews.required}
+                      </span>
+                    </div>
+                    <Button className="w-full bg-[#4ECDC4] text-white hover:bg-[#4ECDC4]/90">
+                      Start Peer Review
+                    </Button>
+                  </div>
+                </Card>
               )}
 
               {/* Submission Area */}
-              <div className="border-2 border-dashed border-[#4ECDC4] rounded-lg p-8 text-center mb-6 bg-[#F7F9F9]">
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl mb-2">🚀</span>
-                  <p className="text-[#2C3E50] font-semibold mb-2">
-                    Ready to launch your campaign? Upload your presentation, assets, and video pitch
-                  </p>
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-4">
-                    <button
-                      className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
-                    >
-                      Submit Campaign
-                    </button>
-                    <button
-                      className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
-                    >
-                      Save Draft
-                    </button>
+              <Card className="p-6 border-2 border-dashed border-[#4ECDC4] bg-[#F7F9F9]">
+                <h2 className="text-2xl font-bold mb-4 text-[#2C3E50]">Submit Your Work</h2>
+                <div className="flex flex-col items-center justify-center mb-6">
+                  <span className="text-5xl mb-2">🚀</span>
+                  <p className="text-lg text-[#2C3E50] text-center">Ready to launch your campaign?<br />Upload your presentation, assets, and video pitch</p>
+                </div>
+              {/* File Upload */}
+                {assignment?.submission_types?.includes('file') && (
+                <div className="mb-6">
+                  <Label className="text-[#2C3E50] font-semibold">File Upload</Label>
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center mb-4 border-[#FF6B35]">
+                    <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-2">
+                        Drag and drop your files here, or{' '}
+                        <button className="text-primary hover:underline">browse</button>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Supported formats: PDF, DOCX, PPT, JPG, PNG (max 10MB)
+                    </p>
+                      <input type="file" className="hidden" multiple />
+                  </div>
+                </div>
+              )}
+              {/* Text Entry */}
+                {assignment?.submission_types?.includes('text') && (
+                <div className="mb-6">
+                  <Label className="text-[#2C3E50] font-semibold">Text Entry</Label>
+                  <textarea
+                    className="textarea textarea-bordered w-full"
+                    placeholder="Type or paste your answer here..."
+                    rows={6}
+                  />
+                </div>
+              )}
+              {/* Link Submission */}
+                {assignment?.submission_types?.includes('link') && (
+                <div className="mb-6">
+                  <Label className="text-[#2C3E50] font-semibold">Link Submission</Label>
+                  <Input
+                    type="url"
+                    className="input input-bordered w-full"
+                    placeholder="Paste your submission link (e.g., Google Docs, YouTube, etc.)"
+                  />
+                </div>
+              )}
+              {/* Submission Checklist */}
+              <div className="space-y-4 mb-6">
+                  <h3 className="font-semibold text-[#FF6B35]">Before Submitting</h3>
+                <div className="space-y-2">
+                  <div className="flex items-start space-x-2">
+                      <Checkbox />
+                    <Label className="leading-none">
+                      I have reviewed all requirements and included all necessary files
+                    </Label>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                      <Checkbox />
+                    <Label className="leading-none">
+                      I confirm this is my own work and I have cited all sources
+                    </Label>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                      <Checkbox />
+                    <Label className="leading-none">
+                      I understand this is my final submission
+                    </Label>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
-              <button
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
-              >
-                Complete Lesson
-              </button>
-              <button
-                className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
-              >
-                Take Notes
-              </button>
-            </div>
-          </div>
+              {/* Submit and Save Draft Buttons */}
+                <div className="flex gap-4 justify-center">
+                  <Button className="flex-1 bg-[#FF6B35] text-white hover:bg-[#FF6B35]/90">
+                  Submit Assignment
+                </Button>
+                <Button variant="outline" className="flex-1">
+                  Save as Draft
+                </Button>
+              </div>
+            </Card>
+                  </div>
+            {ActionButtons}
+          </>
         );
       }
-
       default:
         return (
+          <>
           <div className="flex flex-col items-center text-gray-500">
             Unsupported content type
             <div className="mt-2 text-xs text-red-500">Type: {lesson.type ? lesson.type : 'undefined'}</div>
             <div className="mt-1 text-xs text-red-500 max-w-xl break-all">Content: {JSON.stringify(lesson.content)}</div>
             <BackToCourseButton courseId={lesson['course_id']} />
           </div>
+            {ActionButtons}
+          </>
         );
     }
   };
@@ -412,23 +618,6 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
   return (
     <div className="lesson-content">
       {renderContent()}
-      {/* Show buttons only if lesson is completed */}
-      {completed && (
-        <div className="flex flex-col items-center mt-8 space-y-4">
-          <button
-            className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200"
-            onClick={handleCompleteContinue}
-          >
-            Complete & Continue
-          </button>
-          <button
-            className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
-            onClick={handleTakeNotes}
-          >
-            Take Notes
-          </button>
-        </div>
-      )}
       {/* Completion animation/effect */}
       {showCompletionAnim && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">

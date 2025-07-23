@@ -839,18 +839,40 @@ export default function CourseContentPage() {
 
         // insert lessons for this module
         for (const [lessonIndex, lessonData] of moduleData.lessons.entries()) {
-          const { error: lessonInsertError } = await supabase
-            .from('module_lessons')
-            .insert({
-              module_id: newModule.id,
-              title: lessonData.title,
-              content: lessonData.content,
-              type: lessonData.type,
-              is_published: lessonData.is_published,
-              order: lessonIndex,
+          // If the lesson is new (no id or id starts with 'temp-'), use the backend API
+          if (!lessonData.id || lessonData.id.startsWith('temp-')) {
+            const response = await fetch('/api/instructor/lessons', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                module_id: newModule.id,
+                title: lessonData.title,
+                content: lessonData.content,
+                type: lessonData.type,
+                is_published: lessonData.is_published,
+                order: lessonIndex,
+              }),
             });
-          if (lessonInsertError) {
-            throw new Error(lessonInsertError.message);
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to insert lesson');
+            }
+            // Optionally update local state with result.lesson if needed
+          } else {
+            // Existing lesson, update or re-insert as needed
+            const { error: lessonInsertError } = await supabase
+              .from('module_lessons')
+              .insert({
+                module_id: newModule.id,
+                title: lessonData.title,
+                content: lessonData.content,
+                type: lessonData.type,
+                is_published: lessonData.is_published,
+                order: lessonIndex,
+              });
+            if (lessonInsertError) {
+              throw new Error(lessonInsertError.message);
+            }
           }
         }
       }

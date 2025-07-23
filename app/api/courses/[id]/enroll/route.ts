@@ -184,6 +184,11 @@ async function initializeStripePayment({
   user_id: string;
 }) {
   try {
+    // Debug log for Stripe redirect URLs
+    const successUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/payment/callback?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/courses/${course_id}`;
+    console.log('Stripe Checkout URLs:', { successUrl, cancelUrl });
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -202,8 +207,8 @@ async function initializeStripePayment({
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/payment/callback?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/courses/${course_id}`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       customer_email: email,
       metadata: {
         course_id,

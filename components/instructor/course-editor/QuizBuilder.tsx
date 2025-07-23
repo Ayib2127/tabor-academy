@@ -27,9 +27,21 @@ import {
   HelpCircle,
   Sparkles,
   Wand2,
+  Copy,
+  AlertCircle,
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Modal } from '@/components/ui/modal';
+import QuizPlayer from '@/components/course-player/QuizPlayer';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface QuizBuilderProps {
   quiz: Quiz;
@@ -42,11 +54,44 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [editingQuestions, setEditingQuestions] = useState<{ [id: string]: string }>({});
   const [editingAnswers, setEditingAnswers] = useState<{ [optionId: string]: string }>({});
+  const [showPreview, setShowPreview] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Sync local state when quiz changes (e.g., when switching questions)
   useEffect(() => {
     setEditingQuestions({});
     setEditingAnswers({});
+  }, [quiz]);
+
+  // Validation logic
+  function validateQuiz(quiz: Quiz): string[] {
+    const errors: string[] = [];
+    if (!quiz.questions || quiz.questions.length === 0) {
+      errors.push('Quiz must have at least one question.');
+    }
+    quiz.questions?.forEach((q, idx) => {
+      if (!q.question) errors.push(`Question ${idx + 1} is missing text.`);
+      if (!q.type) errors.push(`Question ${idx + 1} is missing a type.`);
+      if (!q.points) errors.push(`Question ${idx + 1} must have points assigned.`);
+      if (q.type === 'multiple_choice' && (!q.options || q.options.length < 2)) {
+        errors.push(`Question ${idx + 1} must have at least 2 options.`);
+      }
+      if (q.type === 'multiple_choice' && !(q.options || []).some(opt => opt.isCorrect)) {
+        errors.push(`Question ${idx + 1} must have a correct option marked.`);
+      }
+      if (q.type === 'true_false' && !['true', 'false'].includes(q.correctAnswer)) {
+        errors.push(`Question ${idx + 1} must have a correct answer (true/false).`);
+      }
+      if (q.type === 'short_answer' && !q.correctAnswer) {
+        errors.push(`Question ${idx + 1} must have a correct answer.`);
+      }
+    });
+    return errors;
+  }
+
+  // Run validation on quiz change
+  useEffect(() => {
+    setValidationErrors(validateQuiz(quiz));
   }, [quiz]);
 
   const handleQuestionAdd = (type: QuestionType) => {
@@ -83,6 +128,21 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
     });
   };
 
+  const handleQuestionDuplicate = (questionId: string) => {
+    const questionToDuplicate = quiz.questions?.find(q => q.id === questionId);
+    if (!questionToDuplicate) return;
+
+    const newQuestion: QuizQuestion = {
+      ...questionToDuplicate,
+      id: `dup-${Date.now()}-${Math.random()}`,
+    };
+
+    onChange({
+      ...quiz,
+      questions: [...(quiz.questions ?? []), newQuestion],
+    });
+  };
+
   const handleOptionAdd = (questionId: string) => {
     onChange({
       ...quiz,
@@ -113,6 +173,19 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
           options: q.options.map(opt =>
             opt.id === optionId ? { ...opt, ...updates } : opt
           ),
+        };
+      }),
+    });
+  };
+
+  const handleOptionDelete = (questionId: string, optionId: string) => {
+    onChange({
+      ...quiz,
+      questions: (quiz.questions ?? []).map(q => {
+        if (q.id !== questionId || !q.options) return q;
+        return {
+          ...q,
+          options: q.options.filter(opt => opt.id !== optionId),
         };
       }),
     });
@@ -171,24 +244,6 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
     }
   };
 
-  function validateQuiz(quiz: Quiz) {
-    if (!quiz.title || !(quiz.questions ?? []).length) return false;
-    for (const q of quiz.questions ?? []) {
-      if (!q.question || !q.options || q.options.length === 0) return false;
-      if (!q.options.some(a => a.isCorrect)) return false;
-      if (q.options.some(a => !a.text)) return false;
-    }
-    return true;
-  }
-
-  const handleQuizChange = (updatedQuiz: Quiz, validate: boolean = false) => {
-    if (validate && !validateQuiz(updatedQuiz)) {
-      toast.error('Quiz is invalid. Please check all questions and answers.');
-      return;
-    }
-    onChange(updatedQuiz);
-  };
-
   function cleanQuiz(quiz: Quiz): Quiz {
     return {
       ...quiz,
@@ -200,6 +255,14 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
         })),
     };
   }
+
+  const handleQuizChange = (updatedQuiz: Quiz, validate: boolean = false) => {
+    if (validate && validationErrors.length > 0) {
+      toast.error('Please fix validation errors before saving or publishing.');
+      return;
+    }
+    onChange(updatedQuiz);
+  };
 
   return (
     <div className="space-y-6">
@@ -231,14 +294,20 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
       </div>
 
       {showSettings && (
-        <Card className="border-[#E5E8E8] shadow-sm">
-          <CardHeader className="pb-3 bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5">
-            <CardTitle className="text-[#2C3E50]">Quiz Settings</CardTitle>
+        <Card className="border-2 border-transparent bg-gradient-to-r from-[#FF6B35]/10 to-[#4ECDC4]/10 shadow-sm">
+          <CardHeader className="pb-3 bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5 rounded-t-lg">
+            <CardTitle className="text-[#2C3E50] font-bold flex items-center gap-2">
+              Quiz Settings
+              <span className="text-xs font-normal text-[#6E6C75]">(Configure how this quiz behaves for students)</span>
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[#2C3E50]">Time Limit (minutes)</Label>
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Time Limit (minutes)
+                  <span title="Set a time limit for the quiz. Leave blank for no limit." className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
                 <Input
                   type="number"
                   value={quiz.timeLimit ?? ''}
@@ -249,10 +318,15 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                   onBlur={() => handleQuizChange(quiz, true)}
                   placeholder="No time limit"
                   className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
+                  min="0"
                 />
+                <span className="text-xs text-[#6E6C75]">Leave blank for untimed quiz.</span>
               </div>
               <div className="space-y-2">
-                <Label className="text-[#2C3E50]">Passing Score (%)</Label>
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Passing Score (%)
+                  <span title="Minimum score required to pass the quiz." className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
                 <Input
                   type="number"
                   value={quiz.passingScore ?? ''}
@@ -265,11 +339,16 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                   max="100"
                   className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                 />
+                <span className="text-xs text-[#6E6C75]">Students must score at least this percent to pass.</span>
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-[#2C3E50]">Attempts Allowed</Label>
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Attempts Allowed
+                  <span title="How many times can a student attempt this quiz?" className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
               <Input
                 type="number"
                 value={quiz.attemptsAllowed ?? ''}
@@ -281,11 +360,28 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                 min="1"
                 className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
               />
+                <span className="text-xs text-[#6E6C75]">Default is based on question type, but you can override.</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Availability (optional)
+                  <span title="Set when the quiz is available to students." className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input type="datetime-local" className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]" />
+                  <span className="text-[#6E6C75]">to</span>
+                  <Input type="datetime-local" className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]" />
+                </div>
+                <span className="text-xs text-[#6E6C75]">Leave blank for always available.</span>
+              </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-[#2C3E50]">Shuffle Questions</Label>
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Shuffle Questions
+                  <span title="Randomize the order of questions for each student." className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
                 <Switch
                   checked={quiz.shuffleQuestions}
                   onCheckedChange={(checked) => handleQuizChange({
@@ -296,7 +392,10 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Label className="text-[#2C3E50]">Show Correct Answers</Label>
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Show Correct Answers
+                  <span title="Show students the correct answers after they submit." className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
                 <Switch
                   checked={quiz.showCorrectAnswers}
                   onCheckedChange={(checked) => handleQuizChange({
@@ -307,7 +406,10 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Label className="text-[#2C3E50]">Show Explanations</Label>
+                <Label className="text-[#2C3E50] flex items-center gap-1">
+                  Show Explanations
+                  <span title="Show explanations for answers after submission." className="text-[#4ECDC4] cursor-help">?</span>
+                </Label>
                 <Switch
                   checked={quiz.showExplanations}
                   onCheckedChange={(checked) => handleQuizChange({
@@ -321,6 +423,28 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
           </CardContent>
         </Card>
       )}
+
+      <div className="flex items-center gap-4 mb-4">
+        <Button
+          variant="outline"
+          className="border-[#4ECDC4] text-[#4ECDC4] hover:bg-[#4ECDC4]/10"
+          onClick={() => setShowPreview(true)}
+        >
+          Preview Quiz
+        </Button>
+        {validationErrors.length > 0 && (
+          <Alert variant="destructive" className="bg-[#FF6B35]/10 border-[#FF6B35] text-[#FF6B35]">
+            <AlertCircle className="w-4 h-4 mr-2" />
+            <AlertDescription>
+              <ul>
+                {validationErrors.map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -387,21 +511,54 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                       <Card
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className="border-[#E5E8E8]"
+                        className="border-[#E5E8E8] transition-all duration-200 ease-in-out animate-fadeIn"
+                        tabIndex={0}
+                        aria-label={`Question ${index + 1}`}
                       >
                         <CardContent className="pt-6 space-y-4">
                           <div className="flex items-start justify-between">
                             <div
                               {...provided.dragHandleProps}
                               className="cursor-grab p-2 -m-2"
+                              aria-label="Drag to reorder"
                             >
-                              <GripVertical className="h-4 w-4 text-[#2C3E50]/40" />
+                              <GripVertical className="h-4 w-4 text-[#2C3E50]/40" aria-hidden="true" />
                             </div>
                             <div className="flex-1 space-y-4">
                               <div className="space-y-2">
+                                <Label className="text-[#2C3E50] font-semibold" htmlFor={`question-${question.id}`}>
+                                  Question {index + 1}
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-[#FF6B35] hover:bg-[#FF6B35]/10 focus:ring-2 focus:ring-[#4ECDC4]"
+                                    onClick={() => handleQuestionDelete(question.id)}
+                                    title="Delete this question"
+                                    aria-label="Delete this question"
+                                  >
+                                    <Trash2 className="w-4 h-4" aria-hidden="true" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-[#4ECDC4] hover:bg-[#4ECDC4]/10 focus:ring-2 focus:ring-[#4ECDC4]"
+                                    onClick={() => handleQuestionDuplicate(question.id)}
+                                    title="Duplicate this question"
+                                    aria-label="Duplicate this question"
+                                  >
+                                    <Copy className="w-4 h-4" aria-hidden="true" />
+                                  </Button>
+                                </div>
                                 <Input
+                                  id={`question-${question.id}`}
                                   value={editingQuestions[question.id] ?? question.question ?? ''}
-                                  onChange={e => setEditingQuestions(prev => ({ ...prev, [question.id]: e.target.value }))}
+                                  onChange={e => {
+                                    const value = e.target.value;
+                                    setEditingQuestions(prev => ({ ...prev, [question.id]: value }));
+                                    handleQuestionUpdate(question.id, { question: value });
+                                  }}
                                   onBlur={() => {
                                     handleQuestionUpdate(question.id, { question: editingQuestions[question.id] ?? question.question });
                                     setEditingQuestions(prev => {
@@ -410,21 +567,13 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                                     });
                                     if (onBlur) onBlur();
                                   }}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') {
-                                      handleQuestionUpdate(question.id, { question: editingQuestions[question.id] ?? question.question });
-                                      setEditingQuestions(prev => {
-                                        const { [question.id]: _, ...rest } = prev;
-                                        return rest;
-                                      });
-                                      if (onBlur) onBlur();
-                                      e.preventDefault();
-                                    }
-                                  }}
-                                  placeholder="Question"
-                                  className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
+                                  placeholder="Enter your question here"
+                                  className="border-[#4ECDC4]/30 focus:border-[#4ECDC4] focus:ring-2 focus:ring-[#4ECDC4]"
+                                  aria-required="true"
                                 />
-                                <div className="flex items-center space-x-2">
+                                <span className="text-xs text-[#6E6C75]">Be clear and concise. You can use images or math if needed.</span>
+                              </div>
+                              <div className="flex items-center gap-2">
                                   <Select
                                     value={question.type}
                                     onValueChange={(value: QuestionType) =>
@@ -435,18 +584,10 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="multiple_choice">
-                                        Multiple Choice
-                                      </SelectItem>
-                                      <SelectItem value="true_false">
-                                        True/False
-                                      </SelectItem>
-                                      <SelectItem value="short_answer">
-                                        Short Answer
-                                      </SelectItem>
-                                      <SelectItem value="matching">
-                                        Matching
-                                      </SelectItem>
+                                    <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                                    <SelectItem value="true_false">True/False</SelectItem>
+                                    <SelectItem value="short_answer">Short Answer</SelectItem>
+                                    <SelectItem value="matching">Matching</SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <Input
@@ -459,20 +600,22 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                                     onBlur={onBlur}
                                     min="1"
                                     className="w-20 border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
+                                  placeholder="Points"
                                   />
-                                </div>
+                                <span className="text-xs text-[#6E6C75]">Points</span>
                               </div>
-
+                              {/* Multiple Choice/True-False/Short Answer UI */}
                               {question.type === 'multiple_choice' && (
                                 <div className="space-y-2">
                                   {(question.options || []).map((option, optionIndex) => (
-                                    <div
-                                      key={option.id}
-                                      className="flex items-center space-x-2"
-                                    >
+                                    <div key={option.id} className="flex items-center gap-2">
                                       <Input
                                         value={editingAnswers[option.id] ?? option.text ?? ''}
-                                        onChange={e => setEditingAnswers(prev => ({ ...prev, [option.id]: e.target.value }))}
+                                        onChange={e => {
+                                          const value = e.target.value;
+                                          setEditingAnswers(prev => ({ ...prev, [option.id]: value }));
+                                          handleOptionUpdate(question.id, option.id, { text: value });
+                                        }}
                                         onBlur={() => {
                                           handleOptionUpdate(question.id, option.id, { text: editingAnswers[option.id] ?? option.text });
                                           setEditingAnswers(prev => {
@@ -481,127 +624,80 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
                                           });
                                           if (onBlur) onBlur();
                                         }}
-                                        onKeyDown={e => {
-                                          if (e.key === 'Enter') {
-                                            handleOptionUpdate(question.id, option.id, { text: editingAnswers[option.id] ?? option.text });
-                                            setEditingAnswers(prev => {
-                                              const { [option.id]: _, ...rest } = prev;
-                                              return rest;
-                                            });
-                                            if (onBlur) onBlur();
-                                            e.preventDefault();
-                                          }
-                                        }}
                                         placeholder={`Option ${optionIndex + 1}`}
                                         className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                       />
-                                      <Switch
+                                      <input
+                                        type="radio"
                                         checked={option.isCorrect}
-                                        onCheckedChange={(checked) =>
-                                          handleOptionUpdate(
-                                            question.id,
-                                            option.id,
-                                            { isCorrect: checked }
-                                          )
-                                        }
-                                        onBlur={onBlur}
+                                        onChange={() => handleOptionUpdate(question.id, option.id, { isCorrect: true })}
+                                        name={`correct-${question.id}`}
+                                        className="accent-[#FF6B35]"
+                                        title="Mark as correct"
                                       />
+                                      <span className="text-xs text-[#6E6C75]">Correct</span>
                                       <Button
-                                        variant="ghost"
                                         size="icon"
-                                        onClick={() => {
-                                          const newOptions = question.options?.filter(
-                                            (opt) => opt.id !== option.id
-                                          );
-                                          handleQuestionUpdate(question.id, {
-                                            options: newOptions,
-                                          });
-                                        }}
-                                        className="text-red-500 hover:text-red-600"
+                                        variant="ghost"
+                                        className="text-[#FF6B35] hover:bg-[#FF6B35]/10"
+                                        onClick={() => handleOptionDelete(question.id, option.id)}
+                                        title="Delete this option"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="w-4 h-4" />
                                       </Button>
                                     </div>
                                   ))}
                                   <Button
-                                    variant="outline"
                                     size="sm"
+                                    variant="outline"
+                                    className="border-[#4ECDC4] text-[#4ECDC4] hover:bg-[#4ECDC4]/10"
                                     onClick={() => handleOptionAdd(question.id)}
-                                    className="border-[#4ECDC4]/30 text-[#4ECDC4]"
                                   >
-                                    <Plus className="h-4 w-4 mr-2" />
                                     Add Option
                                   </Button>
                                 </div>
                               )}
-
                               {question.type === 'true_false' && (
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroup
-                                      value={question.correctAnswer}
-                                      onValueChange={(value) =>
-                                        handleQuestionUpdate(question.id, {
-                                          correctAnswer: value,
-                                        })
-                                      }
-                                    >
-                                      <div className="flex items-center space-x-2">
-                                        <RadioGroupItem
-                                          value="true"
-                                          id={`${question.id}-true`}
-                                          className="border-[#4ECDC4] text-[#4ECDC4]"
-                                        />
-                                        <Label
-                                          htmlFor={`${question.id}-true`}
-                                          className="text-[#2C3E50]"
-                                        >
-                                          True
-                                        </Label>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <RadioGroupItem
-                                          value="false"
-                                          id={`${question.id}-false`}
-                                          className="border-[#4ECDC4] text-[#4ECDC4]"
-                                        />
-                                        <Label
-                                          htmlFor={`${question.id}-false`}
-                                          className="text-[#2C3E50]"
-                                        >
+                                <div className="flex gap-4">
+                                  <label className="flex items-center gap-1">
+                                    <input
+                                      type="radio"
+                                      checked={question.correctAnswer === 'true'}
+                                      onChange={() => handleQuestionUpdate(question.id, { correctAnswer: 'true' })}
+                                      name={`tf-${question.id}`}
+                                      className="accent-[#FF6B35]"
+                                    />
+                                    True
+                                  </label>
+                                  <label className="flex items-center gap-1">
+                                    <input
+                                      type="radio"
+                                      checked={question.correctAnswer === 'false'}
+                                      onChange={() => handleQuestionUpdate(question.id, { correctAnswer: 'false' })}
+                                      name={`tf-${question.id}`}
+                                      className="accent-[#FF6B35]"
+                                    />
                                           False
-                                        </Label>
-                                      </div>
-                                    </RadioGroup>
-                                  </div>
+                                  </label>
                                 </div>
                               )}
-
                               {question.type === 'short_answer' && (
-                                <div className="space-y-2">
                                   <Input
                                     value={question.correctAnswer ?? ''}
-                                    onChange={(e) => handleQuestionUpdate(
-                                      question.id,
-                                      { correctAnswer: e.target.value }
-                                    )}
-                                    onBlur={onBlur}
-                                    placeholder="Correct Answer"
+                                  onChange={e => handleQuestionUpdate(question.id, { correctAnswer: e.target.value })}
+                                  placeholder="Correct answer"
                                     className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
                                   />
-                                </div>
                               )}
-
-                              <div className="space-y-2">
+                              {/* Explanation Field */}
+                              <div className="space-y-1">
+                                <Label className="text-[#2C3E50]">Explanation (optional)</Label>
                                 <Textarea
                                   value={question.explanation ?? ''}
-                                  onChange={(e) => handleQuestionUpdate(
-                                    question.id,
-                                    { explanation: e.target.value }
-                                  )}
-                                  onBlur={onBlur}
-                                  placeholder="Explanation (optional)"
-                                  className="resize-none border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
+                                  onChange={e => handleQuestionUpdate(question.id, { explanation: e.target.value })}
+                                  placeholder="Explain the answer for students (shown after submission)"
+                                  className="border-[#4ECDC4]/30 focus:border-[#4ECDC4]"
+                                  rows={2}
                                 />
                               </div>
                             </div>
@@ -625,6 +721,17 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
           </Droppable>
         </DragDropContext>
       </div>
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quiz Preview</DialogTitle>
+            <DialogDescription>
+              This is how students will see your quiz.
+            </DialogDescription>
+          </DialogHeader>
+          <QuizPlayer quiz={quiz} onComplete={() => setShowPreview(false)} previewMode />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

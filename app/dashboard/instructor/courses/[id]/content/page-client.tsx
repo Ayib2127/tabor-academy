@@ -315,7 +315,17 @@ function DraggableLesson({
   // Defensive parsing for lesson content
   const safeLesson = {
     ...lesson,
-    content: typeof lesson.content === 'string' ? (() => { try { return JSON.parse(lesson.content); } catch { return {}; } })() : lesson.content,
+    content: typeof lesson.content === 'string' ? (() => {
+      if (lesson.content.trim() === '') {
+        return {}; // Empty string, treat as empty object
+      }
+      try {
+        return JSON.parse(lesson.content);
+      } catch (e) {
+        console.error("Failed to parse lesson content on open:", e, lesson.content);
+        return {}; // Default to empty object on parse failure
+      }
+    })() : lesson.content,
   };
 
   // Check if course is locked (cohort course that has started)
@@ -630,22 +640,37 @@ export default function CourseContentPage() {
 
   // 2. Handler to open editor with fresh data
   const handleEditLesson = async ({ moduleId, lesson }: { moduleId: string, lesson: Lesson }) => {
+    console.log('[handleEditLesson] Opening lesson:', lesson.id);
     const latestLesson = await fetchLessonById(lesson.id);
     if (latestLesson) {
+      console.log('[handleEditLesson] Fetched latest lesson:', latestLesson);
+      const parsedContent = (() => {
+        if (typeof latestLesson.content === 'string') {
+          try {
+            return JSON.parse(latestLesson.content);
+          } catch (e) {
+            console.error("Failed to parse lesson content on open:", e);
+            return {}; // Default to empty object on parse failure
+          }
+        }
+        return latestLesson.content || {}; // Default if content is null/undefined
+      })();
+
       setEditingLesson({
         moduleId,
         lesson: {
           ...latestLesson,
-          content: typeof latestLesson.content === 'string'
-            ? (() => { try { return JSON.parse(latestLesson.content); } catch { return {}; } })()
-            : latestLesson.content,
+          content: parsedContent,
         }
       });
+    } else {
+      console.error('[handleEditLesson] Failed to fetch latest lesson data for', lesson.id);
+      toast.error("Could not load the latest lesson data. Please refresh the page.");
     }
   };
 
   const saveLessonToBackend = async (updatedLesson) => {
-    console.log('[DEBUG] Saving lesson:', updatedLesson);
+    console.log('[saveLessonToBackend] Start saving lesson:', updatedLesson.id, updatedLesson);
     // Serialize content if needed
     const contentToSave = typeof updatedLesson.content === 'string'
       ? updatedLesson.content
@@ -663,9 +688,10 @@ export default function CourseContentPage() {
       })
       .eq('id', updatedLesson.id);
 
-    console.log('[DEBUG] Backend update error:', error);
+    console.log('[saveLessonToBackend] Backend update error:', error);
 
     if (!error) {
+      toast.success("Lesson saved successfully!");
       // Refetch the lesson from backend to get the latest data
       const { data: freshLesson, error: fetchError } = await supabase
         .from('module_lessons')
@@ -673,50 +699,59 @@ export default function CourseContentPage() {
         .eq('id', updatedLesson.id)
         .single();
 
-      console.log('[DEBUG] Fetched fresh lesson after save:', freshLesson, 'Fetch error:', fetchError);
+      console.log('[saveLessonToBackend] Fetched fresh lesson after save:', freshLesson, 'Fetch error:', fetchError);
 
       if (!fetchError && freshLesson) {
-        // Update courseData with the fresh lesson
-        setCourseData(prev =>
-          prev
-            ? {
-                ...prev,
-                modules: prev.modules.map(m =>
-                  m.id === editingLesson?.moduleId
-                    ? {
-                        ...m,
-                        lessons: m.lessons.map(l =>
-                          l.id === updatedLesson.id
-                            ? {
-                                ...freshLesson,
-                                content: typeof freshLesson.content === 'string'
-                                  ? (() => { try { return JSON.parse(freshLesson.content); } catch { return {}; } })()
-                                  : freshLesson.content,
-                              }
-                            : l
-                        ),
-                      }
-                    : m
-                ),
-              }
-            : prev
-        );
-        // Update editingLesson with the fresh lesson
-        setEditingLesson(editingLesson
-          ? {
-              ...editingLesson,
-              lesson: {
-                ...freshLesson,
-                content: typeof freshLesson.content === 'string'
-                  ? (() => { try { return JSON.parse(freshLesson.content); } catch { return {}; } })()
-                  : freshLesson.content,
-              }
+        const parsedContent = (() => {
+          if (typeof freshLesson.content === 'string') {
+            try {
+              return JSON.parse(freshLesson.content);
+            } catch (e) {
+              console.error("Failed to parse lesson content after save:", e);
+              return {}; // Default to empty object on parse failure
             }
-          : null
-        );
+          }
+          return freshLesson.content || {}; // Default if content is null/undefined
+        })();
+        
+        const finalLesson = { ...freshLesson, content: parsedContent };
+
+        // Update courseData with the fresh lesson
+        setCourseData(prev => {
+          if (!prev) return prev;
+          const newCourseData = {
+            ...prev,
+            modules: prev.modules.map(m =>
+              m.id === editingLesson?.moduleId
+                ? {
+                    ...m,
+                    lessons: m.lessons.map(l =>
+                      l.id === updatedLesson.id ? finalLesson : l
+                    ),
+                  }
+                : m
+            ),
+          };
+          console.log('[saveLessonToBackend] Updating courseData state with fresh lesson.');
+          return newCourseData;
+        });
+
+        // Update editingLesson with the fresh lesson to ensure editor has latest data
+        setEditingLesson(prev => {
+          if (!prev) return null;
+          console.log('[saveLessonToBackend] Updating editingLesson state with fresh lesson.');
+          return {
+            ...prev,
+            lesson: finalLesson,
+          };
+        });
+      } else {
+        console.error('[saveLessonToBackend] Failed to refetch lesson after saving.');
+        toast.error("Lesson saved, but couldn't refresh data. Please refresh.");
       }
     } else {
-      toast.error('Failed to save lesson');
+      console.error('[saveLessonToBackend] Error saving lesson:', error);
+      toast.error('Failed to save lesson: ' + error.message);
     }
   };
 
@@ -742,6 +777,8 @@ export default function CourseContentPage() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showCoursePreview, setShowCoursePreview] = useState(false);
   const [previewMode, setPreviewMode] = useState<'student' | 'week-1' | 'week-2' | 'week-3' | 'instructor'>('student');
+  const [lessonSaveStatus, setLessonSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lessonLastSaved, setLessonLastSaved] = useState<Date | null>(null);
 
   // Dnd-kit hooks - MUST be called at the top level of the component
   const pointerSensor = useSensor(PointerSensor);
@@ -905,24 +942,27 @@ export default function CourseContentPage() {
     const module = courseData?.modules.find(m => m.id === moduleId);
     const order = module ? module.lessons.length : 0;
 
-    // 2. Insert the lesson into the backend
-    const { data: newLesson, error } = await supabase
-      .from('module_lessons')
-      .insert({
+    // 2. Call the backend API
+    const response = await fetch('/api/instructor/lessons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         module_id: moduleId,
         title,
         type,
         is_published: false,
         order,
         content: '', // or default content structure if needed
-      })
-      .select()
-      .single();
+      }),
+    });
+    const result = await response.json();
 
-    if (error) {
-      toast.error('Failed to add lesson');
+    if (!response.ok) {
+      toast.error(result.error || 'Failed to add lesson');
       return;
     }
+
+    const newLesson = result.lesson;
 
     // 3. Update local state with the real lesson id
     setCourseData(prev => {
@@ -1088,18 +1128,40 @@ export default function CourseContentPage() {
 
         // insert lessons for this module
         for (const [lessonIndex, lessonData] of moduleData.lessons.entries()) {
-          const { error: lessonInsertError } = await supabase
-            .from('module_lessons')
-            .insert({
-              module_id: newModule.id,
-              title: lessonData.title,
-              content: lessonData.content,
-              type: lessonData.type,
-              is_published: lessonData.is_published,
-              order: lessonIndex,
+          // If the lesson is new (no id or id starts with 'temp-'), use the backend API
+          if (!lessonData.id || lessonData.id.startsWith('temp-')) {
+            const response = await fetch('/api/instructor/lessons', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                module_id: newModule.id,
+                title: lessonData.title,
+                content: lessonData.content,
+                type: lessonData.type,
+                is_published: lessonData.is_published,
+                order: lessonIndex,
+              }),
             });
-          if (lessonInsertError) {
-            throw new Error(lessonInsertError.message);
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to insert lesson');
+            }
+            // Optionally update local state with result.lesson if needed
+          } else {
+            // Existing lesson, update or re-insert as needed
+            const { error: lessonInsertError } = await supabase
+              .from('module_lessons')
+              .insert({
+                module_id: newModule.id,
+                title: lessonData.title,
+                content: lessonData.content,
+                type: lessonData.type,
+                is_published: lessonData.is_published,
+                order: lessonIndex,
+              });
+            if (lessonInsertError) {
+              throw new Error(lessonInsertError.message);
+            }
           }
         }
       }
@@ -1773,13 +1835,34 @@ export default function CourseContentPage() {
               <DialogTitle className="text-xl font-bold">
                 Edit Lesson{editingLesson.lesson.title ? `: ${editingLesson.lesson.title}` : ''}
               </DialogTitle>
-              <button
-                onClick={() => setEditingLesson(null)}
-                className="text-[#FF6B35] hover:text-[#4ECDC4] text-lg font-bold px-2"
-                aria-label="Close"
-              >
-                ×
-              </button>
+              <div className="flex items-center gap-4">
+                {/* Sticky Save Status */}
+                {lessonSaveStatus === 'saving' && (
+                  <div className="flex items-center gap-2 text-blue-600" aria-live="polite">
+                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-xs">Saving...</span>
+                  </div>
+                )}
+                {lessonSaveStatus === 'saved' && (
+                  <div className="flex items-center gap-2 text-green-600" aria-live="polite">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <span className="text-xs">Saved{lessonLastSaved ? ` at ${lessonLastSaved.toLocaleTimeString()}` : ''}</span>
+                  </div>
+                )}
+                {lessonSaveStatus === 'error' && (
+                  <div className="flex items-center gap-2 text-red-600" aria-live="polite">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0z" /></svg>
+                    <span className="text-xs">Save failed</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setEditingLesson(null)}
+                  className="text-[#FF6B35] hover:text-[#4ECDC4] text-lg font-bold px-2"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
             </div>
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-8 py-6" style={{ minHeight: 0 }}>
@@ -1792,7 +1875,7 @@ export default function CourseContentPage() {
                     if (typeof editingLesson.lesson.content === 'string') {
                       try {
                         parsed = JSON.parse(editingLesson.lesson.content);
-                      } catch {
+                      } catch (e) {
                         parsed = editingLesson.lesson.content;
                       }
                     } else {
@@ -1815,6 +1898,12 @@ export default function CourseContentPage() {
                   setEditingLesson(null);
                 }}
                 isVisible={!!editingLesson}
+                onSaveStatusChange={(status, lastSaved) => {
+                  setLessonSaveStatus(status);
+                  setLessonLastSaved(lastSaved);
+                }}
+                saveStatus={lessonSaveStatus}
+                lastSaved={lessonLastSaved}
               />
             </div>
           </DialogContent>

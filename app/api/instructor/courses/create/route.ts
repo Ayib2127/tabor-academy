@@ -149,6 +149,31 @@ export async function POST(req: Request) {
 
       // Create lessons for this module
       for (const lessonData of moduleData.lessons) {
+        let quizId = null;
+        if (lessonData.type === 'quiz') {
+          // 1. Create the quiz
+          const { data: quiz, error: quizError } = await supabase
+            .from('quizzes')
+            .insert({
+              title: lessonData.title,
+              // Add other quiz metadata as needed
+              passingScore: 70,
+              attemptsAllowed: 3,
+              shuffleQuestions: false,
+              showCorrectAnswers: true,
+              showExplanations: true,
+              questions: [], // or null/empty
+            })
+            .select()
+            .single();
+          if (quizError) {
+            // handle error, maybe cleanup
+            throw quizError;
+          }
+          quizId = quiz.id;
+        }
+
+        // 2. Insert the lesson, linking quiz_id if present
         const { error: lessonError } = await supabase
           .from('module_lessons')
           .insert({
@@ -157,9 +182,10 @@ export async function POST(req: Request) {
             type: lessonData.type,
             order: lessonData.order,
             duration: lessonData.duration,
-            is_published: false, // Lessons start unpublished
+            is_published: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            quiz_id: quizId, // will be null for non-quiz lessons
           });
 
         if (lessonError) {

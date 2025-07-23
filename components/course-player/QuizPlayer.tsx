@@ -9,13 +9,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface QuizPlayerProps {
   quiz: Quiz;
   onComplete: (results: QuizResults) => void;
   onExit?: () => void;
+  forceShowResults?: boolean;
+  forcedResults?: QuizResults;
 }
 
 interface QuizResults {
@@ -30,7 +32,13 @@ interface QuizResults {
   }[];
 }
 
-const QuizPlayer: FC<QuizPlayerProps> = ({ quiz, onComplete, onExit }) => {
+const QuizPlayer: FC<QuizPlayerProps> = ({
+  quiz,
+  onComplete,
+  onExit,
+  forceShowResults = false,
+  forcedResults = null,
+}) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(
@@ -39,6 +47,41 @@ const QuizPlayer: FC<QuizPlayerProps> = ({ quiz, onComplete, onExit }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState<QuizResults | null>(null);
+  const [attempts, setAttempts] = useState<number>(0);
+  const [maxAttempts, setMaxAttempts] = useState<number | null>(null);
+
+  // --- Fetch attempts and maxAttempts on mount ---
+  useEffect(() => {
+    // You may need to fetch attempts/maxAttempts from props, context, or API
+    // For now, try to get from quiz object or localStorage
+    setMaxAttempts(quiz.attemptsAllowed ?? null);
+    const savedAttempts = localStorage.getItem(`quiz-attempts-${quiz.id}`);
+    setAttempts(savedAttempts ? parseInt(savedAttempts, 10) : 0);
+  }, [quiz.id, quiz.attemptsAllowed]);
+
+  // --- Only show results if user is out of attempts ---
+  useEffect(() => {
+    if (maxAttempts !== null && attempts >= maxAttempts) {
+      const saved = localStorage.getItem(`quiz-results-${quiz.id}`);
+      if (saved) {
+        setResults(JSON.parse(saved));
+        setShowResults(true);
+      }
+    } else {
+      setShowResults(false);
+      setResults(null);
+      setAnswers({});
+      setCurrentQuestionIndex(0);
+    }
+  }, [quiz.id, attempts, maxAttempts]);
+
+  // --- Support forced results mode ---
+  useEffect(() => {
+    if (forceShowResults && forcedResults) {
+      setResults(forcedResults);
+      setShowResults(true);
+    }
+  }, [forceShowResults, forcedResults]);
 
   // Timer effect
   useEffect(() => {
@@ -135,6 +178,11 @@ const QuizPlayer: FC<QuizPlayerProps> = ({ quiz, onComplete, onExit }) => {
       const results = calculateResults();
       setResults(results);
       setShowResults(true);
+      localStorage.setItem(`quiz-results-${quiz.id}`, JSON.stringify(results)); // Save results
+      // Increment attempts
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      localStorage.setItem(`quiz-attempts-${quiz.id}`, newAttempts.toString());
       onComplete(results);
     } catch (error) {
       console.error('Error submitting quiz:', error);
@@ -335,27 +383,6 @@ const QuizPlayer: FC<QuizPlayerProps> = ({ quiz, onComplete, onExit }) => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Action Buttons: Complete Lesson, Take Notes */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
-            <button
-              className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white font-bold shadow-md hover:scale-105 transition-transform duration-200 flex items-center gap-2"
-              onClick={() => {
-                if (onExit) onExit();
-              }}
-            >
-              <CheckCircle className="h-5 w-5 mr-2" />
-              Complete Lesson
-            </button>
-            <button
-              className="px-6 py-3 rounded-lg border-2 border-[#4ECDC4] text-[#2C3E50] font-bold bg-white hover:bg-[#F7F9F9] transition"
-              onClick={() => {
-                // TODO: Open notes panel/modal if available
-              }}
-            >
-              Take Notes
-            </button>
-          </div>
         </>
       )}
     </div>

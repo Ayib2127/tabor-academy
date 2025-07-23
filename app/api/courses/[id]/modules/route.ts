@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-export async function GET(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+export async function GET(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
   const courseId = params.id;
   try {
     const supabase = await createSupabaseServerClient();
@@ -76,8 +76,8 @@ export async function GET(req: Request, context: Promise<{ params: { id: string 
   }
 }
 
-export async function POST(request: NextRequest, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+export async function POST(request: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
   try {
     const courseId = params.id;
     const supabase = await createSupabaseServerClient();

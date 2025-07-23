@@ -25,8 +25,10 @@ const courses = [
   },
 ];
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const cookieStore = await cookies();
+export async function GET(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
+  const courseId = params.id;
+  const cookieStore = await cookies(); // cookies() is not async
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   // Fetch course and join instructor info
@@ -47,7 +49,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         module_lessons(*)
       )
     `)
-    .eq('id', params.id)
+    .eq('id', courseId)
     .single();
 
   if (error || !course) {
@@ -70,10 +72,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }), { status: 200 });
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, context: { params: { id: string } }) {
+  const { params } = context;
   const courseId = params.id;
   const supabase = createRouteHandlerClient({ cookies });
 
@@ -120,10 +120,8 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
   const supabase = createSupabaseServerClient(); // Initialize Supabase client for DELETE
   try {
     const id = params.id;

@@ -1,10 +1,8 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 
 // GET function to list all lessons for a course
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+    const { params } = context;
     console.log('API Route: /api/courses/[id]/lessons - Incoming request');
     const incomingCookies = request.headers.get('cookie');
     console.log('API Route: Incoming Cookies Header:', incomingCookies); // Log the raw cookie header
