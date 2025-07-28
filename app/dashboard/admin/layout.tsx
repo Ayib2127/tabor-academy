@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -33,12 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const supabase = createClientComponentClient();
 
-  useEffect(() => {
-    checkAdminAccess();
-    fetchPendingCount();
-  }, []);
-
-  const checkAdminAccess = async () => {
+  const checkAdminAccess = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -66,9 +61,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, router]);
 
-  const fetchPendingCount = async () => {
+  const fetchPendingCount = useCallback(async () => {
     try {
       const { count, error } = await supabase
         .from('courses')
@@ -81,7 +76,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     } catch (error) {
       console.error('Error fetching pending count:', error);
     }
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    checkAdminAccess();
+    fetchPendingCount();
+  }, [checkAdminAccess, fetchPendingCount]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

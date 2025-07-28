@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Image as ImageIcon, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
+import Image from 'next/image';
 
 interface ImageUploaderProps {
   onUploadComplete: (imageUrl: string) => void;
@@ -104,9 +105,11 @@ const ImageUploader: FC<ImageUploaderProps> = ({
         </div>
       ) : (
         <div className="relative">
-          <img
+          <Image
             src={preview}
             alt="Preview"
+            width={400}
+            height={300}
             className="w-full h-auto rounded-lg"
           />
           <Button

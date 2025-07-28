@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,11 +76,7 @@ export default function CourseAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [courseId]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/instructor/courses/${courseId}/analytics`);
@@ -99,7 +95,11 @@ export default function CourseAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (

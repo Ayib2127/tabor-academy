@@ -29,6 +29,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 interface Transaction {
   id: string;
@@ -322,7 +323,13 @@ export default function AdminTransactionsPage() {
                   </div>
                   <div className="flex flex-col items-center gap-2">
                     <a href={payment.payment_proof_url} target="_blank" rel="noopener noreferrer" className="block mb-2">
-                      <img src={payment.payment_proof_url} alt="Receipt" className="w-32 h-32 object-contain border rounded" />
+                      <Image 
+                        src={payment.payment_proof_url} 
+                        alt="Receipt" 
+                        width={128}
+                        height={128}
+                        className="w-32 h-32 object-contain border rounded" 
+                      />
                     </a>
                     <div className="flex gap-2">
                       <Button size="sm" className="bg-green-600 text-white" onClick={() => handlePaymentAction(payment.id, 'approve')}>Approve</Button>

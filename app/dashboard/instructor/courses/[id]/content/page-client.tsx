@@ -1922,8 +1922,18 @@ export default function CourseContentPage() {
         <div className="fixed inset-0 bg-black/50 z-50" />
       )}
       {selectedModule && (
-        <EditModuleModal
-          module={selectedModule}
+        <ModuleAccordionCard
+          module={selectedModule.module}
+          courseData={courseData}
+          handleModuleTitleChange={handleModuleTitleChange}
+          handleModuleUpdate={handleModuleUpdate}
+          addLesson={addLesson}
+          deleteLesson={deleteLesson}
+          handleLessonTitleChange={handleLessonTitleChange}
+          setEditingLesson={setEditingLesson}
+          addLessonState={addLessonState}
+          setAddLessonState={setAddLessonState}
+          deleteModule={deleteModule}
           onSave={handleModuleSave}
           onClose={closeModal}
         />

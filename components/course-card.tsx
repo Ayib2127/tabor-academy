@@ -14,6 +14,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
+import Image from 'next/image';
 
 interface CourseCardProps {
   course: {
@@ -97,9 +98,11 @@ const CourseCard: FC<CourseCardProps> = ({
           <div className="flex items-start gap-4">
             {/* Thumbnail */}
             <div className="w-16 h-16 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <img
+              <Image
                 src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
                 alt={course.title}
+                width={64}
+                height={64}
                 className="w-full h-full object-cover rounded-lg"
               />
             </div>
@@ -148,9 +151,11 @@ const CourseCard: FC<CourseCardProps> = ({
     <Card className="border-[#E5E8E8] shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
       {/* Thumbnail */}
       <div className="relative h-48 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20">
-        <img
+        <Image
           src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
           alt={course.title}
+          width={400}
+          height={192}
           className="w-full h-full object-cover"
         />
         
@@ -192,9 +197,11 @@ const CourseCard: FC<CourseCardProps> = ({
           <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center">
               {course.instructor.avatar_url ? (
-                <img
+                <Image
                   src={course.instructor.avatar_url}
                   alt={course.instructor.full_name}
+                  width={24}
+                  height={24}
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (

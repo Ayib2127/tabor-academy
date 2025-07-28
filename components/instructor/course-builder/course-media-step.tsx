@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Upload, Video, DollarSign, ImageIcon } from "lucide-react"
 import { useState } from "react"
+import Image from 'next/image';
 
 interface CourseData {
   price: number
@@ -122,9 +123,11 @@ export function CourseMediaStep({ courseData, updateCourseData, onNext }: Course
               {thumbnailPreview || courseData.thumbnailUrl ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#2C3E50]">Preview:</p>
-                  <img
+                  <Image
                     src={thumbnailPreview || courseData.thumbnailUrl}
                     alt="Thumbnail preview"
+                    width={640}
+                    height={160}
                     className="w-full h-40 object-cover rounded-lg border border-[#E5E8E8]"
                   />
                 </div>

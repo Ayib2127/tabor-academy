@@ -138,7 +138,7 @@ export default function AssignmentSubmissionPage() {
   })
   const [linkValue, setLinkValue] = useState("") // Added for link submission
 
-  // Restore draft on mount
+  // Load draft on mount
   useEffect(() => {
     const draft = localStorage.getItem(`assignment-submission-draft-${assignment.id}`);
     if (draft) {
@@ -147,7 +147,7 @@ export default function AssignmentSubmissionPage() {
       setLinkValue(link || '');
       // File restoration is limited by browser security, so only restore text/link
     }
-  }, [assignment.id]);
+  }, []); // Remove assignment.id from dependency array
 
   // Auto-save on change
   useEffect(() => {
@@ -155,7 +155,7 @@ export default function AssignmentSubmissionPage() {
       `assignment-submission-draft-${assignment.id}`,
       JSON.stringify({ text: editorContent, link: linkValue })
     );
-  }, [editorContent, linkValue, assignment.id]);
+  }, [editorContent, linkValue]); // Remove assignment.id from dependency array
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 

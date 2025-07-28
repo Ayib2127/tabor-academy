@@ -181,9 +181,11 @@ export default function VideoTutorialsPage() {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Play className="h-16 w-16 text-white" />
                 </div>
-                <img
+                <Image
                   src={tutorials.gettingStarted[0].thumbnail}
                   alt="Tutorial thumbnail"
+                  width={800}
+                  height={450}
                   className="w-full h-full object-cover opacity-50"
                 />
               </div>
@@ -255,9 +257,11 @@ export default function VideoTutorialsPage() {
                       onClick={() => handleVideoPlay(video.id)}
                     >
                       <div className="relative aspect-video">
-                        <img
+                        <Image
                           src={video.thumbnail}
                           alt={video.title}
+                          width={400}
+                          height={225}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
