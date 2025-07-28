@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
-import { AuthError, ForbiddenError, createErrorResponse } from '@/lib/utils/error-handling';
+import { AuthError, ForbiddenError, ValidationError, NotFoundError, handleApiError } from '@/lib/utils/error-handling';
 
 // Helper function to verify instructor ownership of a lesson
 async function verifyLessonOwnership(supabase: any, lessonId: string, userId: string): Promise<boolean> {
@@ -23,7 +23,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { id: lessonId } = params;
 
   try {
@@ -40,7 +40,9 @@ export async function PUT(
 
     // Get the updated lesson data from the request body
     const { title, content, video_url, duration, is_published } = await request.json();
-
+    if (!title) {
+      throw new ValidationError('Lesson title is required');
+    }
     // Update the lesson in the database
     const { data: updatedLesson, error: updateError } = await supabase
       .from('lessons')
@@ -57,13 +59,14 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      throw new Error(updateError.message);
+      throw updateError;
     }
 
     return NextResponse.json(updatedLesson);
 
   } catch (error) {
-    return createErrorResponse(error);
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
 
@@ -72,7 +75,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const { id: lessonId } = params;
 
     try {
@@ -94,12 +97,13 @@ export async function DELETE(
             .eq('id', lessonId);
 
         if (deleteError) {
-            throw new Error(deleteError.message);
+            throw deleteError;
         }
 
         return NextResponse.json({ message: 'Lesson deleted successfully' });
 
     } catch (error) {
-        return createErrorResponse(error);
+        const apiError = handleApiError(error);
+        return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
     }
 } 

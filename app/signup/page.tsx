@@ -13,11 +13,15 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SiteHeader } from "@/components/site-header"
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
+import { getName } from 'country-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { SocialIcons } from '@/components/ui/social-icons'
+import PhoneInput from 'react-phone-input-2'
+import 'react-phone-input-2/lib/style.css'
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -36,6 +40,14 @@ const signUpSchema = z.object({
   path: ["confirmPassword"],
 })
 
+const phoneSignUpSchema = z.object({
+  phone: z.string()
+    .min(8, "Please enter a valid phone number")
+    .regex(/^\+?[1-9]\d{7,14}$/, "Please enter a valid phone number with country code"),
+  terms: z.boolean().refine((val) => val === true, "You must accept the terms"),
+  privacy: z.boolean().refine((val) => val === true, "You must accept the privacy policy"),
+});
+
 export default function SignUpPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -51,6 +63,15 @@ export default function SignUpPage() {
   } = useForm({
     resolver: zodResolver(signUpSchema),
   })
+
+  const {
+    register: registerPhone,
+    handleSubmit: handleSubmitPhone,
+    control: controlPhone,
+    formState: { errors: phoneErrors },
+  } = useForm({
+    resolver: zodResolver(phoneSignUpSchema),
+  });
 
   const onSubmit = async (data: any) => {
     console.log('onSubmit triggered', data);
@@ -84,8 +105,45 @@ export default function SignUpPage() {
         setStep(2)
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account")
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || "Failed to create account",
+        });
+      }
       console.error('Signup error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const onSubmitPhoneSignUp = async (data: any) => {
+    setIsLoading(true)
+    try {
+      const fullPhone = `+${getCountryCallingCode(data.country)}${data.phone.replace(/^0+/, '')}`;
+      const { error } = await supabase.auth.signUp({ phone: fullPhone });
+      if (error) throw error;
+      toast.success("Account created! Please check your SMS for a verification code.");
+      router.push(`/verify/phone?phone=${encodeURIComponent(fullPhone)}`);
+    } catch (err: any) {
+      if (err.code) {
+        showApiErrorToast({
+          code: err.code,
+          error: err.message,
+          details: err.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: err.message || "Failed to sign up with phone",
+        });
+      }
     } finally {
       setIsLoading(false)
     }
@@ -102,7 +160,18 @@ export default function SignUpPage() {
       })
       if (error) throw error
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign up with social provider")
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || "Failed to sign up with social provider",
+        });
+      }
     } finally {
       setIsLoading(false)
     }
@@ -149,8 +218,9 @@ export default function SignUpPage() {
               </div>
 
               <Tabs defaultValue="email" className="max-w-md mx-auto">
-                <TabsList className="grid grid-cols-2 mb-8">
+                <TabsList className="grid grid-cols-3 mb-8">
                   <TabsTrigger value="email">Email</TabsTrigger>
+                  <TabsTrigger value="phone">Phone</TabsTrigger>
                   <TabsTrigger value="social">Social</TabsTrigger>
                 </TabsList>
 
@@ -263,6 +333,88 @@ export default function SignUpPage() {
                         )}
                       </div>
 
+                      <Button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating Account...
+                          </>
+                        ) : (
+                          "Create Account"
+                        )}
+                      </Button>
+                    </form>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="phone">
+                  <Card className="p-6">
+                    <form onSubmit={handleSubmitPhone(onSubmitPhoneSignUp)} className="space-y-4">
+                      <div className="space-y-2">
+                        {/* <Label htmlFor="phone" className="text-[#FF6B35] font-semibold text-base mb-1">
+                          Phone Number
+                        </Label> */}
+                        <Controller
+                          name="phone"
+                          control={controlPhone}
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <PhoneInput
+                              {...field}
+                              country={'et'}
+                              inputProps={{
+                                name: 'phone',
+                                required: true,
+                                autoFocus: true,
+                                className: phoneErrors.phone ? "border-red-500" : ""
+                              }}
+                              onChange={field.onChange}
+                              value={field.value}
+                              enableSearch
+                              containerClass="custom-phone-input w-full"
+                              inputClass="w-full"
+                              buttonClass="bg-white"
+                              dropdownClass="bg-white"
+                              placeholder="e.g. 912345678"
+                              inputStyle={{
+                                height: '48px',
+                                fontSize: '1rem',
+                                paddingLeft: '56px',
+                                borderRadius: '0.5rem',
+                                border: phoneErrors.phone ? '1.5px solid #ef4444' : '1.5px solid #E5E8E8',
+                              }}
+                              buttonStyle={{
+                                borderTopLeftRadius: '0.5rem',
+                                borderBottomLeftRadius: '0.5rem',
+                                borderRight: 'none',
+                                background: '#fff',
+                                paddingLeft: '12px',
+                                paddingRight: '8px',
+                              }}
+                              countryCodeEditable={false}
+                            />
+                          )}
+                        />
+                        {phoneErrors.phone && (
+                          <p className="text-sm text-red-500">{phoneErrors.phone.message as string}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="terms" {...registerPhone("terms")} />
+                        <Label htmlFor="terms" className="text-sm">
+                          I accept the terms
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="privacy" {...registerPhone("privacy")} />
+                        <Label htmlFor="privacy" className="text-sm">
+                          I accept the privacy policy
+                        </Label>
+                      </div>
                       <Button
                         type="submit"
                         className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"

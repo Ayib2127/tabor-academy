@@ -46,6 +46,7 @@ import type PlayerType from '@vimeo/player';
 import { useId } from 'react';
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
 import { toast } from 'react-hot-toast';
+import { isLessonLocked } from '@/lib/utils/lessonLock';
 
 export default function LessonPlayerPage() {
   const { id: initialLessonId, courseId } = useParams<{ id: string, courseId: string }>();
@@ -534,8 +535,14 @@ export default function LessonPlayerPage() {
                     </Button>
                     <Button
                       className="w-full sm:w-auto bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white flex items-center justify-center"
-                      disabled={!nextLesson}
-                      onClick={() => nextLesson && router.push(`/courses/lesson/${nextLesson.id}`)}
+                      disabled={!nextLesson || isLessonLocked(allModules, nextLesson.id)}
+                      onClick={() => {
+                        if (nextLesson && !isLessonLocked(allModules, nextLesson.id)) {
+                          router.push(`/courses/lesson/${nextLesson.id}`);
+                        } else {
+                          // Optionally show a message: "Complete all previous lessons to unlock this lesson."
+                        }
+                      }}
                     >
                       Continue Learning
                       <ChevronRight className="h-5 w-5 ml-2 text-white" />
@@ -623,8 +630,14 @@ export default function LessonPlayerPage() {
                     </Button>
                     <Button
                       className="w-full sm:w-auto bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white flex items-center justify-center"
-                      disabled={!nextLesson}
-                      onClick={() => nextLesson && router.push(`/courses/lesson/${nextLesson.id}`)}
+                      disabled={!nextLesson || isLessonLocked(allModules, nextLesson.id)}
+                      onClick={() => {
+                        if (nextLesson && !isLessonLocked(allModules, nextLesson.id)) {
+                          router.push(`/courses/lesson/${nextLesson.id}`);
+                        } else {
+                          // Optionally show a message: "Complete all previous lessons to unlock this lesson."
+                        }
+                      }}
                     >
                       Continue Learning
                       <ChevronRight className="h-5 w-5 ml-2 text-white" />

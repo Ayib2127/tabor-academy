@@ -17,6 +17,23 @@ import {
   ExternalLink
 } from "lucide-react"
 import Link from "next/link"
+import { SUPPORT_EMAIL } from "@/lib/config/support";
+
+const ErrorIllustration = (
+  <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="mx-auto mb-4" aria-hidden="true">
+    <circle cx="60" cy="60" r="56" fill="#FFEBEE" />
+    <rect x="54" y="36" width="12" height="36" rx="6" fill="#E53935" />
+    <circle cx="60" cy="86" r="5" fill="#E53935" />
+  </svg>
+);
+
+const handleReportError = (error: Error) => {
+  const subject = encodeURIComponent('Global Error Report');
+  const body = encodeURIComponent(
+    `Page: ${typeof window !== 'undefined' ? window.location.href : ''}\nMessage: ${error.message}\nStack: ${error.stack || ''}`
+  );
+  window.open(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
+};
 
 export default function Error({
   error,
@@ -37,17 +54,26 @@ export default function Error({
       <main className="flex-1 py-12 md:py-24">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center text-center space-y-8">
-            {/* Error Communication Section */}
+            {/* Illustration and Error Communication Section */}
             <div className="space-y-4">
+              {ErrorIllustration}
               <div className="bg-red-100 rounded-full p-3 w-16 h-16 mx-auto flex items-center justify-center">
                 <AlertCircle className="h-8 w-8 text-red-600" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold">
+              <h1 className="text-3xl md:text-4xl font-bold text-red-700">
                 Something went wrong on our end
               </h1>
               <p className="text-muted-foreground max-w-[600px] mx-auto">
                 We're experiencing some technical difficulties. Our team has been notified and is working to fix the issue. We apologize for any inconvenience.
               </p>
+              <button
+                className="inline-flex items-center gap-2 text-xs underline text-gray-500 hover:text-gray-700 focus:outline-none"
+                onClick={() => handleReportError(error)}
+                title="Report this error to support"
+              >
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                Report This Error
+              </button>
             </div>
 
             {/* Immediate Action Section */}
@@ -142,7 +168,7 @@ export default function Error({
                     </Link>
                   </Button>
                   <Button variant="outline" className="w-full justify-start" asChild>
-                    <Link href="/chat">
+                    <Link href="https://t.me/tabor_support">
                       <MessageSquare className="mr-2 h-4 w-4" />
                       Live Chat
                     </Link>

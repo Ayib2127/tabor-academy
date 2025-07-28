@@ -416,7 +416,7 @@ export default function AchievementsPage() {
                   <Link href="/courses">Continue Learning</Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link href="/community">Join Discussions</Link>
+                  <Link href="https://t.me/tabor_academy">Join Discussions</Link>
                 </Button>
               </div>
             </div>

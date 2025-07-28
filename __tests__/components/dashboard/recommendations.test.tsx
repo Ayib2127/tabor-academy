@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
@@ -84,14 +84,16 @@ describe('Recommendations', () => {
     })
   })
 
-  it('calls onLearnMore with course id when button is clicked', () => {
+  it('calls onLearnMore with course id when button is clicked', async () => {
     const handleLearnMore = jest.fn()
     render(<Recommendations courses={mockCourses} onLearnMore={handleLearnMore} />)
     
     const buttons = screen.getAllByText('Learn More')
     fireEvent.click(buttons[0])
     
-    expect(handleLearnMore).toHaveBeenCalledWith(mockCourses[0].id)
+    await waitFor(() => {
+      expect(handleLearnMore).toHaveBeenCalledWith(mockCourses[0].id)
+    })
   })
 
   it('applies correct styling to course cards', () => {

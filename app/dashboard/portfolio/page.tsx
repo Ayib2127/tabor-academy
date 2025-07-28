@@ -35,7 +35,7 @@ const portfolioData = {
     name: "Sarah Kimani",
     title: "Digital Marketing & E-commerce Specialist",
     bio: "Passionate about helping Ethiopian businesses succeed in the digital space. Experienced in creating and executing successful digital marketing campaigns and e-commerce strategies.",
-    location: "Nairobi, Kenya",
+    location: "Addis Ababa, Ethiopia",
     website: "www.sarahkimani.com",
     social: {
       linkedin: "linkedin.com/in/sarahkimani",

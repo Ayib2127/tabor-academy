@@ -18,7 +18,6 @@ const config: JestConfigWithTsJest = {
   ],
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
   testPathIgnorePatterns: [
-    '<rootDir>/__tests__/integration/',
     '<rootDir>/__tests__/components/dashboard/quick-stats.test.tsx'
   ],
   testMatch: [

@@ -20,7 +20,6 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
       text: generateWelcomeEmailText(userName, userRole),
     });
 
-    console.log('Welcome email sent successfully:', result);
     return { success: true, data: result };
   } catch (error) {
     console.error('Failed to send welcome email:', error);
@@ -47,7 +46,6 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData) {
       text: generateConfirmationEmailText(userName, confirmUrl),
     });
 
-    console.log('Confirmation email sent successfully:', result);
     return { success: true, data: result };
   } catch (error) {
     console.error('Failed to send confirmation email:', error);
@@ -98,6 +96,7 @@ function generateWelcomeEmailHTML(userName: string, userRole: string): string {
           border-radius: 8px;
           margin: 24px 0 16px 0;
           font-size: 1rem;
+          border-left: 6px solid #FF6B35;
         }
         .button {
           display: inline-block;
@@ -122,9 +121,11 @@ function generateWelcomeEmailHTML(userName: string, userRole: string): string {
         }
         .footer {
           text-align: center;
-          color: #6E6C75;
+          color: #fff;
+          background: linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%);
           font-size: 0.95rem;
           padding: 24px 16px 16px 16px;
+          border-top: 1px solid #E5E8E8;
         }
         @media (max-width: 600px) {
           .container, .content, .header { padding-left: 8px !important; padding-right: 8px !important; }
@@ -239,5 +240,152 @@ Confirm your email: ${confirmUrl}
 If you did not create this account, you can safely ignore this email.
 
 © 2024 Tabor Academy
+  `.trim();
+} 
+
+export interface EnrollmentCongratulationsEmailData {
+  userEmail: string;
+  userName: string;
+  courseTitle: string;
+}
+
+export async function sendEnrollmentCongratulationsEmail(data: EnrollmentCongratulationsEmailData) {
+  try {
+    const { userEmail, userName, courseTitle } = data;
+
+    const result = await resend.emails.send({
+      from: 'Tabor Academy <academy@tabordigital.com>',
+      to: [userEmail],
+      subject: `Congratulations on enrolling in "${courseTitle}"! 🎉`,
+      html: generateEnrollmentCongratulationsHTML(userName, courseTitle),
+      text: generateEnrollmentCongratulationsText(userName, courseTitle),
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Failed to send enrollment congratulations email:', error);
+    return { success: false, error };
+  }
+}
+
+function generateEnrollmentCongratulationsHTML(userName: string, courseTitle: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Congratulations on Your Enrollment!</title>
+      <link href="https://fonts.googleapis.com/css?family=Inter:400,700&display=swap" rel="stylesheet" type="text/css">
+      <style>
+        body { background: #F7F9F9; font-family: 'Inter', Arial, sans-serif; color: #2C3E50; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #E5E8E8; box-shadow: 0 2px 8px #E5E8E8; overflow: hidden; }
+        .header {
+          background: linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%);
+          padding: 32px 24px 16px 24px;
+          text-align: center;
+        }
+        .logo {
+          width: 120px;
+          height: auto;
+          margin-bottom: 16px;
+        }
+        .title {
+          color: #fff;
+          font-size: 2rem;
+          font-weight: 700;
+          margin: 0 0 8px 0;
+          letter-spacing: -1px;
+        }
+        .content { padding: 32px 24px 24px 24px; }
+        .greeting { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+        .highlight {
+          background: #D4EDDA;
+          color: #155724;
+          padding: 16px;
+          border-radius: 8px;
+          margin: 24px 0 16px 0;
+          font-size: 1rem;
+          border-left: 6px solid #4ECDC4;
+        }
+        .button {
+          display: inline-block;
+          background: linear-gradient(90deg, #4ECDC4 0%, #FF6B35 100%);
+          color: #fff;
+          padding: 14px 36px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 700;
+          font-size: 1.1rem;
+          margin: 24px 0;
+          box-shadow: 0 2px 8px #E5E8E8;
+        }
+        .footer {
+          text-align: center;
+          color: #fff;
+          background: linear-gradient(90deg, #FF6B35 0%, #4ECDC4 100%);
+          font-size: 0.95rem;
+          padding: 24px 16px 16px 16px;
+          border-top: 1px solid #E5E8E8;
+        }
+        @media (max-width: 600px) {
+          .container, .content, .header { padding-left: 8px !important; padding-right: 8px !important; }
+          .content { padding-top: 16px !important; padding-bottom: 16px !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="https://academy.tabordigital.com/TaborAcademyLogoFinal.png" alt="Tabor Academy Logo" class="logo" />
+          <div class="title">Congratulations, ${userName}!</div>
+        </div>
+        <div class="content">
+          <div class="greeting">You've successfully enrolled in:</div>
+          <div class="highlight">
+            <strong>${courseTitle}</strong>
+          </div>
+          <p>We're excited to have you on board for this learning journey. Here’s how to get the most out of your course:</p>
+          <ul>
+            <li>Start with the first lesson and set a regular study schedule.</li>
+            <li>Engage with your peers and instructors in the course community.</li>
+            <li>Track your progress and celebrate your milestones.</li>
+            <li>Don’t hesitate to ask questions—our team is here to support you!</li>
+          </ul>
+          <div style="text-align: center;">
+            <a href="https://academy.tabordigital.com/courses" class="button">Start Learning Now</a>
+          </div>
+          <p style="margin-top: 32px;">Wishing you success and growth,<br><strong>The Tabor Academy Team</strong></p>
+        </div>
+        <div class="footer">
+          <p>© 2024 Tabor Academy. All rights reserved.</p>
+          <p>This email was sent to you as part of your Tabor Academy enrollment.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateEnrollmentCongratulationsText(userName: string, courseTitle: string): string {
+  return `
+Congratulations, ${userName}!
+
+You've successfully enrolled in: ${courseTitle}
+
+We're excited to have you on board for this learning journey.
+
+Tips for success:
+- Start with the first lesson and set a regular study schedule.
+- Engage with your peers and instructors in the course community.
+- Track your progress and celebrate your milestones.
+- Don’t hesitate to ask questions—our team is here to support you!
+
+Start learning: https://academy.tabordigital.com/courses
+
+Wishing you success and growth,
+The Tabor Academy Team
+
+© 2024 Tabor Academy. All rights reserved.
   `.trim();
 } 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface AutoSaveConfig<T> {
   data: T;
@@ -39,7 +40,15 @@ export function useAutoSave<T>({
       if (onError) {
         onError(error as Error);
       } else {
-        toast.error(`Failed to save changes: ${errorMessage}`);
+        if ((error as any).code) {
+          showApiErrorToast({
+            code: (error as any).code,
+            error: (error as any).message,
+            details: (error as any).details,
+          });
+        } else {
+          toast.error(`Failed to save changes: ${errorMessage}`);
+        }
       }
     } finally {
       setIsSaving(false);

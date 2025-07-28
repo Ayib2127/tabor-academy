@@ -1,5 +1,6 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export async function GET(
   request: Request,
@@ -15,7 +16,7 @@ export async function GET(
 
   if (sessionError || !session) {
     console.error('Auth session missing or error:', sessionError?.message);
-    return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
+    throw new ForbiddenError('Auth session missing!');
   }
 
   const instructorId = session.user.id;
@@ -30,11 +31,11 @@ export async function GET(
 
     if (courseError || !course) {
       console.error('Course not found or access denied:', courseError?.message);
-      return NextResponse.json({ error: 'Course not found or you do not have access' }, { status: 404 });
+      throw new ValidationError('Course not found or you do not have access');
     }
 
     if (course.instructor_id !== instructorId) {
-      return NextResponse.json({ error: 'Unauthorized access to course' }, { status: 403 });
+      throw new ForbiddenError('Unauthorized access to course');
     }
 
     // Fetch enrolled students for the course
@@ -50,7 +51,7 @@ export async function GET(
 
     if (enrollmentsError) {
       console.error('Error fetching enrollments:', enrollmentsError.message);
-      return NextResponse.json({ error: 'Failed to fetch enrollments' }, { status: 500 });
+      throw enrollmentsError;
     }
 
     // Fetch all lessons for the course to calculate total lessons
@@ -61,7 +62,7 @@ export async function GET(
 
     if (lessonsError) {
       console.error('Error fetching lessons:', lessonsError.message);
-      return NextResponse.json({ error: 'Failed to fetch lessons for progress calculation' }, { status: 500 });
+      throw lessonsError;
     }
 
     const totalLessons = lessons ? lessons.length : 0;
@@ -84,6 +85,7 @@ export async function GET(
     return NextResponse.json({ students: studentsData });
   } catch (error: any) {
     console.error('Unexpected error:', error.message);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

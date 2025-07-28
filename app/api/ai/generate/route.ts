@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai, AI_MODEL, AI_PROMPTS, textToTiptapJSON, extractTextFromTiptap } from '@/lib/ai/openai';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createApiSupabaseClient();
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Parse request body
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (err) {
+      throw new ValidationError('Invalid JSON in request body');
+    }
     const { action, input, customPrompt, questionCount = 5 } = body;
 
     if (!action) {
-      return NextResponse.json({ error: 'Action is required' }, { status: 400 });
+      throw new ValidationError('Action is required');
     }
 
     let prompt: string;
@@ -36,54 +41,47 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case 'rewrite':
         if (!inputText) {
-          return NextResponse.json({ error: 'Content is required for rewrite action' }, { status: 400 });
+          throw new ValidationError('Content is required for rewrite action');
         }
         prompt = AI_PROMPTS.rewrite(inputText);
         break;
-
       case 'expand':
         if (!inputText) {
-          return NextResponse.json({ error: 'Content is required for expand action' }, { status: 400 });
+          throw new ValidationError('Content is required for expand action');
         }
         prompt = AI_PROMPTS.expand(inputText);
         break;
-
       case 'summarize':
         if (!inputText) {
-          return NextResponse.json({ error: 'Content is required for summarize action' }, { status: 400 });
+          throw new ValidationError('Content is required for summarize action');
         }
         prompt = AI_PROMPTS.summarize(inputText);
         break;
-
       case 'improve':
         if (!inputText) {
-          return NextResponse.json({ error: 'Content is required for improve action' }, { status: 400 });
+          throw new ValidationError('Content is required for improve action');
         }
         prompt = AI_PROMPTS.improve(inputText);
         break;
-
       case 'outline':
         const title = body.title || 'Lesson Outline';
         const description = body.description;
         prompt = AI_PROMPTS.outline(title, description);
         break;
-
       case 'quiz':
         if (!inputText) {
-          return NextResponse.json({ error: 'Content is required for quiz generation' }, { status: 400 });
+          throw new ValidationError('Content is required for quiz generation');
         }
         prompt = AI_PROMPTS.quiz(inputText, questionCount);
         break;
-
       case 'custom':
         if (!customPrompt) {
-          return NextResponse.json({ error: 'Custom prompt is required for custom action' }, { status: 400 });
+          throw new ValidationError('Custom prompt is required for custom action');
         }
         prompt = AI_PROMPTS.custom(customPrompt, inputText);
         break;
-
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        throw new ValidationError('Invalid action');
     }
 
     // Call OpenAI API
@@ -106,7 +104,7 @@ export async function POST(req: NextRequest) {
     const aiResponse = completion.choices[0]?.message?.content;
 
     if (!aiResponse) {
-      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
+      throw new Error('No response from AI');
     }
 
     // Process response based on action type
@@ -168,23 +166,25 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('AI API Error:', error);
-    
+    const apiError = handleApiError(error);
     // Handle specific OpenAI errors
     if (error.code === 'insufficient_quota') {
-      return NextResponse.json({ 
-        error: 'AI service quota exceeded. Please try again later.' 
+      return NextResponse.json({
+        code: 'AI_QUOTA_EXCEEDED',
+        error: 'AI service quota exceeded. Please try again later.'
       }, { status: 429 });
     }
-    
     if (error.code === 'invalid_api_key') {
-      return NextResponse.json({ 
-        error: 'AI service configuration error.' 
+      return NextResponse.json({
+        code: 'AI_INVALID_API_KEY',
+        error: 'AI service configuration error.'
       }, { status: 500 });
     }
-
-    return NextResponse.json({ 
-      error: 'Failed to generate AI content. Please try again.' 
-    }, { status: 500 });
+    return NextResponse.json({
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 

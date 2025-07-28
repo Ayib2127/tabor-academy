@@ -32,12 +32,11 @@ export function WelcomeEmailManager({ className }: WelcomeEmailManagerProps) {
     try {
       setLoading(true);
       const response = await fetch('/api/admin/welcome-email');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-
       const data = await response.json();
+      console.log('API response for welcome-email:', data); // Debug line
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch users');
+      }
       setUsers(data.users || []);
     } catch (error) {
       console.error('Error fetching users:', error);

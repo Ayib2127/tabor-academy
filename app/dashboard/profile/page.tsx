@@ -51,7 +51,7 @@ export default function ProfilePage() {
     name: "Sarah Kimani",
     displayName: "sarahk",
     title: "Digital Marketing Specialist",
-    location: "Nairobi, Kenya",
+    location: "Addis Ababa, Ethiopia",
     joinDate: "January 2024",
     membershipTier: "Premium",
     dateOfBirth: "1995-06-15",
@@ -66,7 +66,7 @@ export default function ProfilePage() {
     contact: {
       email: "sarah.kimani@example.com",
       emailVerified: true,
-      phone: "+254 700 000000",
+      phone: "+251936747488",
       emergencyContact: "John Doe (+254 711 000000)"
     },
     education: {
@@ -97,7 +97,7 @@ export default function ProfilePage() {
     },
     bio: "Digital marketing professional with a passion for helping Ethiopian businesses succeed online. Experienced in creating and executing successful digital marketing campaigns.",
     professionalSummary: "Over 5 years of experience in digital marketing, specializing in social media strategy and content creation for Ethiopian markets.",
-    learningJourneyStory: "Started my journey in traditional marketing before discovering the power of digital platforms. Now helping other Ethiopian entrepreneurs make the same transition."
+    learningJourneyStory: "Started my journey in traditional marketing before discovering the power of digital platforms. Now helping other entrepreneurs make the same transition."
   }
 
   const handleProfileUpdate = () => {

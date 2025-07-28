@@ -19,11 +19,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL('https://taboracademy.com'),
   title: {
-    default: 'Tabor Academy - Empowering Ethiopian Entrepreneurs',
+    default: 'Tabor Academy - Empowering entrepreneurs',
     template: '%s | Tabor Academy'
   },
   description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
-  keywords: ['digital skills', 'Ethiopian entrepreneurs', 'online learning', 'digital marketing', 'e-commerce', 'entrepreneurship'],
+  keywords: ['digital skills', 'entrepreneurs', 'online learning', 'digital marketing', 'e-commerce', 'entrepreneurship'],
   authors: [{ name: 'Tabor Academy' }],
   creator: 'Tabor Academy',
   publisher: 'Tabor Academy',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://taboracademy.com',
     siteName: 'Tabor Academy',
-    title: 'Tabor Academy - Empowering Ethiopian Entrepreneurs',
+    title: 'Tabor Academy - Empowering entrepreneurs',
     description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
     images: [
       {
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tabor Academy - Empowering Ethiopian Entrepreneurs',
+    title: 'Tabor Academy - Empowering entrepreneurs',
     description: 'A modern, interactive e-learning platform designed to rapidly equip individuals from Ethiopia\'s emerging markets with entrepreneurial, digital, and freelancing skills.',
     images: ['https://taboracademy.com/twitter-image.jpg'],
     creator: '@taboracademy'

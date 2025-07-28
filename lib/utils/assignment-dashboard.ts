@@ -14,8 +14,8 @@ export function getAssignmentDashboardSummary(courses: Course[]) {
   const urgentAssignments: Lesson[] = [];
 
   for (const course of courses) {
-    for (const module of course.modules) {
-      for (const lesson of module.lessons) {
+    for (const courseModule of course.modules) {
+      for (const lesson of courseModule.lessons) {
         if (lesson.type === 'assignment') {
           assignments.push(lesson);
           // Due soon logic
@@ -55,8 +55,8 @@ export function getAssignmentDashboardSummary(courses: Course[]) {
 export function getAllAssignmentsFromCourses(courses: Course[]): Lesson[] {
   const assignments: Lesson[] = [];
   for (const course of courses) {
-    for (const module of course.modules) {
-      for (const lesson of module.lessons) {
+    for (const courseModule of course.modules) {
+      for (const lesson of courseModule.lessons) {
         if (lesson.type === 'assignment') {
           assignments.push(lesson);
         }

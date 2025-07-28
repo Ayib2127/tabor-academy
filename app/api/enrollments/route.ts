@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { handleApiError, ForbiddenError, ValidationError } from '@/lib/utils/error-handling';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,10 +9,7 @@ export async function GET(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      throw new ForbiddenError('Unauthorized');
     }
     
     // Check for courseId query param
@@ -68,10 +66,7 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
         if (error) {
           console.error('Supabase error in enrollments GET:', error);
-          return NextResponse.json(
-            { error: error.message },
-            { status: 500 }
-          );
+          throw handleApiError(error);
         }
         return NextResponse.json({
           enrollment,
@@ -80,10 +75,8 @@ export async function GET(request: NextRequest) {
         });
       } catch (err) {
         console.error('Unexpected error in enrollments GET:', err);
-        return NextResponse.json(
-          { error: 'Internal server error', details: String(err) },
-          { status: 500 }
-        );
+        const apiError = handleApiError(err);
+        return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
       }
     }
     
@@ -105,10 +98,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', session.user.id);
       
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      throw handleApiError(error);
     }
     
     // Get progress for each enrollment
@@ -146,10 +136,8 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ enrollments: enrollmentsWithProgress });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
 
@@ -159,20 +147,14 @@ export async function POST(request: NextRequest) {
     const { courseId } = await request.json();
     
     if (!courseId) {
-      return NextResponse.json(
-        { error: 'Course ID is required' },
-        { status: 400 }
-      );
+      throw new ValidationError('Course ID is required');
     }
     
     // Get the current user
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      throw new ForbiddenError('Unauthorized');
     }
     
     // Check if the user is already enrolled
@@ -184,17 +166,11 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
       
     if (checkError) {
-      return NextResponse.json(
-        { error: checkError.message },
-        { status: 500 }
-      );
+      throw handleApiError(checkError);
     }
     
     if (existingEnrollment) {
-      return NextResponse.json(
-        { error: 'You are already enrolled in this course' },
-        { status: 400 }
-      );
+      throw new ValidationError('You are already enrolled in this course');
     }
     
     // Create the enrollment
@@ -208,17 +184,12 @@ export async function POST(request: NextRequest) {
       .single();
       
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      throw handleApiError(error);
     }
     
     return NextResponse.json({ enrollment: data });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'RESOURCE_CONFLICT' ? 409 : 500 });
   }
 }

@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
+import { handleApiError, ValidationError } from '@/lib/utils/error-handling';
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName } = await request.json();
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
+      throw new ValidationError('Email and password are required');
     }
 
     // Register the user with Supabase Auth
@@ -19,10 +17,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      return NextResponse.json(
-        { error: authError.message },
-        { status: 400 }
-      );
+      throw new ValidationError(authError.message);
     }
 
     if (authData.user) {
@@ -47,9 +42,8 @@ export async function POST(request: NextRequest) {
       message: "Registration successful! Please check your email to confirm your account.",
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
-    );
+    console.error('Register API error:', error);
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }

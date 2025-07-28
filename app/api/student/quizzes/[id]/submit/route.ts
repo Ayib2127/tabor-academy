@@ -1,27 +1,29 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { QuizResults } from '@/types/quiz';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export async function POST(req: Request, context: { params: { id: string } }) {
   const { params } = context;
   console.log("Quiz submit: params.id =", params.id);
   try {
     const supabase = await createApiSupabaseClient();
-    
     // Get session
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Log the incoming payload for debugging
-    const results: QuizResults = await req.json();
+    let results: QuizResults;
+    try {
+      results = await req.json();
+    } catch (err) {
+      throw new ValidationError('Invalid JSON in request body');
+    }
     console.log("Quiz submission payload:", JSON.stringify(results, null, 2));
 
     // Get quiz details
@@ -33,15 +35,12 @@ export async function POST(req: Request, context: { params: { id: string } }) {
     console.log("Quiz submit: quiz =", quiz, "quizError =", quizError);
 
     if (quizError || !quiz) {
-      throw new Error('Quiz not found');
+      throw new ValidationError('Quiz not found');
     }
 
     // Defensive check for attemptsAllowed
     if (typeof quiz.attemptsallowed !== 'number' || isNaN(quiz.attemptsallowed)) {
-      return NextResponse.json(
-        { error: 'Quiz configuration error: attemptsAllowed missing or invalid' },
-        { status: 500 }
-      );
+      throw new ValidationError('Quiz configuration error: attemptsAllowed missing or invalid');
     }
 
     // Check if student has exceeded attempts
@@ -56,10 +55,7 @@ export async function POST(req: Request, context: { params: { id: string } }) {
     }
 
     if (attempts.length >= quiz.attemptsallowed) {
-      return NextResponse.json(
-        { error: 'Maximum attempts exceeded' },
-        { status: 400 }
-      );
+      throw new ValidationError('Maximum attempts exceeded');
     }
 
     // Save attempt
@@ -85,9 +81,10 @@ export async function POST(req: Request, context: { params: { id: string } }) {
   } catch (error: any) {
     // Log the full error stack for debugging
     console.error('Error submitting quiz:', error);
+    const apiError = handleApiError(error);
     return NextResponse.json(
-      { error: error.message || 'Failed to submit quiz', details: error.stack },
-      { status: 500 }
+      { code: apiError.code, error: apiError.message, details: apiError.details },
+      { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 }
     );
   }
 } 

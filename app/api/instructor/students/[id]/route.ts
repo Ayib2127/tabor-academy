@@ -1,32 +1,33 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
+import { handleApiError, ForbiddenError } from '@/lib/utils/error-handling';
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  console.log('--- API Call: /api/instructor/students/[id] ---');
-  console.log('Request URL:', request.url);
-  console.log('Student ID:', params.id);
-
-  const studentId = params.id;
-  const supabase = await createApiSupabaseClient();
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError) {
-    console.error('Supabase getUser Error (Student Details API):', userError.message);
-    return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
-  }
-
-  if (!user) {
-    console.warn('Authentication failed (Student Details API): No user object found from session.');
-    return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
-  }
-
-  console.log('Instructor User ID (Student Details API):', user.id);
-
   try {
+    console.log('--- API Call: /api/instructor/students/[id] ---');
+    console.log('Request URL:', request.url);
+    console.log('Student ID:', params.id);
+
+    const studentId = params.id;
+    const supabase = await createApiSupabaseClient();
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('Supabase getUser Error (Student Details API):', userError.message);
+      throw userError;
+    }
+
+    if (!user) {
+      console.warn('Authentication failed (Student Details API): No user object found from session.');
+      throw new ForbiddenError('Auth session missing!');
+    }
+
+    console.log('Instructor User ID (Student Details API):', user.id);
+
     // 1. Fetch student's profile information
     const { data: studentProfile, error: profileError } = await supabase
       .from('users') // Assuming 'users' table holds profile data joined on auth.users.id
@@ -36,7 +37,7 @@ export async function GET(
 
     if (profileError || !studentProfile) {
       console.error('Error fetching student profile:', profileError);
-      return NextResponse.json({ error: 'Student profile not found or access denied.' }, { status: 404 });
+      throw new ForbiddenError('Student profile not found or access denied.');
     }
 
     // 2. Fetch courses the student is enrolled in AND are taught by the current instructor
@@ -52,7 +53,7 @@ export async function GET(
 
     if (enrolledCoursesError) {
       console.error('Error fetching enrolled courses for student:', enrolledCoursesError);
-      return NextResponse.json({ error: enrolledCoursesError.message }, { status: 500 });
+      throw enrolledCoursesError;
     }
 
     const coursesEnrolledDetails = await Promise.all(
@@ -134,6 +135,7 @@ export async function GET(
 
   } catch (err: any) {
     console.error('Unexpected error fetching individual student data:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 

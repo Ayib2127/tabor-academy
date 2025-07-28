@@ -15,6 +15,7 @@ import AIAssistant from './AIAssistant';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 import DynamicListInput from '@/components/DynamicListInput';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 // Local lesson type for UI editing (content can be object or string)
 type LocalLesson = Omit<Lesson, 'content'> & { content?: any };
@@ -222,7 +223,18 @@ const LessonEditor: FC<LessonEditorProps> = ({
       } catch (error: any) {
         console.error('Auto-save error:', error);
         setSaveStatus('error');
-        toast.error('Failed to save lesson: ' + (error?.message || error));
+        if (error.code) {
+          showApiErrorToast({
+            code: error.code,
+            error: error.message,
+            details: error.details,
+          });
+        } else {
+          showApiErrorToast({
+            code: 'INTERNAL_ERROR',
+            error: 'Failed to save lesson: ' + (error?.message || error),
+          });
+        }
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     }, 1000);
@@ -301,7 +313,18 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
   const handleVideoError = (error: Error) => {
     console.error('Video upload error:', error);
-    toast.error('Video upload failed: ' + error.message);
+    if ((error as any).code) {
+      showApiErrorToast({
+        code: (error as any).code,
+        error: error.message,
+        details: (error as any).details,
+      });
+    } else {
+      showApiErrorToast({
+        code: 'INTERNAL_ERROR',
+        error: 'Video upload failed: ' + error.message,
+      });
+    }
   };
 
   const handleQuizChange = (quiz: any) => {
@@ -346,7 +369,15 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate quiz');
+        if (errorData.code) {
+          showApiErrorToast({
+            code: errorData.code,
+            error: errorData.error,
+            details: errorData.details,
+          });
+        } else {
+          throw new Error(errorData.error || 'Failed to generate quiz');
+        }
       }
 
       const result = await response.json();
@@ -361,7 +392,18 @@ const LessonEditor: FC<LessonEditorProps> = ({
       
     } catch (error: any) {
       console.error('Quiz generation error:', error);
-      toast.error(error.message || 'Failed to generate quiz. Please try again.');
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to generate quiz. Please try again.',
+        });
+      }
     } finally {
       setIsGeneratingQuiz(false);
     }

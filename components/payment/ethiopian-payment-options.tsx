@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Copy, Check, Phone, Building2, CreditCard, Upload, X } from 'lucide-react'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface EthiopianPaymentOption {
   id: string
@@ -123,7 +124,10 @@ export function EthiopianPaymentOptions({
       toast.success('Copied to clipboard!')
       setTimeout(() => setCopiedField(null), 2000)
     } catch (error) {
-      toast.error('Failed to copy to clipboard')
+      showApiErrorToast({
+        code: 'INTERNAL_ERROR',
+        error: 'Failed to copy to clipboard',
+      });
     }
   }
 
@@ -133,13 +137,19 @@ export function EthiopianPaymentOptions({
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
       if (!allowedTypes.includes(file.type)) {
-        toast.error('Please upload an image (JPG, PNG, WebP) or PDF file')
+        showApiErrorToast({
+          code: 'VALIDATION_ERROR',
+          error: 'Please upload an image (JPG, PNG, WebP) or PDF file',
+        });
         return
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB')
+        showApiErrorToast({
+          code: 'VALIDATION_ERROR',
+          error: 'File size must be less than 5MB',
+        });
         return
       }
 
@@ -150,7 +160,10 @@ export function EthiopianPaymentOptions({
 
   const handleSubmitPayment = async () => {
     if (!selectedOption || !paymentProof || !transactionId.trim()) {
-      toast.error('Please fill all required fields and upload payment proof')
+      showApiErrorToast({
+        code: 'VALIDATION_ERROR',
+        error: 'Please fill all required fields and upload payment proof',
+      });
       return
     }
 
@@ -184,8 +197,21 @@ export function EthiopianPaymentOptions({
       onPaymentSubmitted()
 
     } catch (error: any) {
-      console.error('Payment submission error:', error)
-      toast.error(error.message || 'Failed to submit payment')
+      console.error('Payment submission error:', error);
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+          courseId,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to submit payment',
+          courseId,
+        });
+      }
     } finally {
       setIsSubmitting(false)
     }

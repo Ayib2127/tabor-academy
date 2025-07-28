@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import * as Sentry from '@sentry/nextjs';
 import Stripe from 'stripe';
+import { handleApiError, ValidationError } from '@/lib/utils/error-handling';
 
 export const dynamic = 'force-dynamic';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-05-28.basil',
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse<any>> {
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
     
     if (!signature) {
       console.error('No Stripe signature found in webhook headers');
-      return NextResponse.json({ error: 'No signature provided' }, { status: 400 });
+      throw new ValidationError('No signature provided');
     }
 
     // Verify webhook signature
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
       );
     } catch (err: any) {
       console.error('Stripe webhook signature verification failed:', err.message);
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      throw new ValidationError('Invalid signature');
     }
 
     // Handle the event
@@ -56,7 +57,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<any>> {
   } catch (error: any) {
     console.error('Webhook processing error:', error);
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
 
@@ -78,7 +80,7 @@ async function processStripeWebhook(session: Stripe.Checkout.Session): Promise<N
 
     if (!metadata || !metadata.course_id || !metadata.user_id) {
       console.error('Missing required metadata in Stripe session');
-      return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
+      throw new ValidationError('Missing metadata');
     }
 
     const {
@@ -123,7 +125,7 @@ async function createEnrollmentFromPayment({
   course_title: string;
   provider: string;
 }): Promise<NextResponse> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   try {
     // Check if enrollment already exists (prevent duplicate processing)
@@ -136,7 +138,7 @@ async function createEnrollmentFromPayment({
 
     if (checkError) {
       console.error('Error checking existing enrollment:', checkError);
-      throw new Error('Failed to check enrollment status');
+      throw new ValidationError('Failed to check enrollment status');
     }
 
     if (existingEnrollment) {
@@ -161,7 +163,7 @@ async function createEnrollmentFromPayment({
 
     if (enrollmentError) {
       console.error('Error creating enrollment:', enrollmentError);
-      throw new Error('Failed to create enrollment');
+      throw new ValidationError('Failed to create enrollment');
     }
 
     // Log successful payment
@@ -189,18 +191,17 @@ async function createEnrollmentFromPayment({
       console.warn('Analytics tracking failed:', analyticsError);
     }
 
-    // Send enrollment confirmation email (optional)
+    // Send congratulations email (non-blocking)
     try {
-      await sendEnrollmentConfirmationEmail({
-        user_id,
-        course_id,
-        course_title,
-        customer_email,
-        amount,
-        currency: currency.toUpperCase()
-      });
+      // Import dynamically to avoid circular dependencies
+      const { sendEnrollmentCongratulationsEmail } = await import('@/lib/email/resend');
+      sendEnrollmentCongratulationsEmail({
+        userEmail: customer_email,
+        userName: customer_email.split('@')[0], // If you have full name, use it
+        courseTitle: course_title,
+      }).catch((e) => console.warn('Failed to send congratulations email:', e));
     } catch (emailError) {
-      console.warn('Failed to send confirmation email:', emailError);
+      console.warn('Failed to send congratulations email:', emailError);
     }
 
     return NextResponse.json({ 

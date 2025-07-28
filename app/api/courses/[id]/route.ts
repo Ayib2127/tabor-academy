@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { handleApiError, ForbiddenError, ValidationError, NotFoundError } from '@/lib/utils/error-handling';
 
 // Mock data (should match your main courses list)
 const courses = [
@@ -28,9 +29,10 @@ const courses = [
 export async function GET(req: Request, context: { params: { id: string } }) {
   const { params } = context;
   const courseId = params.id;
-  const cookieStore = await cookies(); // cookies() is not async
+  const cookieStore = cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
+  try {
   // Fetch course and join instructor info
   const { data: course, error } = await supabase
     .from('courses')
@@ -53,7 +55,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
     .single();
 
   if (error || !course) {
-    return new Response(JSON.stringify({ error: 'Course not found' }), { status: 404 });
+      throw new NotFoundError('Course not found');
   }
 
   // Transform modules for frontend compatibility
@@ -70,17 +72,24 @@ export async function GET(req: Request, context: { params: { id: string } }) {
     modules,
     // Optionally, map/rename other fields as needed for your frontend
   }), { status: 200 });
+  } catch (error: any) {
+    console.error('Course details API error:', error);
+    const apiError = handleApiError(error);
+    return new Response(
+      JSON.stringify({ code: apiError.code, error: apiError.message, details: apiError.details }),
+      { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 }
+    );
+  }
 }
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
   const { params } = context;
   const courseId = params.id;
-  const supabase = createRouteHandlerClient({ cookies });
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new ForbiddenError('Unauthorized');
   }
 
   try {
@@ -94,12 +103,10 @@ export async function PUT(request: Request, context: { params: { id: string } })
       .single();
 
     if (courseError || !course) {
-      console.error('Course not found or unauthorized:', courseError);
-      return NextResponse.json({ error: 'Course not found or you are not authorized to update this course' }, { status: 404 });
+      throw new NotFoundError('Course not found or you are not authorized to update this course');
     }
-
     if (course.instructor_id !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized: You are not the instructor of this course' }, { status: 403 });
+      throw new ForbiddenError('Unauthorized: You are not the instructor of this course');
     }
 
     const { data, error } = await supabase
@@ -109,65 +116,51 @@ export async function PUT(request: Request, context: { params: { id: string } })
       .select();
 
     if (error) {
-      console.error('Error updating course publication status:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json(data);
   } catch (err: any) {
     console.error('Unexpected error updating course publication status:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
 
 export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   const { params } = context;
-  const supabase = createSupabaseServerClient(); // Initialize Supabase client for DELETE
+  const supabase = await createSupabaseServerClient();
   try {
     const id = params.id;
-    
     // Get the current user
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      throw new ForbiddenError('Unauthorized');
     }
-    
     // Check if the user is the instructor of this course
     const { data: courseData, error: courseError } = await supabase
       .from('courses')
       .select('instructor_id')
       .eq('id', id)
       .single();
-      
-    if (courseError || courseData.instructor_id !== session.user.id) {
-      return NextResponse.json(
-        { error: 'You do not have permission to delete this course' },
-        { status: 403 }
-      );
+    if (courseError || !courseData) {
+      throw new NotFoundError('Course not found');
     }
-    
+    if (courseData.instructor_id !== session.user.id) {
+      throw new ForbiddenError('You do not have permission to delete this course');
+    }
     // Delete the course
     const { error } = await supabase
       .from('courses')
       .delete()
       .eq('id', id);
-      
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      throw error;
     }
-    
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    console.error('Error deleting course:', error);
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }

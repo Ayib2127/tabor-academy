@@ -1,31 +1,32 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
+import { handleApiError, ForbiddenError } from '@/lib/utils/error-handling';
 
 export async function GET(request: Request) {
-  console.log('--- API Call: /api/instructor/students ---');
-  console.log('Request URL:', request.url);
-
-  const { searchParams } = new URL(request.url);
-  const courseIdFilter = searchParams.get('courseId'); // Get courseId from query parameter
-  console.log('Course ID Filter:', courseIdFilter);
-
-  const supabase = await createApiSupabaseClient();
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError) {
-    console.error('Supabase getUser Error (Students):', userError.message, userError);
-    return NextResponse.json({ error: userError.message || 'Supabase user error' }, { status: 500 });
-  }
-
-  if (!user) {
-    console.warn('Authentication failed (Students): No user object found from session.');
-    return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
-  }
-
-  console.log('User found in Students API:', user.id, user.email);
-
   try {
+    console.log('--- API Call: /api/instructor/students ---');
+    console.log('Request URL:', request.url);
+
+    const { searchParams } = new URL(request.url);
+    const courseIdFilter = searchParams.get('courseId'); // Get courseId from query parameter
+    console.log('Course ID Filter:', courseIdFilter);
+
+    const supabase = await createApiSupabaseClient();
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('Supabase getUser Error (Students):', userError.message, userError);
+      throw userError;
+    }
+
+    if (!user) {
+      console.warn('Authentication failed (Students): No user object found from session.');
+      throw new ForbiddenError('Auth session missing!');
+    }
+
+    console.log('User found in Students API:', user.id, user.email);
+
     let targetCourseIds: string[] = [];
 
     if (courseIdFilter) {
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 
       if (coursesError) {
         console.error('Error fetching instructor courses (Students):', coursesError);
-        return NextResponse.json({ error: coursesError.message }, { status: 500 });
+        throw coursesError;
       }
       targetCourseIds = instructorCourses?.map(course => course.id) || [];
     }
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
 
     if (enrollmentsError) {
       console.error('Error fetching enrollments (Students):', enrollmentsError);
-      return NextResponse.json({ error: enrollmentsError.message }, { status: 500 });
+      throw enrollmentsError;
     }
 
     // Fetch all lessons for these courses
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
 
     if (lessonsError) {
       console.error('Error fetching lessons (Students):', lessonsError);
-      return NextResponse.json({ error: lessonsError.message }, { status: 500 });
+      throw lessonsError;
     }
 
     // Fetch all progress records for these enrollments
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
 
     if (progressError) {
       console.error('Error fetching progress records (Students):', progressError);
-      return NextResponse.json({ error: progressError.message }, { status: 500 });
+      throw progressError;
     }
 
     // Process data to build the desired structure
@@ -151,6 +152,7 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error('Unexpected error fetching instructor students:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

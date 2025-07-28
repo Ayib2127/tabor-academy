@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import * as Sentry from '@sentry/nextjs';
+import {
+  ValidationError,
+  ForbiddenError,
+  handleApiError,
+} from '@/lib/utils/error-handling';
+
+class ResourceConflictError extends Error {
+  code = 'RESOURCE_CONFLICT';
+  details?: any;
+  constructor(message: string = 'Resource conflict occurred.', details?: any) {
+    super(message);
+    this.details = details;
+  }
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -116,8 +130,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<any>> {
 
         return {
           ...course,
-          instructor_name: course.users?.full_name || 'Tabor Academy',
-          instructor_avatar: course.users?.avatar_url,
+          instructor_name: Array.isArray(course.users)
+            ? course.users[0]?.full_name || 'Tabor Academy'
+            : course.users?.full_name || 'Tabor Academy',
+          instructor_avatar: Array.isArray(course.users)
+            ? course.users[0]?.avatar_url
+            : course.users?.avatar_url,
           enrollment_count: enrollmentCount || 0,
           rating: Math.round(mockRating * 10) / 10,
           review_count: mockReviewCount,
@@ -167,7 +185,7 @@ export async function POST(request: NextRequest) {
     // 1. Check for authenticated user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('You must be logged in to create a course.');
     }
 
     // 2. Check if the authenticated user has the 'instructor' role
@@ -176,25 +194,25 @@ export async function POST(request: NextRequest) {
       .select('role')
       .eq('id', session.user.id)
       .single();
-      
+
     if (userError || userData?.role !== 'instructor') {
-      return NextResponse.json({ error: 'Forbidden: Only instructors can create courses' }, { status: 403 });
+      throw new ForbiddenError('Only instructors can create courses.');
     }
 
     // 3. Get the new course data from the request body
     const { title, description, level, price, thumbnail_url, category, content_type, delivery_type, tags } = await request.json();
-    
+
     // TEMPORARY: Trigger a server-side error for Sentry testing
     if (title === "trigger_sentry_error") {
       console.error("Intentionally throwing a server-side error for Sentry test.");
       throw new Error("This is a test server-side error for Sentry!");
     }
-    
+
     // Basic validation
     if (!title || !description) {
-        return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+      throw new ValidationError('Title and description are required.', { title, description });
     }
-    
+
     // 4. Insert the new course into the database
     const { data: newCourse, error: insertError } = await supabase
       .from('courses')
@@ -214,24 +232,32 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
-      
+
     if (insertError) {
       // Handle potential duplicate titles if the constraint is active
-      if (insertError.code === '23505') { 
-          return NextResponse.json({ error: 'A course with this title already exists.'}, { status: 409 });
+      if (insertError.code === '23505') {
+        throw new ResourceConflictError('A course with this title already exists.', { title });
       }
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      throw insertError;
     }
-    
+
     return NextResponse.json({
       message: 'Course created successfully',
       course: newCourse
     });
 
   } catch (err: any) {
-    console.error('An unexpected error occurred:', err);
+    console.error('Course creation error:', err);
     Sentry.captureException(err);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json(
+      { code: apiError.code, error: apiError.message, details: apiError.details },
+      { status: apiError.code === 'VALIDATION_ERROR' ? 400 :
+               apiError.code === 'FORBIDDEN' ? 403 :
+               apiError.code === 'RESOURCE_CONFLICT' ? 409 :
+               apiError.code === 'AUTH_REQUIRED' ? 401 :
+               500 }
+    );
   }
 }
 

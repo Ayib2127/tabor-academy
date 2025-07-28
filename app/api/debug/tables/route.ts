@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { cookies } from 'next/headers';
+import { handleApiError, ForbiddenError } from '@/lib/utils/error-handling';
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const supabase = await createApiSupabaseClient(cookieStore);
-
   try {
+    const cookieStore = await cookies();
+    const supabase = await createApiSupabaseClient(cookieStore);
+
     // Check if user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Get all table names
@@ -21,10 +22,7 @@ export async function GET() {
       .eq('table_schema', 'public');
 
     if (tablesError) {
-      return NextResponse.json({ 
-        error: 'Failed to fetch tables',
-        details: tablesError 
-      }, { status: 500 });
+      throw tablesError;
     }
 
     // Check if course_modules table exists
@@ -69,9 +67,8 @@ export async function GET() {
     });
 
   } catch (error) {
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error 
-    }, { status: 500 });
+    console.error('Debug Tables API error:', error);
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 

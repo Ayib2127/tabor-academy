@@ -39,10 +39,10 @@ export default function SettingsPage() {
   // Mock user settings data
   const settings = {
     email: "sarah.kimani@example.com",
-    phone: "+254 700 000000",
+    phone: "+251936747488",
     twoFactorEnabled: true,
     lastLogin: "March 1, 2024 10:30 AM",
-    lastLoginLocation: "Nairobi, Kenya",
+    lastLoginLocation: "Addis Ababa, Ethiopia",
     lastLoginDevice: "Chrome on MacOS",
     notifications: {
       email: {
@@ -72,13 +72,13 @@ export default function SettingsPage() {
         {
           date: "March 1, 2024 10:30 AM",
           device: "Chrome on MacOS",
-          location: "Nairobi, Kenya",
+          location: "Addis Ababa, Ethiopia",
           status: "success"
         },
         {
           date: "February 28, 2024 3:15 PM",
           device: "Safari on iPhone",
-          location: "Nairobi, Kenya",
+          location: "Addis Ababa, Ethiopia",
           status: "success"
         },
         {
@@ -625,7 +625,7 @@ export default function SettingsPage() {
                       <div>
                         <p className="font-medium">Safari on iPhone</p>
                         <p className="text-sm text-muted-foreground">
-                          Nairobi, Kenya • Last active 2 days ago
+                          Addis Ababa, Ethiopia • Last active 2 days ago
                         </p>
                       </div>
                     </div>

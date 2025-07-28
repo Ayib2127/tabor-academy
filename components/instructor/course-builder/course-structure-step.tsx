@@ -193,16 +193,16 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
 
   const addLesson = (moduleId: number) => {
     if (newLessonTitle.trim() && newLessonType) {
-      const module = courseData.modules.find((m) => m.id === moduleId)
+      const courseModule = courseData.modules.find((m) => m.id === moduleId)
       const newLesson: Lesson = {
         id: Date.now(),
         title: newLessonTitle.trim(),
         type: newLessonType,
-        order: module ? module.lessons.length + 1 : 1,
+        order: courseModule ? courseModule.lessons.length + 1 : 1,
       }
       const updatedModules = updateOrders(
-        courseData.modules.map((module) =>
-          module.id === moduleId ? { ...module, lessons: [...module.lessons, newLesson] } : module
+        courseData.modules.map((courseModule) =>
+          courseModule.id === moduleId ? { ...courseModule, lessons: [...courseModule.lessons, newLesson] } : courseModule
         )
       )
       updateCourseData({ modules: updatedModules })
@@ -214,8 +214,8 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
 
   const deleteLesson = (moduleId: number, lessonId: number) => {
     const updatedModules = updateOrders(
-      courseData.modules.map((module) =>
-        module.id === moduleId ? { ...module, lessons: module.lessons.filter((l) => l.id !== lessonId) } : module
+      courseData.modules.map((courseModule) =>
+        courseModule.id === moduleId ? { ...courseModule, lessons: courseModule.lessons.filter((l) => l.id !== lessonId) } : courseModule
       )
     )
     updateCourseData({ modules: updatedModules })
@@ -262,10 +262,10 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-4">
-                {courseData.modules.map((module) => (
+                {courseData.modules.map((courseModule) => (
                   <DraggableModule
-                    key={module.id}
-                    module={module}
+                    key={courseModule.id}
+                    module={courseModule}
                     onDeleteModule={deleteModule}
                     onAddLesson={(moduleId) => setShowAddLesson(moduleId)}
                     onDeleteLesson={deleteLesson}

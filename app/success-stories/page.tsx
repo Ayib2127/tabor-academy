@@ -207,7 +207,7 @@ export default function SuccessStoriesPage() {
               Write Your Success Story
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-up">
-              Join our community of successful Ethiopian entrepreneurs and start your journey today.
+              Join our community of successful entrepreneurs and start your journey today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
               <Button 

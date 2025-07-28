@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { describe, it, expect, jest } from '@jest/globals'
@@ -50,7 +50,6 @@ describe('SiteHeader', () => {
     // Check if main navigation links are present
     expect(screen.getByText('About')).toBeInTheDocument()
     expect(screen.getByText('Courses')).toBeInTheDocument()
-    expect(screen.getByText('Pricing')).toBeInTheDocument()
     expect(screen.getByText('Success Stories')).toBeInTheDocument()
     expect(screen.getByText('FAQs')).toBeInTheDocument()
   })
@@ -67,23 +66,29 @@ describe('SiteHeader', () => {
     fireEvent.click(menuButton)
     
     // Mobile menu should now be rendered (two nav elements total)
-    const navsAfterOpen = screen.getAllByRole('navigation', { hidden: true })
-    expect(navsAfterOpen.length).toBe(2)
+    await waitFor(() => {
+      const navsAfterOpen = screen.getAllByRole('navigation', { hidden: true })
+      expect(navsAfterOpen.length).toBe(2)
+    });
     
     
     // Click again to close
     fireEvent.click(menuButton)
     
     // Mobile menu should be removed (back to single nav)
-    expect(screen.getAllByRole('navigation', { hidden: true }).length).toBe(1)
+    await waitFor(() => {
+      expect(screen.getAllByRole('navigation', { hidden: true }).length).toBe(1)
+    });
   })
 
   it('renders authentication buttons', async () => {
     setViewportWidth(1024);
     render(<SiteHeader />)
     
-    expect(await screen.findByRole('link', { name: /login/i })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /start learning free/i })).toBeInTheDocument()
+    await waitFor(async () => {
+      expect(await screen.findByRole('link', { name: /login/i })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: /start learning free/i })).toBeInTheDocument()
+    });
   })
 
   it('renders language selector dropdown', async () => {

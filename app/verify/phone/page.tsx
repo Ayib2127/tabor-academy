@@ -7,9 +7,23 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Loader2, Check, Phone, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { supabase } from "@/lib/supabase/client"
+import { getCountryCallingCode } from "libphonenumber-js"
+import { z } from "zod"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "sonner"
+import { countries } from "@/lib/countries"
 
 export default function PhoneVerificationPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const phone = searchParams.get("phone") || ""
   const [code, setCode] = useState(["", "", "", "", "", ""])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -58,21 +72,18 @@ export default function PhoneVerificationPage() {
   const handleVerify = async () => {
     setIsLoading(true)
     setError("")
-
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // For demo purposes, we'll consider "123456" as the correct code
-      if (code.join("") === "123456") {
-        router.push("/dashboard")
-      } else {
-        setError("Invalid verification code. Please try again.")
-        setCode(["", "", "", "", "", ""])
-        document.getElementById("code-0")?.focus()
-      }
-    } catch (err) {
-      setError("An error occurred. Please try again.")
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token: code.join(""),
+        type: "sms",
+      });
+      if (error) throw error;
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Invalid verification code. Please try again.");
+      setCode(["", "", "", "", "", ""]);
+      document.getElementById("code-0")?.focus();
     } finally {
       setIsLoading(false)
     }

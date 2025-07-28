@@ -1,22 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
+import { handleApiError } from '@/lib/utils/error-handling';
 
 export async function GET() {
   try {
     // Test the Supabase connection
     const { data, error } = await supabase.from('users').select('count').single();
-    
     if (error) {
-      return NextResponse.json(
-        { 
-          status: 'error', 
-          message: 'Database connection failed', 
-          error: error.message 
-        }, 
-        { status: 500 }
-      );
+      throw error;
     }
-    
     return NextResponse.json({ 
       status: 'ok', 
       message: 'API is healthy', 
@@ -24,12 +16,10 @@ export async function GET() {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('Health API error:', error);
+    const apiError = handleApiError(error);
     return NextResponse.json(
-      { 
-        status: 'error', 
-        message: 'API health check failed', 
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+      { code: apiError.code, error: apiError.message, details: apiError.details },
       { status: 500 }
     );
   }

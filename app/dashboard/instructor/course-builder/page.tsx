@@ -12,6 +12,7 @@ import CourseReviewStep from "@/components/instructor/course-builder/course-revi
 import { toast } from "@/components/ui/use-toast"
 import { SiteHeader } from "@/components/site-header"
 import { useRouter } from "next/navigation"
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface CourseData {
   title: string
@@ -150,10 +151,18 @@ export default function CourseWizardPage() {
         router.push(`/dashboard/instructor/courses/${result.course.id}`)
       }
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.message || 'Failed to create course'
-      })
+      if (err.code) {
+        showApiErrorToast({
+          code: err.code,
+          error: err.message,
+          details: err.details,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: err.message || 'Failed to create course'
+        });
+      }
     } finally {
       setIsSubmitting(false)
     }

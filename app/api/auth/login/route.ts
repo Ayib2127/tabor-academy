@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { handleWelcomeEmail } from '@/lib/utils/welcome-email';
+import { handleApiError, ValidationError, ForbiddenError } from '@/lib/utils/error-handling';
 
 /**
  * @swagger
@@ -59,10 +60,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = await request.json();
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      );
+      throw new ValidationError('Email and password are required');
     }
 
     // Use SSR server client for correct cookie handling
@@ -88,10 +86,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 401 }
-      );
+      throw new ForbiddenError(error.message);
     }
 
     // After successful login, trigger welcome email (non-blocking)
@@ -106,9 +101,8 @@ export async function POST(request: NextRequest) {
       session: data.session
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    console.error('Login API error:', error);
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 401 : 500 });
   }
 }

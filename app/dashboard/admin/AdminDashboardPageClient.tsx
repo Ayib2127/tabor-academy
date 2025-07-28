@@ -223,7 +223,7 @@ export default function AdminDashboardPageClient({ user, role }: { user: any, ro
   }
 
   return (
-    <div className="px-4 py-8 w-full">
+    <div className="w-full px-4 py-8 max-w-7xl">
           {/* Search and Notifications Bar */}
           <div className="flex items-center justify-between mb-8">
             <div className="relative flex-1 max-w-md">
@@ -253,8 +253,7 @@ export default function AdminDashboardPageClient({ user, role }: { user: any, ro
             {dashboardData.systemHealth.serverStatus}
           </Button>
         </div>
-        
-        <div className="grid md:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
           <Card className="p-6 border-[#E5E8E8] shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               <div className="bg-[#FF6B35]/10 rounded-full p-3">

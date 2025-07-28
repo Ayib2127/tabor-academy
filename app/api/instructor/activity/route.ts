@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { handleApiError, ForbiddenError } from '@/lib/utils/error-handling';
 
 interface ActivityItem {
   id: string;
@@ -12,25 +13,25 @@ interface ActivityItem {
 }
 
 export async function GET(request: Request) {
-  console.log('--- API Call: /api/instructor/activity ---');
-  console.log('Request URL:', request.url);
-
-  console.log('Incoming cookies (activity API):', (await cookies()).getAll());
-  const supabase = createRouteHandlerClient({ cookies });
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError) {
-    console.error('Error getting user session:', userError);
-    return NextResponse.json({ error: userError.message }, { status: 500 });
-  }
-
-  if (!user) {
-    console.log('Authentication failed: No user found for instructor activity API.');
-    return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
-  }
-
   try {
+    console.log('--- API Call: /api/instructor/activity ---');
+    console.log('Request URL:', request.url);
+
+    console.log('Incoming cookies (activity API):', (await cookies()).getAll());
+    const supabase = createRouteHandlerClient({ cookies });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('Error getting user session:', userError);
+      throw userError;
+    }
+
+    if (!user) {
+      console.log('Authentication failed: No user found for instructor activity API.');
+      throw new ForbiddenError('Unauthorized: No active session');
+    }
+
     // First, get the course IDs
     const { data: courseIds } = await supabase
       .from('courses')
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 
     if (activityError) {
       console.error('Error fetching recent activity:', activityError);
-      return NextResponse.json({ error: activityError.message }, { status: 500 });
+      throw activityError;
     }
 
     const processedActivity: ActivityItem[] = recentActivityData.map(item => ({
@@ -68,6 +69,7 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error('Unexpected error fetching recent activity:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 

@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface ContentImporterProps {
   onCourseGenerated: (courseData: any) => void;
@@ -113,7 +114,18 @@ const ContentImporter: FC<ContentImporterProps> = ({
               : f
           )
         );
-        toast.error(`Failed to process ${fileData.file.name}`);
+        if (error.code) {
+          showApiErrorToast({
+            code: error.code,
+            error: error.message,
+            details: error.details,
+          });
+        } else {
+          showApiErrorToast({
+            code: 'INTERNAL_ERROR',
+            error: error.message || `Failed to process ${fileData.file.name}`,
+          });
+        }
       }
     }
   }, []);
@@ -161,7 +173,10 @@ const ContentImporter: FC<ContentImporterProps> = ({
     const readyFiles = importedFiles.filter(f => f.status === 'ready');
     
     if (readyFiles.length === 0) {
-      toast.error('Please import and process at least one file first');
+      showApiErrorToast({
+        code: 'VALIDATION_ERROR',
+        error: 'Please import and process at least one file first',
+      });
       return;
     }
 
@@ -221,7 +236,18 @@ const ContentImporter: FC<ContentImporterProps> = ({
 
     } catch (error: any) {
       console.error('Course generation error:', error);
-      toast.error(error.message || 'Failed to generate course. Please try again.');
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to generate course. Please try again.',
+        });
+      }
     } finally {
       setIsProcessing(false);
     }

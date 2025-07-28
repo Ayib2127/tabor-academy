@@ -33,12 +33,12 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
     customer: {
       name: "Sarah Kimani",
       email: "sarah.kimani@example.com",
-      address: "123 Main Street, Nairobi, Kenya",
-      phone: "+254 700 000000"
+      address: "123 Main Street, Addis Ababa, Ethiopia",
+      phone: "+251936747488"
     },
     company: {
       name: "Tabor Academy",
-      address: "456 Business Avenue, Nairobi, Kenya",
+      address: "456 Business Avenue, Addis Ababa, Ethiopia",
       phone: "+254 700 111111",
       email: "billing@taboracademy.com",
       website: "www.taboracademy.com",

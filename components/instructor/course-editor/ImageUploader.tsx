@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Image as ImageIcon, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface ImageUploaderProps {
   onUploadComplete: (imageUrl: string) => void;
@@ -43,6 +44,10 @@ const ImageUploader: FC<ImageUploaderProps> = ({
       });
       if (!response.ok) {
         const data = await response.json();
+        showApiErrorToast({
+          code: data.code || 'INTERNAL_ERROR',
+          error: data.error || 'Failed to upload image',
+        });
         throw new Error(data.error || 'Failed to upload image');
       }
       const data = await response.json();
@@ -51,7 +56,10 @@ const ImageUploader: FC<ImageUploaderProps> = ({
     } catch (error) {
       console.error('Upload error:', error);
       onUploadError(error as Error);
-      toast.error('Failed to upload image');
+      showApiErrorToast({
+        code: (error as any).code || 'INTERNAL_ERROR',
+        error: (error as any).message || 'Failed to upload image',
+      });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

@@ -1,27 +1,62 @@
+"use client";
+
 import { FC, useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
   Sparkles,
-  Wand2,
+  RefreshCw,
+  Zap,
   FileText,
   HelpCircle,
+  BookOpen,
   Lightbulb,
-  RefreshCw,
   Copy,
   Check,
   X,
-  Loader2,
+  ChevronDown,
+  ChevronUp,
   MessageSquare,
-  BookOpen,
+  Bot,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  Brain,
   Target,
-  Zap,
+  Palette,
+  Code,
+  Globe,
+  Users,
+  Award,
+  Star,
+  Heart,
+  Eye,
+  BarChart3,
+  PieChart,
+  Activity,
+  Zap as ZapIcon,
+  Lightbulb as LightbulbIcon,
+  Target as TargetIcon,
+  Palette as PaletteIcon,
+  Code as CodeIcon,
+  Globe as GlobeIcon,
+  Users as UsersIcon,
+  Award as AwardIcon,
+  Star as StarIcon,
+  Heart as HeartIcon,
+  Eye as EyeIcon,
+  BarChart3 as BarChart3Icon,
+  PieChart as PieChartIcon,
+  Activity as ActivityIcon,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface AIAssistantProps {
   selectedText?: string;
@@ -65,8 +100,7 @@ const AIAssistant: FC<AIAssistantProps> = ({
   currentContent,
   isVisible = true,
 }) => {
-  if (!isVisible) return null;
-
+  // All hooks must be called at the top level
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -168,24 +202,16 @@ const AIAssistant: FC<AIAssistantProps> = ({
     const action = aiActions.find(a => a.id === actionId);
     if (!action) return;
 
-    // Check if action requires input
-    if (action.requiresInput && !selectedText && !currentContent && !customPrompt) {
-      toast.error('Please select some text, add content, or provide a custom prompt');
-      return;
-    }
-
-    setIsLoading(true);
     setActiveAction(actionId);
+    setIsLoading(true);
 
     try {
-      const input = selectedText || currentContent;
-      const response = await callAI(actionId, input, customPrompt);
-      
+      const response = await callAI(action.type);
       setGeneratedContent(response);
-      toast.success('AI content generated successfully!');
-    } catch (error: any) {
-      console.error('AI generation error:', error);
-      toast.error(error.message || 'Failed to generate content. Please try again.');
+      setIsOpen(true);
+    } catch (error) {
+      console.error('AI action failed:', error);
+      toast.error('Failed to generate content. Please try again.');
     } finally {
       setIsLoading(false);
       setActiveAction(null);
@@ -194,25 +220,22 @@ const AIAssistant: FC<AIAssistantProps> = ({
 
   const handleCustomAIAction = async () => {
     if (!customPrompt.trim()) {
-      toast.error('Please provide a custom prompt');
+      toast.error('Please enter a custom prompt');
       return;
     }
 
     setIsLoading(true);
-    setActiveAction('custom');
-
     try {
-      const input = selectedText || currentContent;
-      const response = await callAI('custom', input, customPrompt);
-      
+      const response = await callAI('custom', undefined, customPrompt);
       setGeneratedContent(response);
-      toast.success('AI content generated successfully!');
-    } catch (error: any) {
-      console.error('AI generation error:', error);
-      toast.error(error.message || 'Failed to generate content. Please try again.');
+      setIsOpen(true);
+      setShowCustomPrompt(false);
+      setCustomPrompt('');
+    } catch (error) {
+      console.error('Custom AI action failed:', error);
+      toast.error('Failed to generate content. Please try again.');
     } finally {
       setIsLoading(false);
-      setActiveAction(null);
     }
   };
 
@@ -234,9 +257,12 @@ const AIAssistant: FC<AIAssistantProps> = ({
     if (!generatedContent) return;
 
     try {
-      const textContent = JSON.stringify(generatedContent.content, null, 2);
-      await navigator.clipboard.writeText(textContent);
-      setCopiedContent(generatedContent.content);
+      const contentText = typeof generatedContent.content === 'string' 
+        ? generatedContent.content 
+        : JSON.stringify(generatedContent.content, null, 2);
+      
+      await navigator.clipboard.writeText(contentText);
+      setCopiedContent(generatedContent.type);
       toast.success('Content copied to clipboard!');
       
       setTimeout(() => setCopiedContent(null), 2000);
@@ -245,7 +271,6 @@ const AIAssistant: FC<AIAssistantProps> = ({
     }
   };
 
-  // Close assistant when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (assistantRef.current && !assistantRef.current.contains(event.target as Node)) {
@@ -262,226 +287,193 @@ const AIAssistant: FC<AIAssistantProps> = ({
     };
   }, [isOpen]);
 
+  if (!isVisible) return null;
+
   return (
-    <div className="relative" ref={assistantRef}>
-      {/* AI Assistant Trigger */}
+    <div ref={assistantRef} className="relative">
+      {/* AI Assistant Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className={`bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg ${
-          isOpen ? 'ring-2 ring-purple-300' : ''
-        }`}
-        size="sm"
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg rounded-full p-4 h-14 w-14"
+        aria-label="AI Assistant"
       >
-        <Sparkles className="w-4 h-4 mr-2" />
-        AI Assistant
+        {isLoading ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : (
+          <Sparkles className="h-6 w-6" />
+        )}
       </Button>
 
       {/* AI Assistant Panel */}
       {isOpen && (
-        <Card className="absolute top-12 right-0 w-96 z-50 shadow-xl border-purple-200">
-          <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-blue-50">
-            <div className="flex items-center justify-between">
+        <div className="fixed bottom-24 right-6 z-50 w-96 max-h-[80vh] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Wand2 className="w-5 h-5 text-purple-600" />
-                <CardTitle className="text-purple-900">AI Co-pilot</CardTitle>
+                <Bot className="h-5 w-5 text-purple-600" />
+                <h3 className="font-semibold text-lg">AI Assistant</h3>
               </div>
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => setIsOpen(false)}
-                className="h-6 w-6 text-purple-600 hover:text-purple-800"
+                className="h-8 w-8 p-0"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            {selectedText && (
-              <div className="mt-2 p-2 bg-white rounded border border-purple-200">
-                <p className="text-xs text-purple-700 mb-1">Selected text:</p>
-                <p className="text-sm text-gray-700 truncate">
-                  {selectedText.substring(0, 100)}...
-                </p>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            {/* Quick Actions */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {aiActions.map((action) => (
-                  <Button
-                    key={action.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAIAction(action.id)}
-                    disabled={isLoading}
-                    className="flex items-center gap-2 h-auto p-3 border-gray-200 hover:border-purple-300 hover:bg-purple-50"
-                  >
-                    {isLoading && activeAction === action.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      action.icon
-                    )}
-                    <div className="text-left">
-                      <div className="text-xs font-medium">{action.title}</div>
-                      <div className="text-xs text-gray-500">{action.description}</div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
+
+            {/* AI Actions Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {aiActions.map((action) => (
+                <Button
+                  key={action.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAIAction(action.id)}
+                  disabled={isLoading}
+                  className="h-auto p-3 flex flex-col items-center gap-2 text-xs"
+                >
+                  {action.icon}
+                  <div className="text-center">
+                    <div className="font-medium">{action.title}</div>
+                    <div className="text-xs text-muted-foreground">{action.description}</div>
+                  </div>
+                </Button>
+              ))}
             </div>
 
-            {/* Quiz Settings */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <h5 className="text-sm font-semibold text-blue-900 mb-2">Quiz Settings</h5>
-              <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-blue-800">Number of Questions:</label>
-                  <Select value={questionCount.toString()} onValueChange={(value) => setQuestionCount(parseInt(value))}>
-                    <SelectTrigger className="w-full h-8 text-xs border-blue-300">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[3, 5, 7, 10, 15].map(num => (
-                        <SelectItem key={num} value={num.toString()}>{num} questions</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Custom Prompt */}
-            <div>
+            {/* Custom Prompt Section */}
+            <div className="mb-4">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setShowCustomPrompt(!showCustomPrompt)}
-                className="w-full justify-start text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+                className="w-full"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Custom AI Request
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Custom Prompt
+                {showCustomPrompt ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
               </Button>
               
               {showCustomPrompt && (
                 <div className="mt-3 space-y-3">
                   <Textarea
+                    placeholder="Enter your custom prompt..."
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
-                    placeholder="Describe what you'd like the AI to help you with..."
-                    className="border-purple-200 focus:border-purple-400"
-                    rows={3}
+                    className="min-h-[80px]"
                   />
-                  <Button
-                    onClick={handleCustomAIAction}
-                    disabled={isLoading || !customPrompt.trim()}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4 mr-2" />
-                    )}
-                    Generate Content
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleCustomAIAction}
+                      disabled={isLoading || !customPrompt.trim()}
+                      className="flex-1"
+                    >
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      Generate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowCustomPrompt(false);
+                        setCustomPrompt('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Generated Content Preview */}
-            {generatedContent && (
-              <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-semibold text-purple-900">
-                      AI Generated Content
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="border-purple-300 text-purple-700">
-                    {Math.round(generatedContent.confidence * 100)}% confidence
-                  </Badge>
-                </div>
-
-                <div className="bg-white rounded border border-purple-200 p-3 mb-3 max-h-40 overflow-y-auto">
-                  <div className="text-sm text-gray-700">
-                    {generatedContent.type === 'quiz' ? (
-                      <div>
-                        <p className="font-medium mb-2">{generatedContent.content.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {generatedContent.content.questions?.length || 0} questions generated
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="prose prose-sm max-w-none">
-                        <p className="text-gray-600">Content generated successfully. Click "Apply" to use it.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {generatedContent.suggestions && (
-                  <div className="mb-3">
-                    <p className="text-xs font-medium text-purple-700 mb-1">AI Suggestions:</p>
-                    <ul className="text-xs text-purple-600 space-y-1">
-                      {generatedContent.suggestions.map((suggestion, index) => (
-                        <li key={index}>• {suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {generatedContent.usage && (
-                  <div className="mb-3 text-xs text-gray-500">
-                    Tokens used: {generatedContent.usage.totalTokens}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleAcceptContent}
-                    size="sm"
-                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    Apply
-                  </Button>
-                  <Button
-                    onClick={handleCopyContent}
-                    variant="outline"
-                    size="sm"
-                    className="border-purple-300 text-purple-700 hover:bg-purple-50"
-                  >
-                    {copiedContent === generatedContent.content ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => setGeneratedContent(null)}
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+            {/* Quiz Settings */}
+            {lessonType === 'quiz' && (
+              <div className="mb-4">
+                <Label className="text-sm font-medium">Number of Questions</Label>
+                <div className="flex items-center gap-3 mt-2">
+                  <Slider
+                    value={[questionCount]}
+                    onValueChange={(value) => setQuestionCount(value[0])}
+                    max={10}
+                    min={3}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-medium w-8">{questionCount}</span>
                 </div>
               </div>
             )}
 
-            {/* Tips */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <h5 className="text-xs font-semibold text-blue-900 mb-2">💡 AI Tips</h5>
-              <ul className="text-xs text-blue-800 space-y-1">
-                <li>• Select text for context-aware suggestions</li>
-                <li>• Use custom prompts for specific needs</li>
-                <li>• Review AI content before applying</li>
-                <li>• Combine AI suggestions with your expertise</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Generated Content Display */}
+            {generatedContent && (
+              <Card className="mt-4">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="font-medium">Generated Content</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyContent}
+                        disabled={copiedContent === generatedContent.type}
+                      >
+                        {copiedContent === generatedContent.type ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copiedContent === generatedContent.type ? 'Copied!' : 'Copy'}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="max-h-48 overflow-y-auto">
+                    <pre className="text-xs bg-gray-50 p-3 rounded border">
+                      {typeof generatedContent.content === 'string' 
+                        ? generatedContent.content 
+                        : JSON.stringify(generatedContent.content, null, 2)}
+                    </pre>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      onClick={handleAcceptContent}
+                      className="flex-1"
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setGeneratedContent(null)}
+                    >
+                      Regenerate
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Usage Stats */}
+            {generatedContent?.usage && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Tokens used:</span>
+                    <span>{generatedContent.usage.totalTokens}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Confidence:</span>
+                    <span>{(generatedContent.confidence * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

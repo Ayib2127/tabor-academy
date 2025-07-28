@@ -1,20 +1,21 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
+import { handleApiError, ForbiddenError, ValidationError } from '@/lib/utils/error-handling';
 
 export async function PATCH(request: Request) {
-  const supabase = await createApiSupabaseClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const supabase = await createApiSupabaseClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new ForbiddenError('Unauthorized');
+    }
+
     const { lessons } = await request.json(); // Expects an array of { id: string, position: number }
 
     if (!Array.isArray(lessons) || lessons.length === 0) {
-      return NextResponse.json({ error: 'Invalid input: lessons array is required' }, { status: 400 });
+      throw new ValidationError('Invalid input: lessons array is required');
     }
 
     // Verify ownership of all lessons to prevent unauthorized updates
@@ -26,11 +27,11 @@ export async function PATCH(request: Request) {
 
     if (ownershipError) {
       console.error('Error verifying lesson ownership:', ownershipError);
-      return NextResponse.json({ error: ownershipError.message }, { status: 500 });
+      throw ownershipError;
     }
 
     if (ownedLessons.length !== lessons.length) {
-      return NextResponse.json({ error: 'Unauthorized: Some lessons do not exist or you do not own them' }, { status: 403 });
+      throw new ForbiddenError('Unauthorized: Some lessons do not exist or you do not own them');
     }
 
     // Get the course IDs associated with these lessons to verify instructor ownership of courses
@@ -43,7 +44,7 @@ export async function PATCH(request: Request) {
 
     if (coursesOwnershipError || ownedCourses.length !== courseIds.length) {
       console.error('Error verifying course ownership:', coursesOwnershipError);
-      return NextResponse.json({ error: 'Unauthorized: You do not own all associated courses' }, { status: 403 });
+      throw new ForbiddenError('Unauthorized: You do not own all associated courses');
     }
 
     // Perform batch updates for lesson positions
@@ -58,12 +59,13 @@ export async function PATCH(request: Request) {
 
     if (updateError) {
       console.error('Error updating lesson positions:', updateError);
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+      throw updateError;
     }
 
     return NextResponse.json({ message: 'Lesson positions updated successfully' });
   } catch (err: any) {
     console.error('Unexpected error reordering lessons:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 } 

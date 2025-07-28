@@ -1,6 +1,7 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 const announcementSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     } = await supabase.auth.getSession();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Verify admin role
@@ -31,27 +32,21 @@ export async function POST(req: Request) {
       .single();
 
     if (userError || userProfile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      throw new ForbiddenError('Admin access required');
     }
 
     // Parse and validate request body
-    const body = await req.json();
-    const announcementData = announcementSchema.parse(body);
+    let announcementData;
+    try {
+      const body = await req.json();
+      announcementData = announcementSchema.parse(body);
+    } catch (err) {
+      throw new ValidationError('Invalid request data', err instanceof z.ZodError ? err.errors : undefined);
+    }
 
     // For MVP, we'll store in localStorage on the client side
     // In production, this would be stored in the database
-    
-    // TODO: In production, save to database:
-    // const { data, error } = await supabase
-    //   .from('global_announcements')
-    //   .insert({
-    //     title: announcementData.title,
-    //     message: announcementData.message,
-    //     type: announcementData.type,
-    //     enabled: announcementData.enabled,
-    //     created_by: session.user.id,
-    //     created_at: new Date().toISOString(),
-    //   });
+    // TODO: In production, save to database
 
     return NextResponse.json({
       success: true,
@@ -61,18 +56,12 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Announcement API error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        error: 'Invalid request data',
-        details: error.errors,
-      }, { status: 400 });
-    }
-
+    const apiError = handleApiError(error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message,
-    }, { status: 500 });
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 
@@ -87,17 +76,10 @@ export async function GET() {
     } = await supabase.auth.getSession();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
-    // TODO: In production, fetch from database:
-    // const { data: announcements, error } = await supabase
-    //   .from('global_announcements')
-    //   .select('*')
-    //   .eq('enabled', true)
-    //   .order('created_at', { ascending: false })
-    //   .limit(1);
-
+    // TODO: In production, fetch from database
     // For MVP, return empty array since we're using localStorage
     return NextResponse.json({
       announcements: [],
@@ -106,9 +88,11 @@ export async function GET() {
 
   } catch (error: any) {
     console.error('Get announcements API error:', error);
+    const apiError = handleApiError(error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message,
-    }, { status: 500 });
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

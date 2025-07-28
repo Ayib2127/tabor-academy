@@ -440,6 +440,45 @@
   0% { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
 }
+.animate-gradient-move {
+  animation: gradient-move 3s ease-in-out infinite alternate;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-float.delay-1000 {
+  animation-delay: 1s;
+}
+.animate-float.delay-2000 {
+  animation-delay: 2s;
+}
+
+@keyframes scroll-bar {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-scroll-bar {
+  animation: scroll-bar 20s linear infinite;
+}
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(40px);}
+  100% { opacity: 1; transform: translateY(0);}
+}
+.animate-fade-in-up {
+  animation: fade-in-up 1.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes pulse-cta {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,53,0.7); }
+  50% { box-shadow: 0 0 24px 8px rgba(255,107,53,0.5); }
+}
+.animate-pulse-cta {
+  animation: pulse-cta 2s infinite;
+}
 
 /* Brand Scrollbar Styles - applies to all scrollable elements */
 * {
@@ -593,4 +632,31 @@ ul[data-type="taskList"] input[type="checkbox"] {
 ul[data-type="taskList"] input[type="checkbox"]:hover,
 ul[data-type="taskList"] input[type="checkbox"]:focus {
   box-shadow: 0 0 0 2px #4ECDC4;
+}
+
+/* --- Custom Phone Input Styles (from phone-input-custom.css) --- */
+.react-tel-input .form-control:focus {
+  box-shadow: 0 0 0 2px #FF6B35;
+  border: 1px solid #FF6B35;
+}
+/* --- End Custom Phone Input Styles --- */
+
+/* Custom phone input improvements */
+.custom-phone-input .flag-dropdown {
+  border-top-left-radius: 0.5rem !important;
+  border-bottom-left-radius: 0.5rem !important;
+  border-right: none !important;
+  background: #fff !important;
+}
+.custom-phone-input .selected-flag {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.custom-phone-input .form-control {
+  padding-left: 56px !important;
+  height: 48px !important;
+  font-size: 1rem !important;
+}
+.custom-phone-input .country-list {
+  border-radius: 0.5rem !important;
 }

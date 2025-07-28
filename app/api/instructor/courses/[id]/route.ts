@@ -3,6 +3,7 @@ import { cookies as getCookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { courseCreationSchema } from '@/lib/validations/course';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { handleApiError } from '@/lib/utils/error-handling';
 
 // Helper to always resolve cookies
 async function resolveCookies() {
@@ -145,10 +146,8 @@ export async function GET(
 
   } catch (error: any) {
     console.error('Course details API error:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message,
-    }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: 500 });
   }
 }
 
@@ -169,18 +168,12 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
 
     if (sessionError) {
       console.error('Session error:', sessionError);
-      return NextResponse.json(
-        { error: 'Authentication error' },
-        { status: 401 }
-      );
+      throw sessionError;
     }
 
     if (!session) {
       console.log('No active session found');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Verify course ownership
@@ -192,10 +185,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
 
     if (courseError) {
       console.error('Error fetching course:', courseError);
-      return NextResponse.json(
-        { error: 'Failed to fetch course' },
-        { status: 500 }
-      );
+      throw courseError;
     }
 
     if (!course || course.instructor_id !== session.user.id) {
@@ -204,10 +194,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
         userId: session.user.id,
         courseInstructorId: course?.instructor_id,
       });
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Parse and validate request body
@@ -217,10 +204,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
       console.log("PATCH body received:", body);
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
-      return NextResponse.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      );
+      throw new ValidationError('Invalid request body');
     }
 
     let validatedData;
@@ -228,10 +212,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
       validatedData = courseCreationSchema.parse(body);
     } catch (validationError: any) {
       console.error('Validation error:', validationError);
-      return NextResponse.json(
-        { error: `Validation failed: ${validationError.message}` },
-        { status: 400 }
-      );
+      throw new ValidationError(`Validation failed: ${validationError.message}`);
     }
 
     // Only update new fields if present in the request
@@ -262,10 +243,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
 
     if (updateError) {
       console.error('Error updating course:', updateError);
-      return NextResponse.json(
-        { error: `Database error: ${updateError.message}` },
-        { status: 500 }
-      );
+      throw updateError;
     }
 
     // Update modules and lessons with better error handling
@@ -274,10 +252,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
       await updateModulesAndLessons(courseId, validatedData.modules, resolvedCookieStore);
     } catch (modErr: any) {
       console.error('Error updating modules/lessons:', modErr);
-      return NextResponse.json(
-        { error: `Failed to update course structure: ${modErr.message}` },
-        { status: 500 }
-      );
+      throw new ValidationError(`Failed to update course structure: ${modErr.message}`);
     }
 
     console.log('Course updated successfully:', {
@@ -291,10 +266,8 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
     });
   } catch (error: any) {
     console.error('Error updating course:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to update course' },
-      { status: 500 }
-    );
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
 

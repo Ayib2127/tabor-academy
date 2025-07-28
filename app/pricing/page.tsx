@@ -241,7 +241,7 @@ export default function PricingPage() {
               Start Your Learning Journey Today
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-up">
-              Join thousands of successful Ethiopian entrepreneurs who have transformed their lives through our platform.
+              Join thousands of successful entrepreneurs who have transformed their lives through our platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
               <Button 

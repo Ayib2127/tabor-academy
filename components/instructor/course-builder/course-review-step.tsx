@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { CourseCreationData } from '@/lib/validations/course';
 import CourseSummary from './CourseSummary';
 import ReviewStepHeader from './ReviewStepHeader';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface CourseReviewStepProps {
   courseData: CourseCreationData;
@@ -37,7 +38,10 @@ export default function CourseReviewStep({ courseData }: CourseReviewStepProps) 
       router.push(`/dashboard/instructor/courses/${result.courseId}`);
     } catch (error: any) {
       console.error('Error submitting course:', error);
-      toast.error(error.message || 'An unexpected error occurred');
+      showApiErrorToast({
+        code: error.code || 'INTERNAL_ERROR',
+        error: error.message || 'An unexpected error occurred',
+      });
     } finally {
       setIsSubmitting(false);
     }

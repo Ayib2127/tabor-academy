@@ -280,7 +280,7 @@ export default function ContactSupportPage() {
                     </Link>
                   </Button>
                   <Button variant="outline" className="w-full justify-start" asChild>
-                    <Link href="/community">
+                    <Link href="https://t.me/tabor_academy">
                       <Globe className="h-4 w-4 mr-2" />
                       Community Forum
                     </Link>

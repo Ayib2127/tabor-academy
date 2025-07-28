@@ -33,7 +33,7 @@ export default function AboutPage() {
             <div className="animate-fade-up">
               <h2 className="text-3xl font-bold mb-6 gradient-text">Our Mission</h2>
               <p className="text-lg text-muted-foreground mb-6">
-                To empower Ethiopian entrepreneurs with the digital skills and knowledge needed to build
+                To empower entrepreneurs with the digital skills and knowledge needed to build
                 successful businesses and contribute to the continent's economic growth.
               </p>
               <div className="grid gap-4">

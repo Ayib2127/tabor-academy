@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Rocket, BarChart, Video, HelpCircle, FileText, Lock, CheckCircle, Play, Hourglass } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { isLessonLocked } from '@/lib/utils/lessonLock';
 
 type LessonType = "video" | "quiz" | "assignment" | "text";
 
@@ -156,9 +157,6 @@ export const CoursePlayerSidebar: FC<CoursePlayerSidebarProps & { courseTitle?: 
     );
   };
 
-  // Helper for lesson row disabled state
-  const isLessonLocked = (moduleIdx) => moduleIdx > currentModuleIdx;
-
   return (
     <>
       {/* Mobile toggle button */}
@@ -213,7 +211,7 @@ export const CoursePlayerSidebar: FC<CoursePlayerSidebarProps & { courseTitle?: 
                 <ul className="space-y-3">
                   {module.lessons.map((lesson) => {
                     const isCurrent = lesson.id === currentLessonId;
-                    const locked = isLessonLocked(mIdx);
+                    const locked = isLessonLocked(modules, lesson.id);
                     return (
                       <li key={lesson.id}>
                         <div

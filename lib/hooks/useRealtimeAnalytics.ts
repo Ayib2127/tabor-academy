@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface AnalyticsData {
   overview: {
@@ -190,17 +191,24 @@ export function useRealtimeAnalytics({
     // Show insights as toasts for important alerts
     insights.forEach(insight => {
       if (insight.impact === 'high' && insight.type === 'alert') {
-        toast.error(insight.title, {
-          description: insight.description,
-          duration: 8000,
-          action: insight.action ? {
-            label: insight.action,
-            onClick: () => {
-              // Handle action click
-              console.log('Action clicked:', insight.action);
-            }
-          } : undefined,
-        });
+        if (insight.code) {
+          showApiErrorToast({
+            code: insight.code,
+            error: insight.title,
+            details: insight,
+          });
+        } else {
+          toast.error(insight.title, {
+            description: insight.description,
+            duration: 8000,
+            action: insight.action ? {
+              label: insight.action,
+              onClick: () => {
+                // Handle action click
+              }
+            } : undefined,
+          });
+        }
       } else if (insight.impact === 'high' && insight.type === 'success') {
         toast.success(insight.title, {
           description: insight.description,
@@ -226,7 +234,6 @@ export function useRealtimeAnalytics({
           filter: role === 'instructor' ? `course_id=in.(${getInstructorCourseIds()})` : undefined,
         },
         (payload) => {
-          console.log('Enrollment change detected:', payload);
           // Refresh analytics data when enrollments change
           fetchAnalyticsData();
         }
@@ -245,7 +252,6 @@ export function useRealtimeAnalytics({
           filter: role === 'instructor' ? `course_id=in.(${getInstructorCourseIds()})` : undefined,
         },
         (payload) => {
-          console.log('Progress change detected:', payload);
           // Refresh analytics data when progress changes
           fetchAnalyticsData();
         }
@@ -264,7 +270,6 @@ export function useRealtimeAnalytics({
           filter: role === 'instructor' ? `course_id=in.(${getInstructorCourseIds()})` : undefined,
         },
         (payload) => {
-          console.log('Rating change detected:', payload);
           // Refresh analytics data when ratings change
           fetchAnalyticsData();
         }

@@ -68,6 +68,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import Draggable from 'react-draggable';
 import { supabase } from '@/lib/supabase/client'; // or createSupabaseClient if you use a function
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface Lesson {
   id: string;
@@ -558,7 +559,7 @@ function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, hand
                       <SelectItem value="assignment">📄 Assignment</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white" onClick={e => { e.stopPropagation(); handleAddLesson(); }}>Add</Button>
+                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">Add</Button>
                   <Button variant="outline" onClick={e => { e.stopPropagation(); setAddLessonState(prev => ({ ...prev, [module.id]: { open: false, title: '', type: 'text' } })); }}>Cancel</Button>
                 </div>
               ) : (
@@ -1175,8 +1176,16 @@ export default function CourseContentPage() {
     } catch (err: any) {
       console.error("Error saving course changes:", err);
       setSaveStatus('error');
-      toast.error(err.message || 'Failed to save course changes.');
-      
+      if (err.code) {
+        showApiErrorToast({
+          code: err.code,
+          error: err.message,
+          details: err.details,
+          courseId,
+        });
+      } else {
+        toast.error(err.message || 'Failed to save course changes.');
+      }
       // Reset save status after 3 seconds
       setTimeout(() => setSaveStatus('idle'), 3000);
     }

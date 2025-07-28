@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
@@ -13,11 +13,15 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SiteHeader } from "@/components/site-header"
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
+import { getName } from 'country-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { SocialIcons } from '@/components/ui/social-icons'
+import PhoneInput from 'react-phone-input-2'
+import 'react-phone-input-2/lib/style.css'
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 const emailLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -26,8 +30,9 @@ const emailLoginSchema = z.object({
 })
 
 const phoneLoginSchema = z.object({
-  country: z.string().min(1, "Please select a country"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
+  phone: z.string()
+    .min(8, "Please enter a valid phone number")
+    .regex(/^\+?[1-9]\d{7,14}$/, "Please enter a valid phone number with country code"),
 })
 
 export default function LoginPage() {
@@ -48,11 +53,10 @@ export default function LoginPage() {
     // resolver: zodResolver(emailLoginSchema), // <--- COMMENT THIS LINE OUT
   })
 
-  console.log('Current Email Form Errors (outside submit):', emailErrors);
-
   const {
     register: registerPhone,
     handleSubmit: handleSubmitPhone,
+    control: controlPhone, // <-- Add this
     formState: { errors: phoneErrors },
   } = useForm({
     resolver: zodResolver(phoneLoginSchema),
@@ -86,8 +90,6 @@ export default function LoginPage() {
         throw new Error('Failed to fetch user data')
       }
 
-      console.log('User role:', userData?.role);
-
       if (userData?.role === 'admin') {
         router.push('/dashboard/admin');
       } else if (userData?.role === 'mentor') {
@@ -117,10 +119,20 @@ export default function LoginPage() {
     } catch (error) {
       console.error('Login error:', error)
       setError(error instanceof Error ? error.message : 'An error occurred')
-      toast.error(error instanceof Error ? error.message : 'An error occurred')
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error instanceof Error ? error.message : 'An error occurred',
+        });
+      }
     } finally {
       setIsLoading(false)
-      console.log('Login process finished (finally block).')
     }
   }
 
@@ -128,11 +140,14 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      // Redirect to phone verification page
-    } catch (err) {
-      setError("Invalid phone number")
+      // Compose full phone number with country code
+      const fullPhone = `+${getCountryCallingCode(data.country)}${data.phone.replace(/^0+/, '')}`;
+      const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+      if (error) throw error;
+      // Redirect to phone verification page, pass phone in query
+      router.push(`/verify/phone?phone=${encodeURIComponent(fullPhone)}`);
+    } catch (err: any) {
+      setError(err.message || "Invalid phone number");
     } finally {
       setIsLoading(false)
     }
@@ -151,7 +166,18 @@ export default function LoginPage() {
       if (error) throw error
     } catch (error: any) {
       setError(error.message || "Failed to login with social provider")
-      toast.error(error.message || "Failed to login with social provider")
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || "Failed to login with social provider",
+        });
+      }
     } finally {
       setIsLoading(false)
     }
@@ -180,14 +206,14 @@ export default function LoginPage() {
             )}
 
             <Tabs defaultValue="email" className="mb-8">
-              <TabsList className="grid grid-cols-2 mb-6">
+              <TabsList className="grid grid-cols-3 mb-8">
                 <TabsTrigger value="email">Email</TabsTrigger>
+                <TabsTrigger value="phone">Phone</TabsTrigger>
                 <TabsTrigger value="social">Social</TabsTrigger>
               </TabsList>
 
               <TabsContent value="email">
                 <form onSubmit={(e) => {
-                    console.log('Form onSubmit event triggered.');
                     handleSubmitEmail(onSubmitEmail)(e);
                 }} className="space-y-4">
                   <div className="space-y-2">
@@ -288,7 +314,6 @@ export default function LoginPage() {
                     className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
                     disabled={isLoading}
                     onClick={() => {
-                      console.log('Login button clicked!');
                     }}
                   >
                     {isLoading ? (
@@ -301,6 +326,73 @@ export default function LoginPage() {
                     )}
                   </Button>
                 </form>
+              </TabsContent>
+
+              <TabsContent value="phone">
+                <Card className="p-6">
+                  <form onSubmit={handleSubmitPhone(onSubmitPhone)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Controller
+                        name="phone"
+                        control={controlPhone}
+                        rules={{ required: true }}
+                        render={({ field }) => (
+                          <PhoneInput
+                            {...field}
+                            country={'et'}
+                            inputProps={{
+                              name: 'phone',
+                              required: true,
+                              autoFocus: true,
+                              className: phoneErrors.phone ? "border-red-500" : ""
+                            }}
+                            onChange={field.onChange}
+                            value={field.value}
+                            enableSearch
+                            containerClass="custom-phone-input w-full"
+                            inputClass="w-full"
+                            buttonClass="bg-white"
+                            dropdownClass="bg-white"
+                            placeholder="e.g. 912345678"
+                            inputStyle={{
+                              height: '48px',
+                              fontSize: '1rem',
+                              paddingLeft: '56px',
+                              borderRadius: '0.5rem',
+                              border: phoneErrors.phone ? '1.5px solid #ef4444' : '1.5px solid #E5E8E8',
+                            }}
+                            buttonStyle={{
+                              borderTopLeftRadius: '0.5rem',
+                              borderBottomLeftRadius: '0.5rem',
+                              borderRight: 'none',
+                              background: '#fff',
+                              paddingLeft: '12px',
+                              paddingRight: '8px',
+                            }}
+                            countryCodeEditable={false}
+                          />
+                        )}
+                      />
+                      {phoneErrors.phone && (
+                        <p className="text-sm text-red-500">{phoneErrors.phone.message as string}</p>
+                      )}
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        "Login"
+                      )}
+                    </Button>
+                  </form>
+                </Card>
               </TabsContent>
 
               <TabsContent value="social">

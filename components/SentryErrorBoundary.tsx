@@ -1,7 +1,8 @@
 "use client"
 
 import * as Sentry from '@sentry/nextjs';
-import { useEffect } from 'react';
+import { ErrorBoundary } from '@sentry/react';
+import { ErrorDialog } from '@/components/ui/ErrorDialog';
 
 // This is a simple Sentry Error Boundary component.
 // For a more robust solution, consider using Sentry.ErrorBoundary from '@sentry/react' directly,
@@ -13,22 +14,39 @@ interface SentryErrorBoundaryProps {
 }
 
 export default function SentryErrorBoundary({ children, fallback }: SentryErrorBoundaryProps) {
-  useEffect(() => {
-    const handleError = (error: ErrorEvent) => {
-      Sentry.captureException(error.error);
-    };
-
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
-  // You can implement a more sophisticated error boundary here
-  // based on React's componentDidCatch or getDerivedStateFromError
-  // For simplicity, we'll let Sentry capture unhandled errors at the window level.
-  // For React components, React's own error boundary behavior is generally preferred.
-  // Sentry provides an <ErrorBoundary> component for this:
-  // import { ErrorBoundary } from '@sentry/react';
-  // return <ErrorBoundary fallback={fallback}>{children}</ErrorBoundary>;
-
-  return <>{children}</>;
+  return (
+    <ErrorBoundary
+      fallback={({ error, resetError }) => {
+        const err = error as any;
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            role="alertdialog"
+            aria-modal="true"
+          >
+            <ErrorDialog
+              open={true}
+              onClose={resetError}
+              code={err.name || 'INTERNAL_ERROR'}
+              message={err.message || 'Something went wrong.'}
+              details={err.stack}
+            />
+          </div>
+        );
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  );
 } 

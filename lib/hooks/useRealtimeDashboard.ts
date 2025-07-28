@@ -49,7 +49,6 @@ export function useRealtimeDashboard({
               },
               (payload) => {
                 try {
-                  console.log('Course update received:', payload);
                   const update: DashboardUpdate = {
                     type: 'course_update',
                     data: payload,
@@ -63,9 +62,7 @@ export function useRealtimeDashboard({
               }
             )
             .subscribe((status) => {
-              console.log('Course channel status:', status);
               if (status === 'CHANNEL_ERROR') {
-                console.warn('Course channel error - will retry');
                 setTimeout(() => {
                   if (enabled && userId && instructorId) {
                     setupRealtimeSubscriptions();
@@ -91,7 +88,6 @@ export function useRealtimeDashboard({
               },
               (payload) => {
                 try {
-                  console.log('New enrollment received:', payload);
                   const update: DashboardUpdate = {
                     type: 'enrollment',
                     data: payload,
@@ -105,9 +101,7 @@ export function useRealtimeDashboard({
               }
             )
             .subscribe((status) => {
-              console.log('Enrollment channel status:', status);
               if (status === 'CHANNEL_ERROR') {
-                console.warn('Enrollment channel error - will retry');
                 setTimeout(() => {
                   if (enabled && userId && instructorId) {
                     setupRealtimeSubscriptions();
@@ -133,7 +127,6 @@ export function useRealtimeDashboard({
               },
               (payload) => {
                 try {
-                  console.log('Assignment update received:', payload);
                   const update: DashboardUpdate = {
                     type: 'assignment',
                     data: payload,
@@ -147,9 +140,7 @@ export function useRealtimeDashboard({
               }
             )
             .subscribe((status) => {
-              console.log('Assignment channel status:', status);
               if (status === 'CHANNEL_ERROR') {
-                console.warn('Assignment channel error - will retry');
                 setTimeout(() => {
                   if (enabled && userId && instructorId) {
                     setupRealtimeSubscriptions();
@@ -175,7 +166,6 @@ export function useRealtimeDashboard({
               },
               (payload) => {
                 try {
-                  console.log('Activity update received:', payload);
                   const update: DashboardUpdate = {
                     type: 'activity',
                     data: payload,
@@ -189,9 +179,7 @@ export function useRealtimeDashboard({
               }
             )
             .subscribe((status) => {
-              console.log('Activity channel status:', status);
               if (status === 'CHANNEL_ERROR') {
-                console.warn('Activity channel error - will retry');
                 setTimeout(() => {
                   if (enabled && userId && instructorId) {
                     setupRealtimeSubscriptions();
@@ -217,7 +205,6 @@ export function useRealtimeDashboard({
               },
               (payload) => {
                 try {
-                  console.log('Progress update received:', payload);
                   const update: DashboardUpdate = {
                     type: 'progress',
                     data: payload,
@@ -231,9 +218,7 @@ export function useRealtimeDashboard({
               }
             )
             .subscribe((status) => {
-              console.log('Progress channel status:', status);
               if (status === 'CHANNEL_ERROR') {
-                console.warn('Progress channel error - will retry');
                 setTimeout(() => {
                   if (enabled && userId) {
                     setupRealtimeSubscriptions();
@@ -254,7 +239,7 @@ export function useRealtimeDashboard({
             channel.state === 'joined'
           );
           if (allSubscribed) {
-            console.log('All real-time subscriptions active');
+            // console.log('All real-time subscriptions active');
           }
         }, 1000);
 
@@ -265,7 +250,7 @@ export function useRealtimeDashboard({
         // Retry after a delay
         setTimeout(() => {
           if (enabled && userId) {
-            console.log('Retrying real-time dashboard setup...');
+            // console.log('Retrying real-time dashboard setup...');
             setupRealtimeSubscriptions();
           }
         }, 5000);
@@ -277,7 +262,7 @@ export function useRealtimeDashboard({
     // Cleanup subscriptions on unmount
     return () => {
       try {
-        console.log('Cleaning up real-time dashboard subscriptions');
+        // console.log('Cleaning up real-time dashboard subscriptions');
         channels.forEach(channel => {
           supabase.removeChannel(channel);
         });

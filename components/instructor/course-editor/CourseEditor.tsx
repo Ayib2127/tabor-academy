@@ -1,4 +1,5 @@
-'use client'
+
+"use client";
 
 import { FC, useState, useEffect } from 'react';
 import { Course, Module, Lesson } from '@/types/course';
@@ -9,6 +10,7 @@ import ModuleEditor from './ModuleEditor';
 import { Plus } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { TagInput } from "@/components/ui/TagInput";
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface CourseEditorProps {
   course: Course;
@@ -107,9 +109,13 @@ const CourseEditor: FC<CourseEditorProps> = ({ course: initialCourse }) => {
         throw new Error('Invalid response from server');
       }
     },
-    onError: (error: Error) => {
-      // Show specific error message
-      toast.error(`Save failed: ${error.message}`);
+    onError: (error: any) => {
+      showApiErrorToast({
+        code: error.code,
+        error: error.message,
+        details: error.details,
+        courseId: course?.id,
+      });
     },
   });
 

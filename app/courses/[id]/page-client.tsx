@@ -121,9 +121,9 @@ export default function CourseDetailsPage() {
   let firstLessonId: string | null = null;
   if (modules && modules.length > 0) {
     const sortedModules = [...modules].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
-    for (const module of sortedModules) {
-      if (module.lessons && module.lessons.length > 0) {
-        const sortedLessons = [...module.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
+    for (const courseModule of sortedModules) {
+      if (courseModule.lessons && courseModule.lessons.length > 0) {
+        const sortedLessons = [...courseModule.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
         const publishedLesson = sortedLessons.find((lesson) => {
           if (!lesson.is_published) return false;
           switch (lesson.type) {

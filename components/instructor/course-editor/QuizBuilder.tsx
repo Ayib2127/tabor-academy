@@ -42,6 +42,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface QuizBuilderProps {
   quiz: Quiz;
@@ -238,7 +239,18 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
       
     } catch (error: any) {
       console.error('AI question generation error:', error);
-      toast.error(error.message || 'Failed to generate questions. Please try again.');
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to generate questions. Please try again.',
+        });
+      }
     } finally {
       setIsGeneratingQuestions(false);
     }
@@ -258,7 +270,10 @@ const QuizBuilder: FC<QuizBuilderProps> = ({ quiz, onChange, onBlur }) => {
 
   const handleQuizChange = (updatedQuiz: Quiz, validate: boolean = false) => {
     if (validate && validationErrors.length > 0) {
-      toast.error('Please fix validation errors before saving or publishing.');
+      showApiErrorToast({
+        code: 'VALIDATION_ERROR',
+        error: 'Please fix validation errors before saving or publishing.',
+      });
       return;
     }
     onChange(updatedQuiz);

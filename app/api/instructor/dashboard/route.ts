@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { cookies } from 'next/headers';
+import { handleApiError } from '@/lib/utils/error-handling';
 
 interface DashboardStats {
   totalStudents: number;
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
 
   if (!sessionCookie || !sessionCookie.value) {
     console.error('No Supabase auth cookie found!');
-    return NextResponse.json({ error: 'No Supabase auth cookie found' }, { status: 401 });
+    return NextResponse.json({ code: 'AUTH_REQUIRED', error: 'No Supabase auth cookie found' }, { status: 401 });
   }
 
   // Optionally, decode the JWT and log expiry (for debugging)
@@ -109,12 +110,12 @@ export async function GET(request: Request) {
 
     if (userError) {
       console.error('Error getting user session:', userError);
-      return NextResponse.json({ error: userError.message }, { status: 500 });
+      return NextResponse.json({ code: 'INTERNAL_SERVER_ERROR', error: userError.message, details: userError }, { status: 500 });
     }
 
     if (!user) {
       console.log('Authentication failed: No user found for instructor dashboard API.');
-      return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+      return NextResponse.json({ code: 'UNAUTHORIZED', error: 'Unauthorized: No active session' }, { status: 401 });
     }
 
     // Verify user is an instructor
@@ -125,7 +126,7 @@ export async function GET(request: Request) {
       .single();
 
     if (profileError || profile?.role !== 'instructor') {
-      return NextResponse.json({ error: 'Instructor access required' }, { status: 403 });
+      return NextResponse.json({ code: 'FORBIDDEN', error: 'Instructor access required' }, { status: 403 });
     }
 
     // Fetch all instructor courses with detailed information
@@ -149,7 +150,7 @@ export async function GET(request: Request) {
 
     if (coursesError) {
       console.error('Error fetching instructor courses:', coursesError);
-      return NextResponse.json({ error: coursesError.message }, { status: 500 });
+      return NextResponse.json({ code: 'INTERNAL_SERVER_ERROR', error: coursesError.message, details: coursesError }, { status: 500 });
     }
 
     // Calculate summary statistics
@@ -441,6 +442,7 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error('Unexpected error fetching instructor dashboard:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const apiError = handleApiError(err);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: 500 });
   }
 }

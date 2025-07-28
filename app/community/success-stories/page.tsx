@@ -37,7 +37,7 @@ const successStoriesData = {
       title: "From Local Shop to E-commerce Success",
       author: {
         name: "Sarah Kimani",
-        location: "Nairobi, Kenya",
+        location: "Addis Ababa, Ethiopia",
         image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb"
       },
       category: "E-commerce",
@@ -128,7 +128,7 @@ const successStoriesData = {
       title: "Growing My Freelance Business",
       author: {
         name: "David Kamau",
-        location: "Nairobi, Kenya",
+        location: "Addis Ababa, Ethiopia",
         image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
       },
       category: "Freelancing",
@@ -202,7 +202,7 @@ export default function SuccessStoriesPage() {
                 Success Stories
               </h1>
               <p className="text-muted-foreground">
-                Inspiring stories from our community of Ethiopian entrepreneurs
+                Inspiring stories from our community of entrepreneurs
               </p>
             </div>
             <Button className="bg-gradient-to-r from-orange-600 to-orange-500">

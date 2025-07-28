@@ -77,13 +77,13 @@ const faqs = [
     id: 1,
     category: 'general',
     question: 'What is Tabor Academy?',
-    answer: 'Tabor Academy is a mobile-first, project-based education platform designed specifically for Ethiopian entrepreneurs. We provide practical courses in digital marketing, no-code development, e-commerce, AI tools, and more, combined with mentorship and community support to help you launch real businesses.'
+    answer: 'Tabor Academy is a mobile-first, project-based education platform designed specifically for entrepreneurs. We provide practical courses in digital marketing, no-code development, e-commerce, AI tools, and more, combined with mentorship and community support to help you launch real businesses.'
   },
   {
     id: 2,
     category: 'general',
     question: 'Who can join Tabor Academy?',
-    answer: 'Tabor Academy is open to anyone interested in entrepreneurship and digital skills, with a special focus on Ethiopian entrepreneurs. Whether you\'re a complete beginner or looking to expand your existing business, our courses are designed to meet you where you are.'
+    answer: 'Tabor Academy is open to anyone interested in entrepreneurship and digital skills, with a special focus on entrepreneurs. Whether you\'re a complete beginner or looking to expand your existing business, our courses are designed to meet you where you are.'
   },
   {
     id: 3,
@@ -526,7 +526,7 @@ export default function FAQsPage() {
                     className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white"
                     asChild
                   >
-                    <Link href="/chat">Start Chat</Link>
+                    <Link href="https://t.me/tabor_support">Start Chat</Link>
                   </Button>
                 </CardContent>
               </Card>

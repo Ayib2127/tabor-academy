@@ -46,13 +46,33 @@ export class NotFoundError extends Error {
   }
 }
 
+export class ResourceConflictError extends Error {
+  code = 'RESOURCE_CONFLICT';
+  details?: any;
+  constructor(message: string = 'A conflict occurred with the requested resource.', details?: any) {
+    super(message);
+    this.details = details;
+  }
+}
+
+export class PaymentError extends Error {
+  code = 'PAYMENT_ERROR';
+  details?: any;
+  constructor(message: string = 'A payment error occurred.', details?: any) {
+    super(message);
+    this.details = details;
+  }
+}
+
 export function handleApiError(error: unknown): ApiError {
   if (
     error instanceof EnrollmentRequiredError ||
     error instanceof ValidationError ||
     error instanceof AuthError ||
     error instanceof ForbiddenError ||
-    error instanceof NotFoundError
+    error instanceof NotFoundError ||
+    error instanceof ResourceConflictError ||
+    error instanceof PaymentError
   ) {
     return {
       code: error.code,

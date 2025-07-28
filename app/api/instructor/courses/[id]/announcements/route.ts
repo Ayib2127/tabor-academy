@@ -1,6 +1,7 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 const announcementSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -24,7 +25,7 @@ export async function POST(
     } = await supabase.auth.getSession();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     const instructorId = session.user.id;
@@ -38,12 +39,17 @@ export async function POST(
       .single();
 
     if (courseError || !course) {
-      return NextResponse.json({ error: 'Course not found or access denied' }, { status: 404 });
+      throw new ForbiddenError('Course not found or access denied');
     }
 
     // Parse and validate request body
+    let title, message;
+    try {
     const body = await req.json();
-    const { title, message } = announcementSchema.parse(body);
+      ({ title, message } = announcementSchema.parse(body));
+    } catch (err) {
+      throw new ValidationError('Invalid request data', err instanceof z.ZodError ? err.errors : undefined);
+    }
 
     // Create announcement record
     const { data: announcement, error: announcementError } = await supabase
@@ -59,8 +65,7 @@ export async function POST(
       .single();
 
     if (announcementError) {
-      console.error('Error creating announcement:', announcementError);
-      return NextResponse.json({ error: 'Failed to create announcement' }, { status: 500 });
+      throw announcementError;
     }
 
     // Get all students enrolled in the course
@@ -125,17 +130,11 @@ export async function POST(
 
   } catch (error: any) {
     console.error('Course announcement API error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        error: 'Invalid request data',
-        details: error.errors,
-      }, { status: 400 });
-    }
-
+    const apiError = handleApiError(error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message,
-    }, { status: 500 });
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

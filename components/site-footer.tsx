@@ -29,25 +29,25 @@ export function SiteFooter() {
           {/* Company Info - Spans 2 columns on large screens */}
           <div className="lg:col-span-2 space-y-6">
             {/* Logo and Brand */}
-            <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3 group">
               <Image
                 src="/logo.jpg"
                 alt="Tabor Academy"
                 width={50}
                 height={50}
-                className="rounded-lg"
+                className="rounded-lg group-hover:scale-105 transition-transform"
               />
               <div>
-                <h3 className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent group-hover:from-[#4ECDC4] group-hover:to-[#FF6B35] transition-colors">
                   Tabor Academy
                 </h3>
                 <p className="text-white/70 text-sm">The Skills to Build. The Tools to Launch. Your Business Starts Here!</p>
               </div>
-            </div>
+            </Link>
             
             {/* Mission Statement */}
             <p className="text-white/80 leading-relaxed max-w-md">
-              Empowering Ethiopian entrepreneurs with mobile-first, project-based education. 
+              Empowering entrepreneurs with mobile-first, project-based education. 
               We combine cutting-edge technology with deep understanding of Ethiopian markets 
               to deliver practical, affordable, and accessible entrepreneurial education.
             </p>
@@ -72,17 +72,15 @@ export function SiteFooter() {
                   <Facebook className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
                   <span className="sr-only">Facebook</span>
                 </Link>
-                <Link href="https://twitter.com" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#4ECDC4] transition-colors group">
-                  <Twitter className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
-                  <span className="sr-only">Twitter</span>
+                <Link href="https://t.me/tabor_academy" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#4ECDC4] transition-colors group">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-white group-hover:scale-110 transition-transform">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 3.75l-3.75 16.5-5.25-4.5-3.75 3-1.5-6.75 14.25-8.25z" />
+                  </svg>
+                  <span className="sr-only">Telegram</span>
                 </Link>
-                <Link href="https://linkedin.com" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#4ECDC4] transition-colors group">
+                <Link href="https://www.linkedin.com/company/taboracademy-official" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#4ECDC4] transition-colors group">
                   <Linkedin className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
                   <span className="sr-only">LinkedIn</span>
-                </Link>
-                <Link href="https://instagram.com" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#4ECDC4] transition-colors group">
-                  <Instagram className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
-                  <span className="sr-only">Instagram</span>
                 </Link>
               </div>
             </div>
@@ -100,28 +98,25 @@ export function SiteFooter() {
                 { text: "All Courses", href: "/courses" },
                 { text: "Success Stories", href: "/success-stories" },
                 { text: "For Partners", href: "/partners" },
-                { text: "Become Instructor", href: "/instructor" },
-                { text: "Community", href: "/community" },
-                { text: "Blog", href: "/blog" }
+                { text: "Become Instructor", href: "/instructor", highlight: true },
+                { text: "Community", href: "https://t.me/tabor_academy" }
               ].map((link) => (
                 <li key={link.text}>
                   <Link
                     href={link.href}
-                    className="text-white/70 hover:text-[#4ECDC4] transition-colors text-sm flex items-center gap-2 group"
+                    className={
+                      link.highlight
+                        ? "font-semibold text-[#FF6B35] hover:text-[#4ECDC4] transition-colors text-sm"
+                        : "text-white/70 hover:text-[#4ECDC4] transition-colors text-sm flex items-center gap-2 group"
+                    }
                   >
-                    <span className="w-1 h-1 bg-[#4ECDC4] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {!link.highlight && (
+                      <span className="w-1 h-1 bg-[#4ECDC4] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    )}
                     {link.text}
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link
-                  href="/become-instructor"
-                  className="font-semibold text-[#FF6B35] hover:text-[#4ECDC4] transition-colors text-base"
-                >
-                  Become an Instructor
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -136,11 +131,7 @@ export function SiteFooter() {
                 { text: "Help Center", href: "/help" },
                 { text: "FAQs", href: "/faqs" },
                 { text: "Contact Support", href: "/contact" },
-                { text: "Live Chat", href: "/chat" },
-                { text: "System Status", href: "/status" },
-                { text: "API Documentation", href: "/docs" },
-                { text: "Mobile App", href: "/app" },
-                { text: "Accessibility", href: "/accessibility" }
+                { text: "Live Chat", href: "https://t.me/tabor_support" }
               ].map((link) => (
                 <li key={link.text}>
                   <Link
@@ -166,15 +157,15 @@ export function SiteFooter() {
             <div className="space-y-4 mb-6">
               <div className="flex items-center space-x-3 text-sm text-white/70">
                 <Mail className="h-4 w-4 text-[#4ECDC4]" />
-                <span>hello@taboracademy.com</span>
+                <span>academy@tabordigital.com</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-white/70">
                 <Phone className="h-4 w-4 text-[#4ECDC4]" />
-                <span>+254 700 000000</span>
+                <span>+251936747488</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-white/70">
                 <MapPin className="h-4 w-4 text-[#4ECDC4]" />
-                <span>Nairobi, Kenya</span>
+                <span>Addis Ababa, Ethiopia</span>
               </div>
             </div>
 
@@ -228,10 +219,23 @@ export function SiteFooter() {
           {/* Copyright */}
           <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-white/60">
             <p>© {new Date().getFullYear()} Tabor Academy. All rights reserved.</p>
-            <div className="flex items-center gap-2">
-              <Heart className="w-4 h-4 text-[#FF6B35]" />
-              <span>Made with love in Ethiopia</span>
-            </div>
+          </div>
+
+          {/* Centered Made By Link */}
+          <div className="flex items-center justify-center text-sm">
+            <span className="text-white/60">Made by </span>
+            <a
+              href="https://www.tabordigital.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent hover:from-[#4ECDC4] hover:to-[#FF6B35] transition-colors duration-300 flex items-center"
+              style={{marginLeft: 0, paddingLeft: 0}}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline align-middle" style={{marginRight: '2px'}}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+              </svg>
+              Tabor Digital Solutions
+            </a>
           </div>
 
           {/* Legal Links */}
@@ -254,18 +258,6 @@ export function SiteFooter() {
             >
               Cookie Policy
             </Link>
-          </div>
-
-          {/* Additional Trust Elements */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-white/60">
-              <Globe className="w-3 h-3" />
-              <span>Available in 15+ countries</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-white/60">
-              <Users className="w-3 h-3" />
-              <span>10K+ active community</span>
-            </div>
           </div>
         </div>
       </div>

@@ -223,7 +223,7 @@ export default function FAQPage() {
                   Chat with our support team 24/7
                 </p>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/chat">Start Chat</Link>
+                  <Link href="https://t.me/tabor_support">Start Chat</Link>
                 </Button>
               </Card>
               <Card className="p-6 text-center card-hover gradient-border">
@@ -250,7 +250,7 @@ export default function FAQPage() {
               Ready to Start Learning?
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-up">
-              Join our community of successful Ethiopian entrepreneurs and start your journey today.
+              Join our community of successful entrepreneurs and start your journey today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
               <Button 

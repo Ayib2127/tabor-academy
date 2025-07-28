@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { getUserLocation, type LocationData } from '@/lib/utils/geolocation'
 import { EthiopianPaymentOptions } from '@/components/payment/ethiopian-payment-options'
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface EnrollmentButtonProps {
   courseId: string
@@ -121,10 +122,22 @@ export function EnrollmentButton({
       setShowPaymentOptions(true)
 
     } catch (error: any) {
-      console.error('Enrollment error:', error)
-      toast.error(error.message || 'Failed to enroll in course')
+      console.error('Enrollment error:', error);
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+          courseId,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to enroll in course',
+        });
+      }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -157,7 +170,12 @@ export function EnrollmentButton({
 
     } catch (error: any) {
       console.error('Stripe payment error:', error)
-      toast.error(error.message || 'Failed to initialize payment')
+      showApiErrorToast({
+        code: error.code || 'INTERNAL_ERROR',
+        error: error.message || 'Failed to initialize payment',
+        details: error.details,
+        courseId,
+      });
     } finally {
       setIsLoading(false)
     }

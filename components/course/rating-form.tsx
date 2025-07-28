@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface RatingFormProps {
   courseId: string;
@@ -26,7 +27,11 @@ export function RatingForm({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      toast.error('Please select a rating');
+      showApiErrorToast({
+        code: 'VALIDATION_ERROR',
+        error: 'Please select a rating',
+        courseId,
+      });
       return;
     }
 
@@ -58,7 +63,20 @@ export function RatingForm({
       }
     } catch (error: any) {
       console.error('Error submitting rating:', error);
-      toast.error(error.message || 'Failed to submit rating');
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+          courseId,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to submit rating',
+          courseId,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

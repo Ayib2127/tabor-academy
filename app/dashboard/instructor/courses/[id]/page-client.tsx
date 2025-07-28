@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { CourseStatusIndicator } from '@/components/instructor/course-status-indicator';
 import { CourseAnnouncements } from '@/components/instructor/course-announcements';
 import { Badge } from '@/components/ui/badge';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface CourseDetails {
   id: string;
@@ -86,7 +87,16 @@ export default function CoursePage() {
         } catch (err: any) {
       console.error('Error fetching course details:', err);
       setError(err.message);
-      toast.error('Failed to load course details');
+      if (err.code) {
+        showApiErrorToast({
+          code: err.code,
+          error: err.message,
+          details: err.details,
+          courseId,
+        });
+      } else {
+        toast.error('Failed to load course details');
+      }
       } finally {
         setLoading(false);
       }
@@ -100,7 +110,16 @@ export default function CoursePage() {
       const data = await response.json();
       setModules(data.modules || []);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load curriculum');
+      if (err.code) {
+        showApiErrorToast({
+          code: err.code,
+          error: err.message,
+          details: err.details,
+          courseId,
+        });
+      } else {
+        toast.error(err.message || 'Failed to load curriculum');
+      }
     }
   };
 

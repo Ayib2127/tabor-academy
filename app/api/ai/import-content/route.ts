@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai, AI_MODEL } from '@/lib/ai/openai';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
     const supabase = await createApiSupabaseClient();
-    
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Parse request body
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (err) {
+      throw new ValidationError('Invalid JSON in request body');
+    }
     const { content, customInstructions, courseType, wordCount, fileCount } = body;
 
     if (!content) {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+      throw new ValidationError('Content is required');
     }
 
     // Create comprehensive prompt for course generation
@@ -122,7 +127,7 @@ Ensure the JSON is valid and properly formatted. Do not include any text before 
     const aiResponse = completion.choices[0]?.message?.content;
 
     if (!aiResponse) {
-      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
+      throw new Error('No response from AI');
     }
 
     // Parse the JSON response
@@ -131,16 +136,12 @@ Ensure the JSON is valid and properly formatted. Do not include any text before 
       courseData = JSON.parse(aiResponse);
     } catch (error) {
       console.error('Failed to parse AI response as JSON:', aiResponse);
-      return NextResponse.json({ 
-        error: 'Failed to generate valid course structure. Please try again.' 
-      }, { status: 500 });
+      throw new ValidationError('Failed to generate valid course structure. Please try again.');
     }
 
     // Validate the course structure
     if (!courseData.title || !courseData.modules || !Array.isArray(courseData.modules)) {
-      return NextResponse.json({ 
-        error: 'Invalid course structure generated. Please try again.' 
-      }, { status: 500 });
+      throw new ValidationError('Invalid course structure generated. Please try again.');
     }
 
     // Add IDs and additional metadata
@@ -188,23 +189,25 @@ Ensure the JSON is valid and properly formatted. Do not include any text before 
 
   } catch (error: any) {
     console.error('Content import API Error:', error);
-    
+    const apiError = handleApiError(error);
     // Handle specific OpenAI errors
     if (error.code === 'insufficient_quota') {
       return NextResponse.json({ 
-        error: 'AI service quota exceeded. Please try again later.' 
+        code: 'AI_QUOTA_EXCEEDED',
+        error: 'AI service quota exceeded. Please try again later.'
       }, { status: 429 });
     }
-    
     if (error.code === 'invalid_api_key') {
       return NextResponse.json({ 
-        error: 'AI service configuration error.' 
+        code: 'AI_INVALID_API_KEY',
+        error: 'AI service configuration error.'
       }, { status: 500 });
     }
-
     return NextResponse.json({ 
-      error: 'Failed to process content and generate course. Please try again.' 
-    }, { status: 500 });
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 

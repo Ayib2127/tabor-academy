@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { handleApiError, ForbiddenError } from '@/lib/utils/error-handling';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest): Promise<NextResponse<any>> {
-  const supabase = await createApiSupabaseClient();
-
   try {
+    const supabase = await createApiSupabaseClient();
+
     // Get the current user
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Get user profile with funnel stage
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<any>> {
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
-      return NextResponse.json({ error: profileError.message }, { status: 500 });
+      throw profileError;
     }
 
     // Get user's enrolled courses with enhanced data
@@ -55,7 +53,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<any>> {
 
     if (enrollmentsError) {
       console.error('Error fetching enrollments:', enrollmentsError);
-      return NextResponse.json({ error: enrollmentsError.message }, { status: 500 });
+      throw enrollmentsError;
     }
 
     // Calculate progress for each enrollment (mock data for now)
@@ -206,10 +204,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<any>> {
 
   } catch (error: any) {
     console.error('Dashboard API error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 
@@ -312,7 +308,7 @@ function getNextStepCourse(funnelStage: string, recommendedCourses: any[]) {
     },
     'Growth': {
       title: "Scale Your Business! 📈",
-      description: "Your product is ready - now it's time to grow! Learn advanced marketing strategies, customer acquisition techniques, and scaling frameworks used by successful Ethiopian entrepreneurs.",
+      description: "Your product is ready - now it's time to grow! Learn advanced marketing strategies, customer acquisition techniques, and scaling frameworks used by successful entrepreneurs.",
       action: "Start Growth Course"
     }
   };

@@ -311,63 +311,76 @@ export default function Home() {
       </section>
 
       {/* 8. Enhanced Final Call-to-Action Section */}
-      <section className="py-24 bg-gradient-to-br from-[#2C3E50] via-[#1B4D3E] to-[#2C3E50] relative overflow-hidden min-h-[500px] md:min-h-[600px]">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
-        {/* Animated Background Elements */}
-        <div className="absolute top-10 left-10 w-64 h-64 bg-[#FF6B35]/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 right-10 w-80 h-80 bg-[#4ECDC4]/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-[#FF6B35]/5 to-[#4ECDC4]/5 rounded-full blur-3xl" />
-        <div className="container px-4 md:px-6 relative z-10 h-full">
+      <section className="relative py-28 bg-gradient-to-br from-[#1e3c72] via-[#2a5298] to-[#38b6ff] overflow-hidden min-h-[650px]">
+        {/* Darker overlay for more contrast */}
+        <div className="absolute inset-0 bg-black/60 z-0" />
+        {/* Animated Pattern Overlay */}
+        <div className="absolute inset-0 pointer-events-none z-10">
+          <svg width="100%" height="100%">
+            <defs>
+              <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="2" fill="#fff" opacity="0.10"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#dots)" />
+          </svg>
+        </div>
+        {/* Wavy Divider at Bottom */}
+        <div className="absolute bottom-0 left-0 w-full z-10">
+          <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#17494D" fillOpacity="1" d="M0,32 C360,80 1080,0 1440,48 L1440,80 L0,80 Z"/>
+          </svg>
+        </div>
+        <div className="container px-4 md:px-6 relative z-20 h-full">
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center h-full">
             {/* Left: Text Content */}
             <div className="text-center md:text-left">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/20">
-                <Zap className="w-4 h-4 text-[#FF6B35]" />
-                <span className="text-sm font-medium text-white">Ready to Transform Your Future?</span>
+              <div className="inline-flex items-center gap-2 bg-white/30 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/40 shadow-lg">
+                <Zap className="w-4 h-4 text-[#FF6B35] animate-pulse" />
+                <span className="text-sm font-medium text-white drop-shadow">Ready to Transform Your Future?</span>
               </div>
               {/* Main Headline */}
-              <h2 className="text-4xl md:text-6xl font-bold mb-8 text-white leading-tight">
+              <h2 className="text-4xl md:text-6xl font-extrabold mb-8 text-white leading-tight drop-shadow-2xl animate-fade-in-up">
                 Start Building Your Future,
-                <span className="block bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] bg-clip-text text-transparent">
-                  for Free
+                <span
+                  className="block bg-gradient-to-r from-[#FF6B35] via-[#FFD166] to-[#43B0F1] bg-clip-text text-transparent animate-gradient-move drop-shadow-2xl"
+                  style={{
+                    backgroundSize: '200% 200%',
+                    animation: 'gradient-move 3s ease-in-out infinite alternate',
+                  }}
+                >
+                  for <span className="text-[#FFD166] drop-shadow-2xl">Free</span>
                 </span>
               </h2>
               {/* Sub-headline */}
-              <p className="text-xl md:text-2xl text-white/90 mb-12 leading-relaxed max-w-3xl mx-auto md:mx-0">
-                Join thousands of successful Ethiopian entrepreneurs who have transformed their lives through our platform.
+              <p className="text-xl md:text-2xl text-white mb-8 leading-relaxed max-w-3xl mx-auto md:mx-0 drop-shadow-2xl font-semibold">
+                Join thousands of successful entrepreneurs who have transformed their lives through our platform.
                 Your journey from idea to income starts with a single click.
               </p>
               {/* Value Propositions */}
               <div className="grid md:grid-cols-3 gap-8 mb-12">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center mb-4 border border-[#4ECDC4]/30">
-                    <Shield className="w-8 h-8 text-[#4ECDC4]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">100% Free to Start</h3>
-                  <p className="text-white/70 text-sm">No credit card required. Access premium content immediately.</p>
+                <div className="flex flex-col items-center text-center bg-[#17494D] rounded-2xl p-6 border border-[#FFD166]/60 shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                  <Shield className="w-8 h-8 text-[#4ECDC4]" />
+                  <h3 className="text-lg font-bold text-white mb-2 mt-4 drop-shadow">100% Free to Start</h3>
+                  <p className="text-white/90 text-sm font-medium drop-shadow">No credit card required. Access premium content immediately.</p>
                 </div>
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-[#FF6B35]/20 rounded-full flex items-center justify-center mb-4 border border-[#FF6B35]/30">
-                    <Users className="w-8 h-8 text-[#FF6B35]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Expert Community</h3>
-                  <p className="text-white/70 text-sm">Connect with mentors and fellow entrepreneurs across Ethiopia.</p>
+                <div className="flex flex-col items-center text-center bg-[#17494D] rounded-2xl p-6 border border-[#FFD166]/60 shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                  <Users className="w-8 h-8 text-[#FF6B35]" />
+                  <h3 className="text-lg font-bold text-white mb-2 mt-4 drop-shadow">Expert Community</h3>
+                  <p className="text-white/90 text-sm font-medium drop-shadow">Connect with mentors and fellow entrepreneurs across Ethiopia.</p>
                 </div>
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-[#1B4D3E]/40 rounded-full flex items-center justify-center mb-4 border border-[#1B4D3E]/50">
-                    <Award className="w-8 h-8 text-[#4ECDC4]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Real Results</h3>
-                  <p className="text-white/70 text-sm">85% of our students launch profitable businesses within 6 months.</p>
+                <div className="flex flex-col items-center text-center bg-[#17494D] rounded-2xl p-6 border border-[#FFD166]/60 shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                  <Award className="w-8 h-8 text-[#FFD166]" />
+                  <h3 className="text-lg font-bold text-white mb-2 mt-4 drop-shadow">Real Results</h3>
+                  <p className="text-white/90 text-sm font-medium drop-shadow">85% of our students launch profitable businesses within 6 months.</p>
                 </div>
               </div>
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-6 justify-center md:justify-start items-center mb-8">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 text-lg px-8 py-4 group"
+                  className="bg-gradient-to-r from-[#FF6B35] to-[#43B0F1] hover:from-[#FFD166] hover:to-[#43B0F1] text-white shadow-2xl border-2 border-white/80 hover:shadow-3xl transition-all duration-300 hover:scale-105 text-lg px-8 py-4 group animate-pulse-cta font-bold"
                   asChild
                 >
                   <Link href="/signup" className="flex items-center gap-3">
@@ -379,7 +392,7 @@ export default function Home() {
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="border-2 border-white/30 text-white hover:bg-white hover:text-[#2C3E50] backdrop-blur-sm bg-white/10 text-lg px-8 py-4 group transition-all duration-300"
+                  className="border-2 border-[#17494D] text-[#17494D] bg-white hover:bg-[#FFD166]/80 text-lg px-8 py-4 group transition-all duration-300 font-bold"
                   asChild
                 >
                   <Link href="/courses" className="flex items-center gap-2">
@@ -389,16 +402,19 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-            {/* Right: Image */}
+            {/* Right: Image and Trust Indicators (keep your improved version here) */}
             <div className="flex flex-col items-end justify-center h-full w-full p-4">
-              <Image
-                src="https://res.cloudinary.com/dbn8jx8bh/image/upload/v1751697065/welcome_s9s8az.png"
-                alt="Welcome to Tabor Academy"
-                width={500}
-                height={500}
-                className="rounded-3xl shadow-2xl w-full max-w-[500px] object-contain"
-                priority
-              />
+              <div className="relative group">
+                <span className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] blur-lg opacity-60 group-hover:opacity-90 transition duration-500 animate-glow"></span>
+                <Image
+                  src="https://res.cloudinary.com/dbn8jx8bh/image/upload/v1751697065/welcome_s9s8az.png"
+                  alt="Welcome to Tabor Academy"
+                  width={500}
+                  height={500}
+                  className="relative rounded-3xl shadow-2xl w-full max-w-[500px] object-contain z-10"
+                  priority
+                />
+              </div>
               {/* Trust Indicators */}
               <div className="flex flex-col sm:flex-row items-center justify-center md:justify-end gap-8 text-white/80 mt-8 w-full">
                 <div className="flex items-center gap-2">

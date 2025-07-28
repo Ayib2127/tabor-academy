@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import * as Sentry from '@sentry/nextjs';
 import Stripe from 'stripe';
+import { handleApiError, ForbiddenError, ValidationError, ResourceConflictError, NotFoundError, PaymentError } from '@/lib/utils/error-handling';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function POST(
     // 1. Check for authenticated user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // 2. Get course details
@@ -34,7 +35,7 @@ export async function POST(
       .single();
 
     if (courseError || !course) {
-      return NextResponse.json({ error: 'Course not found or not published' }, { status: 404 });
+      throw new NotFoundError('Course not found or not published');
     }
 
     // 3. Check if user is already enrolled
@@ -47,21 +48,16 @@ export async function POST(
 
     if (enrollmentCheckError) {
       console.error('Error checking enrollment:', enrollmentCheckError);
-      return NextResponse.json({ error: 'Failed to check enrollment status' }, { status: 500 });
+      throw handleApiError(enrollmentCheckError);
     }
 
     if (existingEnrollment) {
-      return NextResponse.json({ 
-        error: 'You are already enrolled in this course',
-        enrolled: true 
-      }, { status: 400 });
+      throw new ResourceConflictError('You are already enrolled in this course');
     }
 
     // 4. Check if user is trying to enroll in their own course
     if (course.instructor_id === session.user.id) {
-      return NextResponse.json({ 
-        error: 'You cannot enroll in your own course' 
-      }, { status: 400 });
+      throw new ValidationError('You cannot enroll in your own course');
     }
 
     // 5. Handle enrollment based on course price
@@ -79,7 +75,7 @@ export async function POST(
 
       if (enrollmentError) {
         console.error('Error creating enrollment:', enrollmentError);
-        return NextResponse.json({ error: 'Failed to enroll in course' }, { status: 500 });
+        throw handleApiError(enrollmentError);
       }
 
       // Track enrollment event
@@ -101,6 +97,28 @@ export async function POST(
         console.warn('Analytics tracking failed:', analyticsError);
       }
 
+      // Send congratulations email (non-blocking)
+      try {
+        // Fetch user details for email
+        const { data: userProfile, error: userError } = await supabase
+          .from('users')
+          .select('full_name, email')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!userError && userProfile?.email) {
+          // Import dynamically to avoid circular dependencies
+          const { sendEnrollmentCongratulationsEmail } = await import('@/lib/email/resend');
+          sendEnrollmentCongratulationsEmail({
+            userEmail: userProfile.email,
+            userName: userProfile.full_name || userProfile.email.split('@')[0],
+            courseTitle: course.title,
+          }).catch((e) => console.error('Failed to send congratulations email:', e));
+        }
+      } catch (e) {
+        console.error('Error preparing to send congratulations email:', e);
+      }
+
       return NextResponse.json({
         success: true,
         enrollment,
@@ -113,9 +131,7 @@ export async function POST(
       const { amount, currency = 'USD' } = await request.json();
       
       if (!amount || amount !== course.price) {
-        return NextResponse.json({ 
-          error: 'Invalid payment amount' 
-        }, { status: 400 });
+        throw new ValidationError('Invalid payment amount');
       }
 
       // Get user details for payment
@@ -127,7 +143,7 @@ export async function POST(
 
       if (userError) {
         console.error('Error fetching user profile:', userError);
-        return NextResponse.json({ error: 'Failed to fetch user details' }, { status: 500 });
+        throw handleApiError(userError);
       }
 
       // Initialize payment with Stripe
@@ -142,9 +158,7 @@ export async function POST(
       });
 
       if (!paymentData.success) {
-        return NextResponse.json({ 
-          error: 'Failed to initialize payment' 
-        }, { status: 500 });
+        throw new PaymentError(paymentData.error || 'Failed to initialize payment');
       }
 
       return NextResponse.json({
@@ -159,9 +173,10 @@ export async function POST(
   } catch (error: any) {
     console.error('Enrollment error:', error);
     Sentry.captureException(error);
+    const apiError = handleApiError(error);
     return NextResponse.json({ 
-      error: 'An unexpected error occurred during enrollment' 
-    }, { status: 500 });
+      code: apiError.code, error: apiError.message, details: apiError.details 
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'RESOURCE_CONFLICT' ? 409 : apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'PAYMENT_ERROR' ? 402 : 500 });
   }
 }
 

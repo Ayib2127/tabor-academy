@@ -19,6 +19,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface CourseAnnouncementsProps {
   courseId: string;
@@ -34,7 +35,11 @@ export function CourseAnnouncements({ courseId, studentCount }: CourseAnnounceme
 
   const handleSendAnnouncement = async () => {
     if (!title.trim() || !message.trim()) {
-      toast.error('Please provide both a title and message');
+      showApiErrorToast({
+        code: 'VALIDATION_ERROR',
+        error: 'Please provide both a title and message',
+        courseId,
+      });
       return;
     }
 
@@ -72,7 +77,20 @@ export function CourseAnnouncements({ courseId, studentCount }: CourseAnnounceme
       
     } catch (error: any) {
       console.error('Error sending announcement:', error);
-      toast.error(error.message || 'Failed to send announcement');
+      if (error.code) {
+        showApiErrorToast({
+          code: error.code,
+          error: error.message,
+          details: error.details,
+          courseId,
+        });
+      } else {
+        showApiErrorToast({
+          code: 'INTERNAL_ERROR',
+          error: error.message || 'Failed to send announcement',
+          courseId,
+        });
+      }
     } finally {
       setIsSending(false);
     }

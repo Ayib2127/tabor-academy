@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // Get user role
@@ -50,14 +51,18 @@ export async function GET(request: NextRequest) {
     const { data: events, error } = await query.order('start_date', { ascending: true });
 
     if (error) {
-      console.error('Error fetching calendar events:', error);
-      return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json({ events: events || [] });
   } catch (error) {
     console.error('Calendar API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 
@@ -68,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     const body = await request.json();
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!title || !startDate || !endDate || !type) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      throw new ValidationError('Missing required fields');
     }
 
     // Create event
@@ -128,14 +133,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating calendar event:', error);
-      return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json({ event });
   } catch (error) {
     console.error('Calendar API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 
@@ -146,14 +155,14 @@ export async function PUT(request: NextRequest) {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     const body = await request.json();
     const { id, ...updates } = body;
 
     if (!id) {
-      return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
+      throw new ValidationError('Event ID is required');
     }
 
     // Check if user owns the event
@@ -164,7 +173,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (!existingEvent) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      throw new ValidationError('Event not found');
     }
 
     const canEdit = existingEvent.user_id === user.id || 
@@ -172,7 +181,7 @@ export async function PUT(request: NextRequest) {
                    existingEvent.student_id === user.id;
 
     if (!canEdit) {
-      return NextResponse.json({ error: 'Not authorized to edit this event' }, { status: 403 });
+      throw new ForbiddenError('Not authorized to edit this event');
     }
 
     // Update event
@@ -187,14 +196,18 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error updating calendar event:', error);
-      return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json({ event });
   } catch (error) {
     console.error('Calendar API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 
@@ -205,14 +218,14 @@ export async function DELETE(request: NextRequest) {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
+      throw new ValidationError('Event ID is required');
     }
 
     // Check if user owns the event
@@ -223,7 +236,7 @@ export async function DELETE(request: NextRequest) {
       .single();
 
     if (!existingEvent) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      throw new ValidationError('Event not found');
     }
 
     const canDelete = existingEvent.user_id === user.id || 
@@ -231,7 +244,7 @@ export async function DELETE(request: NextRequest) {
                      existingEvent.student_id === user.id;
 
     if (!canDelete) {
-      return NextResponse.json({ error: 'Not authorized to delete this event' }, { status: 403 });
+      throw new ForbiddenError('Not authorized to delete this event');
     }
 
     // Delete event
@@ -241,13 +254,17 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting calendar event:', error);
-      return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Calendar API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 

@@ -1,31 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export async function GET(req: Request, context: { params: { id: string } }) {
   const { params } = context;
   const courseId = params.id;
   try {
     const supabase = await createSupabaseServerClient();
-
     // Get current user
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
-
     const { data: modules, error: modulesError } = await supabase
       .from('course_modules')
       .select('id, title, order')
       .eq('course_id', courseId)
       .order('order', { ascending: true });
-
     if (modulesError) {
       throw modulesError;
     }
-
     const modulesWithLessons = await Promise.all(
       (modules || []).map(async (module) => {
         // Fetch lessons for this module
@@ -34,11 +31,9 @@ export async function GET(req: Request, context: { params: { id: string } }) {
           .select('id, title, order, content, duration, is_published, type')
           .eq('module_id', module.id)
           .order('order', { ascending: true });
-
         if (lessonsError) {
           throw lessonsError;
         }
-
         // Fetch progress for all lessons in this module for the current user
         const lessonIds = (lessons || []).map((l) => l.id);
         let progressMap: Record<string, boolean> = {};
@@ -55,24 +50,22 @@ export async function GET(req: Request, context: { params: { id: string } }) {
             }, {} as Record<string, boolean>);
           }
         }
-
         // Attach completed property to each lesson
         const lessonsWithCompletion = (lessons || []).map((lesson) => ({
           ...lesson,
           completed: !!progressMap[lesson.id],
         }));
-
         return {
           ...module,
           lessons: lessonsWithCompletion,
         };
       })
     );
-
     return NextResponse.json(modulesWithLessons);
   } catch (error) {
     console.error('Error fetching course modules:', error);
-    return NextResponse.json({ error: 'Failed to fetch course modules', details: error.message || error }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }
 
@@ -82,11 +75,9 @@ export async function POST(request: NextRequest, context: { params: { id: string
     const courseId = params.id;
     const supabase = await createSupabaseServerClient();
     const { title, order } = await request.json();
-
     if (!title) {
-      return NextResponse.json({ error: 'Module title is required' }, { status: 400 });
+      throw new ValidationError('Module title is required');
     }
-
     const { data: newModule, error } = await supabase
       .from('course_modules')
       .insert([
@@ -98,14 +89,13 @@ export async function POST(request: NextRequest, context: { params: { id: string
       ])
       .select()
       .single();
-
     if (error) {
       throw error;
     }
-
     return NextResponse.json({ ...newModule, lessons: [] }, { status: 201 });
   } catch (error) {
     console.error('Error creating module:', error);
-    return NextResponse.json({ error: 'Failed to create module' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

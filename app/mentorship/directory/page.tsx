@@ -302,7 +302,7 @@ export default function MentorDirectoryPage() {
               <div>
                 <h2 className="text-2xl font-bold mb-2">Share Your Expertise</h2>
                 <p className="text-muted-foreground">
-                  Join our community of mentors and help shape the next generation of Ethiopian entrepreneurs
+                  Join our community of mentors and help shape the next generation of entrepreneurs
                 </p>
               </div>
               <Button size="lg" className="min-w-[200px]">

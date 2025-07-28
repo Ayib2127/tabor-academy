@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface LessonContentProps {
   lesson: Lesson;
@@ -124,7 +125,16 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
       }, 1500);
       if (onLessonCompleted) onLessonCompleted();
     } catch (err) {
-      toast.error("Could not complete lesson.");
+      if ((err as any).code) {
+        showApiErrorToast({
+          code: (err as any).code,
+          error: (err as any).message,
+          details: (err as any).details,
+          lessonId: lesson.id,
+        });
+      } else {
+        toast.error("Could not complete lesson.");
+      }
     } finally {
       setCompleting(false);
     }
@@ -365,7 +375,16 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
                   }).then(async (response) => {
                     const data = await response.json();
                     if (!response.ok) {
-                      toast.error(data.error || 'Failed to submit quiz');
+                      if (data.code) {
+                        showApiErrorToast({
+                          code: data.code,
+                          error: data.error,
+                          details: data.details,
+                          lessonId: lesson.id,
+                        });
+                      } else {
+                        toast.error(data.error || 'Failed to submit quiz');
+                      }
                       return;
                     }
                     if (data.passed) {
@@ -375,7 +394,16 @@ const LessonContent: FC<LessonContentProps> = ({ lesson, isPreview = false, comp
                     }
                   }).catch((error) => {
                     console.error('Error submitting quiz:', error);
-                    toast.error('Failed to submit quiz');
+                    if (error.code) {
+                      showApiErrorToast({
+                        code: error.code,
+                        error: error.message,
+                        details: error.details,
+                        lessonId: lesson.id,
+                      });
+                    } else {
+                      toast.error('Failed to submit quiz');
+                    }
                   });
                 }}
               />

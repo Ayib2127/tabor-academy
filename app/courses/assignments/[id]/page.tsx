@@ -30,6 +30,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { toast } from "react-hot-toast"
+import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 // Mock assignment data
 const assignment = {
@@ -218,7 +219,16 @@ export default function AssignmentSubmissionPage() {
       localStorage.removeItem(`assignment-submission-draft-${assignment.id}`);
     } catch (error) {
       console.error('Assignment upload error:', error);
-      toast.error('Failed to submit assignment');
+      if ((error as any).code) {
+        showApiErrorToast({
+          code: (error as any).code,
+          error: (error as any).message,
+          details: (error as any).details,
+          assignmentId: assignment.id,
+        });
+      } else {
+        toast.error('Failed to submit assignment');
+      }
     } finally {
       setIsSubmitting(false);
     }

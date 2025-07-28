@@ -176,7 +176,6 @@ export function useRealtimeNotifications({
             (payload) => {
               try {
                 const newNotification = payload.new as Notification;
-                console.log('New notification received:', newNotification);
                 
                 // Add to notifications list
                 setNotifications(prev => [newNotification, ...prev]);
@@ -213,7 +212,6 @@ export function useRealtimeNotifications({
             (payload) => {
               try {
                 const updatedNotification = payload.new as Notification;
-                console.log('Notification updated:', updatedNotification);
                 
                 // Update in notifications list
                 setNotifications(prev => 
@@ -251,7 +249,6 @@ export function useRealtimeNotifications({
             (payload) => {
               try {
                 const deletedNotification = payload.old as Notification;
-                console.log('Notification deleted:', deletedNotification);
                 
                 // Remove from notifications list
                 setNotifications(prev => prev.filter(n => n.id !== deletedNotification.id));
@@ -266,29 +263,23 @@ export function useRealtimeNotifications({
             }
           )
           .subscribe((status) => {
-            console.log('Realtime subscription status:', status);
             if (status === 'SUBSCRIBED') {
-              console.log('Successfully subscribed to notifications');
               setError(null); // Clear any previous errors
             } else if (status === 'CHANNEL_ERROR') {
-              console.warn('Realtime subscription error - will retry');
               setError('Connection issue with real-time notifications');
               
               // Retry connection after a delay
               setTimeout(() => {
                 if (enabled && userId) {
-                  console.log('Retrying real-time connection...');
                   setupRealtimeSubscription();
                 }
               }, 5000);
             } else if (status === 'TIMED_OUT') {
-              console.warn('Realtime subscription timed out - will retry');
               setError('Connection timed out');
               
               // Retry connection after a delay
               setTimeout(() => {
                 if (enabled && userId) {
-                  console.log('Retrying real-time connection after timeout...');
                   setupRealtimeSubscription();
                 }
               }, 3000);
@@ -297,13 +288,11 @@ export function useRealtimeNotifications({
 
         setChannel(newChannel);
       } catch (err) {
-        console.warn('Error setting up real-time subscription:', err);
         setError('Failed to setup real-time notifications');
         
         // Retry after a delay
         setTimeout(() => {
           if (enabled && userId) {
-            console.log('Retrying real-time setup...');
             setupRealtimeSubscription();
           }
         }, 5000);
@@ -316,7 +305,6 @@ export function useRealtimeNotifications({
     return () => {
       if (channel) {
         try {
-          console.log('Cleaning up real-time subscription');
           supabase.removeChannel(channel);
         } catch (err) {
           console.warn('Error cleaning up real-time subscription:', err);

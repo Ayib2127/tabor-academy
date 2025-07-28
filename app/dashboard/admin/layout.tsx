@@ -137,18 +137,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9F9]">
-      <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 9999, background: 'red', color: 'white' }}>
-        ADMIN LAYOUT ACTIVE
-      </div>
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <div className="min-h-screen bg-[#F7F9F9] flex">
       {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
@@ -227,10 +216,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="flex-1 flex flex-col">
         {/* Top bar */}
         <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-[#E5E8E8]">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6">
             <Button
               variant="ghost"
               size="icon"
@@ -239,7 +228,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               <Menu className="h-5 w-5" />
             </Button>
-
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
@@ -252,9 +240,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </div>
         </div>
-
         {/* Page content */}
-        <main className="flex-1">
+        <main className="flex-1 flex flex-col">
           {children}
         </main>
       </div>

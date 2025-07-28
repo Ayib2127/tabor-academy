@@ -2,6 +2,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 export const courseCreationSchema = z.object({
   title: z.string().min(1, 'Course title is required').max(100),
@@ -57,12 +58,17 @@ export async function POST(req: Request) {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    throw new ForbiddenError('Unauthorized');
   }
 
   try {
-    const body = await req.json();
-    const validatedData = courseCreationSchema.parse(body);
+    let validatedData;
+    try {
+      const body = await req.json();
+      validatedData = courseCreationSchema.parse(body);
+    } catch (err) {
+      throw new ValidationError('Validation failed', err instanceof z.ZodError ? err.errors : undefined);
+    }
 
     // Get user profile to check role
     const { data: userProfile, error: userError } = await supabase
@@ -72,8 +78,7 @@ export async function POST(req: Request) {
       .single();
 
     if (userError) {
-      console.error('Error fetching user profile:', userError);
-      return NextResponse.json({ error: 'Failed to verify user permissions' }, { status: 500 });
+      throw userError;
     }
 
     // Determine content_type based on user role
@@ -121,8 +126,7 @@ export async function POST(req: Request) {
       .single();
 
     if (courseError) {
-      console.error('Error creating course:', courseError);
-      return NextResponse.json({ error: 'Failed to create course' }, { status: 500 });
+      throw courseError;
     }
 
     // Create modules and lessons
@@ -141,10 +145,9 @@ export async function POST(req: Request) {
         .single();
 
       if (moduleError) {
-        console.error('Error creating module:', moduleError);
         // Clean up: delete the course if module creation fails
         await supabase.from('courses').delete().eq('id', course.id);
-        return NextResponse.json({ error: 'Failed to create course modules' }, { status: 500 });
+        throw moduleError;
       }
 
       // Create lessons for this module
@@ -189,10 +192,9 @@ export async function POST(req: Request) {
           });
 
         if (lessonError) {
-          console.error('Error creating lesson:', lessonError);
           // Clean up: delete the course if lesson creation fails
           await supabase.from('courses').delete().eq('id', course.id);
-          return NextResponse.json({ error: 'Failed to create course lessons' }, { status: 500 });
+          throw lessonError;
         }
       }
     }
@@ -221,17 +223,11 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Course creation error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        error: 'Validation failed',
-        details: error.errors,
-      }, { status: 400 });
-    }
-
+    const apiError = handleApiError(error);
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message,
-    }, { status: 500 });
+      code: apiError.code,
+      error: apiError.message,
+      details: apiError.details,
+    }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

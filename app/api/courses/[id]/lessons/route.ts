@@ -1,4 +1,6 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { NextResponse } from 'next/server';
+import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
 // GET function to list all lessons for a course
 export async function GET(request: NextRequest, context: { params: { id: string } }) {
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
                 console.error("API Route: Supabase Auth Error Details:", userError.details);
                 console.error("API Route: Supabase Auth Error Hint:", userError.hint);
             }
-            return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 });
+            throw new ForbiddenError('Auth session missing!');
         }
 
         console.log("API Route: Authenticated user ID:", user.id); // Confirm user ID
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
         if (courseError || !courseData) {
             console.error("API Route: Error fetching course instructor:", courseError?.message);
-            return NextResponse.json({ error: 'Course not found or instructor not linked.' }, { status: 404 });
+            throw new ValidationError('Course not found or instructor not linked.');
         }
 
         const isInstructor = user.id === courseData.instructor_id;
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
         if (lessonsError) {
             console.error("API Route: Error fetching lessons:", lessonsError.message);
-            return NextResponse.json({ error: 'Failed to fetch lessons.' }, { status: 500 });
+            throw lessonsError;
         }
 
         console.log("API Route: Successfully fetched lessons count:", lessons?.length);
@@ -62,7 +64,8 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
     } catch (error: any) {
         console.error("API Route: Unexpected error in GET /api/courses/[id]/lessons:", error.message);
-        return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+        const apiError = handleApiError(error);
+        return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
     }
 }
 
@@ -77,7 +80,7 @@ export async function POST(
     // 1. Get the authenticated user's session
     const { data: { user }, error: sessionError } = await supabase.auth.getUser();
     if (sessionError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new ForbiddenError('Unauthorized');
     }
 
     // 2. Verify that the user is the instructor of this specific course
@@ -88,17 +91,17 @@ export async function POST(
       .single();
 
     if (courseError || !courseData) {
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+      throw new ValidationError('Course not found');
     }
 
     if (courseData.instructor_id !== user.id) {
-      return NextResponse.json({ error: 'Forbidden: You are not the instructor of this course' }, { status: 403 });
+      throw new ForbiddenError('You are not the instructor of this course');
     }
 
     // 3. Get the new lesson data from the request body
     const { title, content, video_url, duration } = await request.json();
     if (!title) {
-      return NextResponse.json({ error: 'Lesson title is required' }, { status: 400 });
+      throw new ValidationError('Lesson title is required');
     }
 
     // 4. Determine the position for the new lesson
@@ -106,11 +109,9 @@ export async function POST(
       .from('lessons')
       .select('id', { count: 'exact', head: true })
       .eq('course_id', courseId);
-    
     if (countError) {
       throw countError;
     }
-    
     const newPosition = (count || 0) + 1;
 
     // 5. Insert the new lesson into the database
@@ -129,13 +130,14 @@ export async function POST(
       .single();
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      throw insertError;
     }
 
     return NextResponse.json(newLesson, { status: 201 });
 
   } catch (error) {
     console.error('An unexpected error occurred:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    const apiError = handleApiError(error);
+    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 

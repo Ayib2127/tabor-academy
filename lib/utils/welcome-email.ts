@@ -16,7 +16,7 @@ export interface UserData {
  */
 export async function handleWelcomeEmail(userId: string) {
   try {
-    const { supabase } = await createApiSupabaseClient();
+    const supabase = await createApiSupabaseClient(); // FIXED: do not destructure
     
     // Get user data including welcome_email_sent flag
     const { data: userData, error: userError } = await supabase
@@ -37,7 +37,6 @@ export async function handleWelcomeEmail(userId: string) {
 
     // Check if welcome email has already been sent
     if (userData.welcome_email_sent) {
-      console.log('Welcome email already sent for user:', userId);
       return { success: true, emailSent: false };
     }
 
@@ -66,7 +65,6 @@ export async function handleWelcomeEmail(userId: string) {
       // The email was sent successfully
     }
 
-    console.log('Welcome email sent and marked as sent for user:', userId);
     return { success: true, emailSent: true };
 
   } catch (error) {
@@ -82,7 +80,7 @@ export async function handleWelcomeEmail(userId: string) {
  */
 export async function forceSendWelcomeEmail(userId: string) {
   try {
-    const { supabase } = await createApiSupabaseClient();
+    const supabase = await createApiSupabaseClient(); // FIXED: do not destructure
     
     // Get user data
     const { data: userData, error: userError } = await supabase
@@ -120,7 +118,6 @@ export async function forceSendWelcomeEmail(userId: string) {
       return { success: false, error: updateError };
     }
 
-    console.log('Welcome email force-sent for user:', userId);
     return { success: true };
 
   } catch (error) {

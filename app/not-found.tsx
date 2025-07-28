@@ -13,10 +13,37 @@ import {
   MessageSquare,
   HelpCircle,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  AlertCircle,
+  ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { SUPPORT_EMAIL } from "@/lib/config/support";
+
+const NotFoundIllustration = (
+  <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="mx-auto mb-4" aria-hidden="true">
+    <circle cx="60" cy="60" r="56" fill="#ECEFF1" />
+    <ellipse cx="60" cy="90" rx="32" ry="10" fill="#B0BEC5" />
+    <circle cx="48" cy="60" r="6" fill="#90A4AE" />
+    <circle cx="72" cy="60" r="6" fill="#90A4AE" />
+    <rect x="54" y="72" width="12" height="4" rx="2" fill="#90A4AE" />
+  </svg>
+);
+
+const handleReportNotFound = () => {
+  const subject = encodeURIComponent('404 Not Found Report');
+  const body = encodeURIComponent(
+    `Page: ${typeof window !== 'undefined' ? window.location.href : ''}\nMessage: I encountered a 404 page.`
+  );
+  window.open(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
+};
+
+const handleGoBack = () => {
+  if (typeof window !== 'undefined') {
+    window.history.back();
+  }
+};
 
 export default function NotFound() {
   return (
@@ -26,18 +53,34 @@ export default function NotFound() {
       <main className="flex-1 py-12 md:py-24">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center text-center space-y-8">
-            {/* Error Communication Section */}
+            {/* Illustration and Error Communication Section */}
             <div className="space-y-4">
-              <h1 className="text-8xl md:text-9xl font-bold tracking-tighter gradient-text animate-fade-up">
-                404
-              </h1>
-              <h2 className="text-2xl md:text-3xl font-semibold">
+              {NotFoundIllustration}
+              <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">
                 Oops! This page seems to have wandered off
               </h2>
               <p className="text-muted-foreground max-w-[600px] mx-auto">
                 Don't worry, even the best explorers sometimes take unexpected paths. 
                 Let's get you back on track to continue your learning journey.
               </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium focus:outline-none"
+                  onClick={handleGoBack}
+                  title="Go back to the previous page"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Go Back
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 text-xs underline text-gray-500 hover:text-gray-700 focus:outline-none"
+                  onClick={handleReportNotFound}
+                  title="Report this page to support"
+                >
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  Report This Page
+                </button>
+              </div>
             </div>
 
             {/* Navigation Recovery Section */}
@@ -71,7 +114,7 @@ export default function NotFound() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="w-full" asChild>
-                <Link href="/community">
+                <Link href="https://t.me/tabor_academy">
                   <Users className="mr-2 h-4 w-4" />
                   Visit Community
                 </Link>

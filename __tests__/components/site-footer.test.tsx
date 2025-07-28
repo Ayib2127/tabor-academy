@@ -8,24 +8,30 @@ describe('SiteFooter', () => {
     render(<SiteFooter />)
     
     expect(screen.getByText('Tabor Academy')).toBeInTheDocument()
-    expect(screen.getByText(/empowering Ethiopian entrepreneurs/i)).toBeInTheDocument()
+    expect(screen.getByText(/empowering entrepreneurs/i)).toBeInTheDocument()
   })
 
   it('renders quick links section', () => {
     render(<SiteFooter />)
     
-    const links = ['About Us', 'All Courses', 'Success Stories', 'Blog']
+    const links = [
+      'About Us',
+      'All Courses',
+      'Success Stories',
+      'Blog'
+    ]
     links.forEach(link => {
-      expect(screen.getByText(link, { exact: false })).toBeInTheDocument()
+      // Use getByRole to ensure we're only matching links
+      expect(screen.getByRole('link', { name: link })).toBeInTheDocument()
     })
   })
 
   it('renders contact information', () => {
     render(<SiteFooter />)
     
-    expect(screen.getByText('hello@taboracademy.com')).toBeInTheDocument()
-    expect(screen.getByText('+254 700 000000')).toBeInTheDocument()
-    expect(screen.getByText('Nairobi, Kenya')).toBeInTheDocument()
+    expect(screen.getByText('academy@tabordigital.com')).toBeInTheDocument()
+    expect(screen.getByText('+251936747488')).toBeInTheDocument()
+    expect(screen.getByText('Addis Ababa, Ethiopia')).toBeInTheDocument()
   })
 
   it('renders newsletter subscription form', () => {

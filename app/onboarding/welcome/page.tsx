@@ -122,7 +122,7 @@ export default function WelcomeWizardPage() {
             </h1>
             <p className="text-2xl font-medium mb-2">Hello, {userName}!</p>
             <p className="text-lg text-muted-foreground">
-              Join thousands of Ethiopian entrepreneurs transforming their future through digital skills. 
+              Join thousands of entrepreneurs transforming their future through digital skills. 
               Let's personalize your learning experience to help you achieve your goals.
             </p>
           </div>
@@ -321,7 +321,7 @@ export default function WelcomeWizardPage() {
                       Email: support@taboracademy.com
                     </Button>
                     <Button variant="outline" className="justify-start">
-                      Call: +254 700 000000
+                      Call: +251936747488
                     </Button>
                     <Button variant="outline" className="justify-start" asChild>
                       <Link href="/faq">View Onboarding FAQ</Link>

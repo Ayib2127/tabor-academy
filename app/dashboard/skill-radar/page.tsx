@@ -18,7 +18,8 @@ import {
   Star,
   Target,
   TrendingUp,
-  Users
+  Users,
+  CheckCircle
 } from "lucide-react"
 import {
   Chart as ChartJS,

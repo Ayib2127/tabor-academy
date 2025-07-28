@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
-import { createErrorResponse } from '@/lib/utils/error-handling';
+import { handleApiError } from '@/lib/utils/error-handling';
 import { trackPerformance } from '@/lib/utils/performance';
 import { validateEnv } from '@/lib/utils/env-validation';
 import * as Sentry from '@sentry/nextjs';
@@ -29,7 +29,6 @@ export async function GET(
   _: NextRequest,
   context: RouteContext
 ): Promise<NextResponse> {
-  // Validate environment variables
   validateEnv();
   
   const courseId = context.params.id;  // Access via context.params
@@ -40,7 +39,11 @@ export async function GET(
       // Verify authentication
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        return createErrorResponse(userError || new Error('User not found'));
+        return NextResponse.json({
+          code: 'VALIDATION_ERROR',
+          error: 'User not found',
+          details: userError || new Error('User not found')
+        }, { status: 400 });
       }
 
       // Verify course ownership
@@ -51,15 +54,19 @@ export async function GET(
         .single();
 
       if (courseError || !courseData) {
-        return createErrorResponse(courseError || new Error('Course not found'));
+        return NextResponse.json({
+          code: 'VALIDATION_ERROR',
+          error: 'Course not found',
+          details: courseError || new Error('Course not found')
+        }, { status: 400 });
       }
 
       if (courseData.instructor_id !== user.id) {
         return NextResponse.json({
-          error: 'Forbidden: You are not the instructor of this course'
-        }, {
-          status: 403
-        });
+          code: 'FORBIDDEN',
+          error: 'Forbidden: You are not the instructor of this course',
+          details: new Error('Forbidden: You are not the instructor of this course')
+        }, { status: 403 });
       }
 
       // Fetch enrollments with user details
@@ -80,7 +87,11 @@ export async function GET(
       if (enrollmentsError) {
         console.error('Error fetching course enrollments:', enrollmentsError);
         Sentry.captureException(enrollmentsError);
-        return createErrorResponse(enrollmentsError);
+        return NextResponse.json({
+          code: 'INTERNAL_SERVER_ERROR',
+          error: 'Failed to fetch course enrollments',
+          details: enrollmentsError
+        }, { status: 500 });
       }
 
       // Get published lessons
@@ -92,7 +103,11 @@ export async function GET(
       if (lessonsError) {
         console.error('Error fetching lessons:', lessonsError);
         Sentry.captureException(lessonsError);
-        return createErrorResponse(lessonsError);
+        return NextResponse.json({
+          code: 'INTERNAL_SERVER_ERROR',
+          error: 'Failed to fetch lessons',
+          details: lessonsError
+        }, { status: 500 });
       }
 
       const lessonsTyped = (lessons ?? []) as Lesson[];
@@ -142,7 +157,8 @@ export async function GET(
     } catch (error) {
       console.error('Unexpected error:', error);
       Sentry.captureException(error);
-      return createErrorResponse(error);
+      const apiError = handleApiError(error);
+      return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
     }
   });
 }

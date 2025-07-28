@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CourseCard } from '@/components/dashboard/course-card'
 import { describe, it, expect, jest } from '@jest/globals'
 
@@ -45,8 +45,9 @@ describe('CourseCard', () => {
     // Simulate hover
     fireEvent.mouseEnter(overlay)
     // Wait for the transition
-    await new Promise(resolve => setTimeout(resolve, 0))
-    expect(overlay).toHaveClass('opacity-100')
+    await waitFor(() => {
+      expect(overlay).toHaveClass('opacity-100')
+    });
   })
 
   it('calls onContinue with course id when continue button is clicked', () => {
