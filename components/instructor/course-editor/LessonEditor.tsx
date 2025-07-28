@@ -92,15 +92,14 @@ const LessonEditor: FC<LessonEditorProps> = ({
     return JSON.stringify(content);
   }, []);
 
-  // Early return after all hooks
-  if (!isVisible || !lesson) return null;
-
   // Reset local state when a new lesson is selected
   useEffect(() => {
-    setLocalLesson({
-      ...lesson,
-      content: parseContent(lesson.content),
-    });
+    if (lesson) {
+      setLocalLesson({
+        ...lesson,
+        content: parseContent(lesson.content),
+      });
+    }
   }, [lesson?.id, lesson, parseContent]);
 
   // Debounced save function
@@ -194,7 +193,6 @@ const LessonEditor: FC<LessonEditorProps> = ({
             'title',
             'description',
             'is_published',
-            'order',
             'duration',
             'duedate',
             'needsgrading',
@@ -205,17 +203,18 @@ const LessonEditor: FC<LessonEditorProps> = ({
             'points',
             'allow_late',
             'resources',
-          ].forEach((key) => {
-            const value = (updatedLesson as any)[key];
-            if (value !== undefined) updateData[key] = value;
+          ].forEach(field => {
+            if ((updatedLesson as any)[field] !== undefined) {
+              updateData[field] = (updatedLesson as any)[field];
+            }
           });
 
-          const { error: updateError } = await supabase
+          const { error } = await supabase
             .from('module_lessons')
             .update(updateData)
             .eq('id', updatedLesson.id);
 
-          if (updateError) throw updateError;
+          if (error) throw error;
         }
 
         lastContentRef.current = contentString;
@@ -224,24 +223,13 @@ const LessonEditor: FC<LessonEditorProps> = ({
         onUpdate({ ...updatedLesson, content: contentString });
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error: any) {
-        console.error('Auto-save error:', error);
+        console.error('Save error:', error);
         setSaveStatus('error');
-        if (error.code) {
-          showApiErrorToast({
-            code: error.code,
-            error: error.message,
-            details: error.details,
-          });
-        } else {
-          showApiErrorToast({
-            code: 'INTERNAL_ERROR',
-            error: 'Failed to save lesson: ' + (error?.message || error),
-          });
-        }
+        toast.error(error.message || 'Failed to save lesson');
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     }, 1000);
-  }, [onUpdate, supabase, moduleId, parseContent, serializeContent]);
+  }, [moduleId, supabase, parseContent, serializeContent, onUpdate]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -433,6 +421,9 @@ const LessonEditor: FC<LessonEditorProps> = ({
       setEditingQuiz(localLesson.content);
     }
   }, [localLesson.type, localLesson.content]);
+
+  // Early return after all hooks
+  if (!isVisible || !lesson) return null;
 
   return (
     <div className="space-y-6">
