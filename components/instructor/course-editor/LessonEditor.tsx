@@ -63,8 +63,8 @@ const LessonEditor: FC<LessonEditorProps> = ({
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const lastContentRef = useRef<any>(lesson?.content);
 
-  // Helper functions
-  function parseContent(content: any) {
+  // Helper functions - wrap in useCallback to prevent re-creation
+  const parseContent = useCallback((content: any) => {
     if (!content) return undefined;
     if (typeof content === 'string') {
       try {
@@ -85,13 +85,14 @@ const LessonEditor: FC<LessonEditorProps> = ({
       }
     }
     return content;
-  }
-  function serializeContent(content: any) {
+  }, []);
+
+  const serializeContent = useCallback((content: any) => {
     if (typeof content === 'string') return content;
     return JSON.stringify(content);
-  }
+  }, []);
 
-  // All hooks are now above this line!
+  // Early return after all hooks
   if (!isVisible || !lesson) return null;
 
   // Reset local state when a new lesson is selected
@@ -240,7 +241,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     }, 1000);
-  }, [onUpdate, supabase, moduleId]);
+  }, [onUpdate, supabase, moduleId, parseContent, serializeContent]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

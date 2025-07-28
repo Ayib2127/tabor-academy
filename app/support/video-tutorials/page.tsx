@@ -316,9 +316,11 @@ export default function VideoTutorialsPage() {
               ].map((series, index) => (
                 <Card key={index} className="overflow-hidden">
                   <div className="relative aspect-video">
-                    <img
+                    <Image
                       src={series.thumbnail}
                       alt={series.title}
+                      width={400}
+                      height={225}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

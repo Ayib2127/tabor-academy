@@ -43,15 +43,12 @@ const VersionHistory: FC<VersionHistoryProps> = ({
   onClose,
   isVisible = true,
 }) => {
-  // Move all hooks to the top, before any return
+  // All hooks must be called before any return
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDiff, setShowDiff] = useState(false);
-
-  // Early return after all hooks
-  if (!isVisible) return null;
 
   // Mock version history data
   useEffect(() => {
@@ -121,6 +118,9 @@ const VersionHistory: FC<VersionHistoryProps> = ({
 
     loadVersionHistory();
   }, [lessonId, currentContent]);
+
+  // Early return after all hooks
+  if (!isVisible) return null;
 
   const formatTimestamp = (timestamp: Date) => {
     const now = new Date();

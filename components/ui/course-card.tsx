@@ -254,3 +254,10 @@ const CourseCard: FC<CourseCardProps> = ({
 };
 
 export default CourseCard;
+        </Link>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default CourseCard;
