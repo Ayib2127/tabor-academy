@@ -181,11 +181,9 @@ export default function VideoTutorialsPage() {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Play className="h-16 w-16 text-white" />
                 </div>
-                <Image
+                <img
                   src={tutorials.gettingStarted[0].thumbnail}
                   alt="Tutorial thumbnail"
-                  width={800}
-                  height={450}
                   className="w-full h-full object-cover opacity-50"
                 />
               </div>
@@ -257,11 +255,9 @@ export default function VideoTutorialsPage() {
                       onClick={() => handleVideoPlay(video.id)}
                     >
                       <div className="relative aspect-video">
-                        <Image
+                        <img
                           src={video.thumbnail}
                           alt={video.title}
-                          width={400}
-                          height={225}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
@@ -316,11 +312,9 @@ export default function VideoTutorialsPage() {
               ].map((series, index) => (
                 <Card key={index} className="overflow-hidden">
                   <div className="relative aspect-video">
-                    <Image
+                    <img
                       src={series.thumbnail}
                       alt={series.title}
-                      width={400}
-                      height={225}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

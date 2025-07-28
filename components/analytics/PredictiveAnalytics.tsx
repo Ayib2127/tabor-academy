@@ -26,7 +26,6 @@ import {
   Star,
   Eye,
   ArrowRight,
-  BookOpen,
 } from 'lucide-react';
 import {
   LineChart as RechartsLineChart,

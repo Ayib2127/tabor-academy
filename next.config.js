@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@sentry/node'],
+  experimental: {
+    serverComponentsExternalPackages: ['@sentry/node'],
+  },
   webpack: (config, { isServer }) => {
     // Suppress OpenTelemetry warnings
     config.ignoreWarnings = [
@@ -25,4 +27,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig; 
+module.exports = nextConfig; 

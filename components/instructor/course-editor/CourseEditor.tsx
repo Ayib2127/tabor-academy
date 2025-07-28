@@ -1,6 +1,4 @@
 
-"use client";
-
 import { FC, useState, useEffect } from 'react';
 import { Course, Module, Lesson } from '@/types/course';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';

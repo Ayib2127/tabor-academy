@@ -1,4 +1,5 @@
 "use client"
+"use client"
 
 import { useState } from "react"
 import { SiteHeader } from "@/components/site-header"
@@ -31,129 +32,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { withDefault, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
-export default function MentorshipProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
-  
-  // Mock data - replace with actual data fetching
-  const mentor = {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    title: "Senior Software Engineer",
-    company: "Tech Corp",
-    avatar: DEFAULT_AVATAR_URL,
-    rating: 4.8,
-    reviewCount: 127,
-    hourlyRate: 75,
-    description: "Experienced software engineer with 10+ years in full-stack development...",
-    skills: ["React", "Node.js", "Python", "AWS", "Docker"],
-    languages: ["English", "Spanish"],
-    availability: {
-      sessionDurations: [30, 60, 90],
-      schedule: {
-        "Monday": ["09:00", "14:00", "16:00"],
-        "Tuesday": ["10:00", "15:00", "17:00"],
-        "Wednesday": ["11:00", "13:00", "18:00"]
-      }
-    },
-    education: [
-      { degree: "PhD Computer Science", institution: "Stanford University", year: "2020" },
-      { degree: "MS Software Engineering", institution: "MIT", year: "2017" }
-    ],
-    certifications: [
-      { name: "AWS Solutions Architect", issuer: "Amazon", year: "2021" },
-      { name: "Google Cloud Professional", issuer: "Google", year: "2020" }
-    ],
-    achievements: [
-      "Led development of 3 major applications",
-      "Mentored 50+ junior developers",
-      "Published 15 technical articles"
-    ],
-    reviews: [
-      {
-        id: "1",
-        author: "John Doe",
-        rating: 5,
-        content: "Excellent mentor! Very knowledgeable and patient.",
-        date: new Date("2024-01-15"),
-        helpful: 12
-      },
-      {
-        id: "2", 
-        author: "Jane Smith",
-        rating: 4,
-        content: "Great insights and practical advice.",
-        date: new Date("2024-01-10"),
-        helpful: 8
-      }
-    ]
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Profile Header */}
-            <Card className="p-6">
-              <div className="flex items-start gap-6">
-                <Image
-                  src={mentor.avatar}
-                  alt={mentor.name}
-                  width={120}
-                  height={120}
-                  className="rounded-full"
-                />
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold mb-2">{mentor.name}</h1>
-                  <p className="text-xl text-muted-foreground mb-4">
-                    {mentor.title} at {mentor.company}
-                  </p>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star
-                          key={index}
-                          className={`h-5 w-5 ${
-                            index < Math.floor(mentor.rating)
-                              ? "text-yellow-500 fill-current"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                      <span className="ml-2 text-sm text-muted-foreground">
-                        {mentor.rating} ({mentor.reviewCount} reviews)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      ${mentor.hourlyRate}/hour
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground mb-4">{mentor.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {mentor.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Reviews */}
-            <Card className="p-6">
-              <h2 className="text-2xl font-semibold mb-6">Reviews</h2>
-              <div className="space-y-6">
-                {mentor.reviews.map((review) => (
-                  <div key={review.id} className="border-b border-border pb-4 last:border-b-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">{review.author}</span>
+export default async function MentorshipProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
                         <span className="text-sm text-muted-foreground">
                           {review.date.toLocaleDateString()}
                         </span>
@@ -330,6 +210,7 @@ export default function MentorshipProfilePage({ params }: { params: Promise<{ id
                   </Button>
                 </div>
               </Card>
+            </div>
           </div>
         </div>
       </main>

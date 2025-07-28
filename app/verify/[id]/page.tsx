@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -25,18 +25,10 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 
-export default function VerifyPage({ params }: { params: Promise<{ id: string }> }) {
-  const [id, setId] = useState<string>("");
+export default async function VerifyPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [verificationStatus, setVerificationStatus] = useState<"verified" | "invalid" | "pending">("verified")
   const [isVerifying, setIsVerifying] = useState(false)
-
-  useEffect(() => {
-    const getParams = async () => {
-      const resolvedParams = await params;
-      setId(resolvedParams.id);
-    };
-    getParams();
-  }, [params]);
 
   // Mock certificate data
   const certificate = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,8 +83,11 @@ export default function AdminApprovalsPage() {
 
   const supabase = createClientComponentClient();
 
-  // Wrap fetchPendingCourses in useCallback
-  const fetchPendingCourses = useCallback(async () => {
+  useEffect(() => {
+    fetchPendingCourses();
+  }, []);
+
+  const fetchPendingCourses = async () => {
     try {
       setLoading(true);
 
@@ -154,11 +157,7 @@ export default function AdminApprovalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
-
-  useEffect(() => {
-    fetchPendingCourses();
-  }, [fetchPendingCourses]);
+  };
 
   const handleReviewCourse = async (courseId: string, action: 'approve' | 'reject', reason?: string) => {
     try {

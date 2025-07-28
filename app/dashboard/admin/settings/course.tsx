@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -26,7 +26,11 @@ export default function AdminCourseSettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [initialSettings, setInitialSettings] = useState<CourseSettings | null>(null);
 
-  const loadSettings = useCallback(async () => {
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
     setLoading(true);
     try {
       const saved = localStorage.getItem("adminCourseSettings");
@@ -42,11 +46,7 @@ export default function AdminCourseSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [settings]);
-
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+  };
 
   const saveSettings = async () => {
     setSaving(true);

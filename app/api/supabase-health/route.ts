@@ -4,7 +4,7 @@ import { handleApiError } from '@/lib/utils/error-handling';
 
 export async function GET() {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseServerClient();
     // Test the Supabase connection
     const { data, error } = await supabase.from('users').select('count').single();
     if (error) {

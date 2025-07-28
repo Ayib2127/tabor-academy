@@ -559,7 +559,7 @@ function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, hand
                       <SelectItem value="assignment">📄 Assignment</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">Add</Button>
+                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white" onClick={e => { e.stopPropagation(); handleAddLesson(); }}>Add</Button>
                   <Button variant="outline" onClick={e => { e.stopPropagation(); setAddLessonState(prev => ({ ...prev, [module.id]: { open: false, title: '', type: 'text' } })); }}>Cancel</Button>
                 </div>
               ) : (
@@ -940,8 +940,8 @@ export default function CourseContentPage() {
 
   const addLesson = async (moduleId: string, title: string, type: 'text' | 'video' | 'quiz') => {
     // 1. Find the order for the new lesson
-    const courseModule = courseData?.modules.find(m => m.id === moduleId);
-    const order = courseModule ? courseModule.lessons.length : 0;
+    const module = courseData?.modules.find(m => m.id === moduleId);
+    const order = module ? module.lessons.length : 0;
 
     // 2. Call the backend API
     const response = await fetch('/api/instructor/lessons', {
@@ -970,13 +970,13 @@ export default function CourseContentPage() {
       if (!prev) return prev;
       return {
         ...prev,
-        modules: prev.modules.map(courseModule =>
-          courseModule.id === moduleId
+        modules: prev.modules.map(module =>
+          module.id === moduleId
             ? {
-                ...courseModule,
-                lessons: [...courseModule.lessons, newLesson],
+                ...module,
+                lessons: [...module.lessons, newLesson],
               }
-            : courseModule
+            : module
         ),
       };
     });
@@ -1922,18 +1922,8 @@ export default function CourseContentPage() {
         <div className="fixed inset-0 bg-black/50 z-50" />
       )}
       {selectedModule && (
-        <ModuleAccordionCard
-          module={selectedModule.module}
-          courseData={courseData}
-          handleModuleTitleChange={handleModuleTitleChange}
-          handleModuleUpdate={handleModuleUpdate}
-          addLesson={addLesson}
-          deleteLesson={deleteLesson}
-          handleLessonTitleChange={handleLessonTitleChange}
-          setEditingLesson={setEditingLesson}
-          addLessonState={addLessonState}
-          setAddLessonState={setAddLessonState}
-          deleteModule={deleteModule}
+        <EditModuleModal
+          module={selectedModule}
           onSave={handleModuleSave}
           onClose={closeModal}
         />

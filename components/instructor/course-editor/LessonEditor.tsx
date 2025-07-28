@@ -35,6 +35,7 @@ interface LessonEditorProps {
   lastSaved?: Date | null;
 }
 
+// Move all hooks to the top, before any early returns
 const LessonEditor: FC<LessonEditorProps> = ({
   lesson,
   moduleId,
@@ -61,10 +62,10 @@ const LessonEditor: FC<LessonEditorProps> = ({
   const supabase = createClientComponentClient();
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastContentRef = useRef<any>(lesson?.content);
+  const lastContentRef = useRef<any>(lesson.content);
 
-  // Helper functions - wrap in useCallback to prevent re-creation
-  const parseContent = useCallback((content: any) => {
+  // Helper functions
+  function parseContent(content: any) {
     if (!content) return undefined;
     if (typeof content === 'string') {
       try {
@@ -85,22 +86,22 @@ const LessonEditor: FC<LessonEditorProps> = ({
       }
     }
     return content;
-  }, []);
-
-  const serializeContent = useCallback((content: any) => {
+  }
+  function serializeContent(content: any) {
     if (typeof content === 'string') return content;
     return JSON.stringify(content);
-  }, []);
+  }
+
+  // Early return after all hooks
+  if (!isVisible || !lesson) return null;
 
   // Reset local state when a new lesson is selected
   useEffect(() => {
-    if (lesson) {
-      setLocalLesson({
-        ...lesson,
-        content: parseContent(lesson.content),
-      });
-    }
-  }, [lesson?.id, lesson, parseContent]);
+    setLocalLesson({
+      ...lesson,
+      content: parseContent(lesson.content),
+    });
+  }, [lesson?.id]);
 
   // Debounced save function
   const debouncedSave = useCallback(async (updatedLesson: LocalLesson) => {
@@ -193,6 +194,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
             'title',
             'description',
             'is_published',
+            'order',
             'duration',
             'duedate',
             'needsgrading',
@@ -203,18 +205,17 @@ const LessonEditor: FC<LessonEditorProps> = ({
             'points',
             'allow_late',
             'resources',
-          ].forEach(field => {
-            if ((updatedLesson as any)[field] !== undefined) {
-              updateData[field] = (updatedLesson as any)[field];
-            }
+          ].forEach((key) => {
+            const value = (updatedLesson as any)[key];
+            if (value !== undefined) updateData[key] = value;
           });
 
-          const { error } = await supabase
+          const { error: updateError } = await supabase
             .from('module_lessons')
             .update(updateData)
             .eq('id', updatedLesson.id);
 
-          if (error) throw error;
+          if (updateError) throw updateError;
         }
 
         lastContentRef.current = contentString;
@@ -223,13 +224,24 @@ const LessonEditor: FC<LessonEditorProps> = ({
         onUpdate({ ...updatedLesson, content: contentString });
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error: any) {
-        console.error('Save error:', error);
+        console.error('Auto-save error:', error);
         setSaveStatus('error');
-        toast.error(error.message || 'Failed to save lesson');
+        if (error.code) {
+          showApiErrorToast({
+            code: error.code,
+            error: error.message,
+            details: error.details,
+          });
+        } else {
+          showApiErrorToast({
+            code: 'INTERNAL_ERROR',
+            error: 'Failed to save lesson: ' + (error?.message || error),
+          });
+        }
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     }, 1000);
-  }, [moduleId, supabase, parseContent, serializeContent, onUpdate]);
+  }, [onUpdate, supabase, moduleId]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -421,9 +433,6 @@ const LessonEditor: FC<LessonEditorProps> = ({
       setEditingQuiz(localLesson.content);
     }
   }, [localLesson.type, localLesson.content]);
-
-  // Early return after all hooks
-  if (!isVisible || !lesson) return null;
 
   return (
     <div className="space-y-6">

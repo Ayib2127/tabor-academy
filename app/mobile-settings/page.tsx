@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -43,26 +43,18 @@ export default function MobileSettingsPage() {
   const [categories, setCategories] = useState<string[]>([])
   const supabase = createClientComponentClient()
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('name')
-        .order('name');
-      
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase.from('categories').select('name');
       if (error) {
         console.error("Error fetching categories:", error);
       } else if (data) {
         setCategories(data.map(cat => cat.name));
       }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  }, [supabase]);
+    };
 
-  useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+  }, []);
 
   // Mock settings data
   const settings = {

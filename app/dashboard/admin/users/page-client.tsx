@@ -41,7 +41,6 @@ import {
 import { toast } from 'sonner';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { WelcomeEmailManager } from '@/components/admin/welcome-email-manager';
-import Image from 'next/image';
 
 interface User {
   id: string;
@@ -398,11 +397,9 @@ export default function AdminUsersPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center">
                           {user.avatar_url ? (
-                            <Image
+                            <img
                               src={user.avatar_url}
                               alt={user.full_name}
-                              width={32}
-                              height={32}
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (

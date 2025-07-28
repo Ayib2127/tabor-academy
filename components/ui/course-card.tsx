@@ -14,7 +14,6 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
-import Image from 'next/image';
 
 interface CourseCardProps {
   course: {
@@ -193,11 +192,9 @@ const CourseCard: FC<CourseCardProps> = ({
           <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center">
               {course.instructor.avatar_url ? (
-                <Image
+                <img
                   src={course.instructor.avatar_url}
                   alt={course.instructor.full_name}
-                  width={24}
-                  height={24}
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
