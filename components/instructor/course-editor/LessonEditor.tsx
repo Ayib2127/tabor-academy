@@ -35,7 +35,6 @@ interface LessonEditorProps {
   lastSaved?: Date | null;
 }
 
-// Move all hooks to the top, before any early returns
 const LessonEditor: FC<LessonEditorProps> = ({
   lesson,
   moduleId,
@@ -62,7 +61,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
   const supabase = createClientComponentClient();
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastContentRef = useRef<any>(lesson.content);
+  const lastContentRef = useRef<any>(lesson?.content);
 
   // Helper functions
   function parseContent(content: any) {
@@ -92,7 +91,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
     return JSON.stringify(content);
   }
 
-  // Early return after all hooks
+  // All hooks are now above this line!
   if (!isVisible || !lesson) return null;
 
   // Reset local state when a new lesson is selected
@@ -101,7 +100,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
       ...lesson,
       content: parseContent(lesson.content),
     });
-  }, [lesson?.id]);
+  }, [lesson?.id, lesson, parseContent]);
 
   // Debounced save function
   const debouncedSave = useCallback(async (updatedLesson: LocalLesson) => {
