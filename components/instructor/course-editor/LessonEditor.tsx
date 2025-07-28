@@ -1,4 +1,6 @@
-import { FC, useState, useEffect, useRef, useCallback } from 'react';
+"use client";
+
+import { FC, useState, useRef, useEffect, useCallback } from 'react';
 import { Lesson } from '@/types/course';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -33,6 +35,7 @@ interface LessonEditorProps {
   lastSaved?: Date | null;
 }
 
+// Move all hooks to the top, before any early returns
 const LessonEditor: FC<LessonEditorProps> = ({
   lesson,
   moduleId,
@@ -44,23 +47,24 @@ const LessonEditor: FC<LessonEditorProps> = ({
   saveStatus: externalSaveStatus,
   lastSaved: externalLastSaved,
 }) => {
-  if (!isVisible || !lesson) return null;
-
-  // Local state for editing
+  // All hooks must be called before any return
   const [localLesson, setLocalLesson] = useState<LocalLesson>(() => ({
     ...lesson,
     content: parseContent(lesson.content),
   }));
 
-  // Reset local state when a new lesson is selected
-  useEffect(() => {
-    setLocalLesson({
-      ...lesson,
-      content: parseContent(lesson.content),
-    });
-  }, [lesson?.id]);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(externalSaveStatus || 'idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(externalLastSaved || null);
+  const [selectedText, setSelectedText] = useState<string>('');
+  const [showAIQuizGenerator, setShowAIQuizGenerator] = useState(false);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
-  // Helper to parse content string to object
+  const supabase = createClientComponentClient();
+
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastContentRef = useRef<any>(lesson.content);
+
+  // Helper functions
   function parseContent(content: any) {
     if (!content) return undefined;
     if (typeof content === 'string') {
@@ -83,24 +87,23 @@ const LessonEditor: FC<LessonEditorProps> = ({
     }
     return content;
   }
-  // Helper to serialize content object to string
   function serializeContent(content: any) {
     if (typeof content === 'string') return content;
     return JSON.stringify(content);
   }
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(externalSaveStatus || 'idle');
-  const [lastSaved, setLastSaved] = useState<Date | null>(externalLastSaved || null);
-  const [selectedText, setSelectedText] = useState<string>('');
-  const [showAIQuizGenerator, setShowAIQuizGenerator] = useState(false);
-  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
-  
-  const supabase = createClientComponentClient();
-  
-  // Debounced save function
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastContentRef = useRef<any>(lesson.content);
+  // Early return after all hooks
+  if (!isVisible || !lesson) return null;
 
+  // Reset local state when a new lesson is selected
+  useEffect(() => {
+    setLocalLesson({
+      ...lesson,
+      content: parseContent(lesson.content),
+    });
+  }, [lesson?.id]);
+
+  // Debounced save function
   const debouncedSave = useCallback(async (updatedLesson: LocalLesson) => {
     // Cancel any existing pending save
     if (saveTimeoutRef.current) {

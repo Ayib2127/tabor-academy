@@ -940,8 +940,8 @@ export default function CourseContentPage() {
 
   const addLesson = async (moduleId: string, title: string, type: 'text' | 'video' | 'quiz') => {
     // 1. Find the order for the new lesson
-    const module = courseData?.modules.find(m => m.id === moduleId);
-    const order = module ? module.lessons.length : 0;
+    const courseModule = courseData?.modules.find(m => m.id === moduleId);
+    const order = courseModule ? courseModule.lessons.length : 0;
 
     // 2. Call the backend API
     const response = await fetch('/api/instructor/lessons', {
@@ -970,13 +970,13 @@ export default function CourseContentPage() {
       if (!prev) return prev;
       return {
         ...prev,
-        modules: prev.modules.map(module =>
-          module.id === moduleId
+        modules: prev.modules.map(courseModule =>
+          courseModule.id === moduleId
             ? {
-                ...module,
-                lessons: [...module.lessons, newLesson],
+                ...courseModule,
+                lessons: [...courseModule.lessons, newLesson],
               }
-            : module
+            : courseModule
         ),
       };
     });

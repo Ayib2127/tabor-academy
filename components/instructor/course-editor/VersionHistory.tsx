@@ -43,13 +43,15 @@ const VersionHistory: FC<VersionHistoryProps> = ({
   onClose,
   isVisible = true,
 }) => {
-  if (!isVisible) return null;
-
+  // Move all hooks to the top, before any return
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDiff, setShowDiff] = useState(false);
+
+  // Early return after all hooks
+  if (!isVisible) return null;
 
   // Mock version history data
   useEffect(() => {
