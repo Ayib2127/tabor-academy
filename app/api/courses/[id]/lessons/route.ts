@@ -1,16 +1,17 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
-import { NextResponse } from 'next/server';
 import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 // GET function to list all lessons for a course
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = context;
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+    const { id: courseId } = await context.params;
     console.log('API Route: /api/courses/[id]/lessons - Incoming request');
     const incomingCookies = request.headers.get('cookie');
     console.log('API Route: Incoming Cookies Header:', incomingCookies); // Log the raw cookie header
 
     const supabase = await createApiSupabaseClient();
-    const courseId = params.id;
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -20,8 +21,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
             // Added more specific logging for debugging
             if (userError) {
                 console.error("API Route: Supabase Auth Error Code:", userError.code);
-                console.error("API Route: Supabase Auth Error Details:", userError.details);
-                console.error("API Route: Supabase Auth Error Hint:", userError.hint);
+                console.error("API Route: Supabase Auth Error Message:", userError.message);
             }
             throw new ForbiddenError('Auth session missing!');
         }
@@ -64,17 +64,17 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
     } catch (error: any) {
         console.error("API Route: Unexpected error in GET /api/courses/[id]/lessons:", error.message);
-        const apiError = handleApiError(error);
+        const apiError = await handleApiError(error);
         return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
     }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = createRouteHandlerClient({ cookies });
-  const courseId = params.id;
+  const { id: courseId } = await params;
 
   try {
     // 1. Get the authenticated user's session
@@ -137,7 +137,7 @@ export async function POST(
 
   } catch (error) {
     console.error('An unexpected error occurred:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 
