@@ -13,13 +13,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<any>> {
   const supabase = await createApiSupabaseClient();
+  const { id: courseId } = await params;
 
   try {
-    const courseId = params.id;
-
     // 1. Check for authenticated user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -173,7 +172,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Enrollment error:', error);
     Sentry.captureException(error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({ 
       code: apiError.code, error: apiError.message, details: apiError.details 
     }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'RESOURCE_CONFLICT' ? 409 : apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'PAYMENT_ERROR' ? 402 : 500 });
