@@ -6,7 +6,7 @@ import { AuthError, ForbiddenError, ValidationError, NotFoundError, handleApiErr
 // Helper function to verify instructor ownership of a lesson
 async function verifyLessonOwnership(supabase: any, lessonId: string, userId: string): Promise<boolean> {
     const { data: lessonData, error } = await supabase
-        .from('lessons')
+        .from('module_lessons')
         .select('courses ( instructor_id )')
         .eq('id', lessonId)
         .single();
@@ -45,7 +45,7 @@ export async function PUT(
     }
     // Update the lesson in the database
     const { data: updatedLesson, error: updateError } = await supabase
-      .from('lessons')
+      .from('module_lessons')
       .update({
         title,
         content,
@@ -92,7 +92,7 @@ export async function DELETE(
 
         // Delete the lesson
         const { error: deleteError } = await supabase
-            .from('lessons')
+            .from('module_lessons')
             .delete()
             .eq('id', lessonId);
 

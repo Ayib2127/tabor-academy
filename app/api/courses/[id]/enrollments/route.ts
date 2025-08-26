@@ -96,8 +96,8 @@ export async function GET(
 
       // Get published lessons
       const { data: lessons, error: lessonsError } = await supabase
-        .from('lessons')
-        .select('id, is_published')
+        .from('module_lessons')  // Changed from 'lessons'
+        .select('*')
         .eq('course_id', courseId);
 
       if (lessonsError) {

@@ -66,8 +66,6 @@ const AIAssistant: FC<AIAssistantProps> = ({
   currentContent,
   isVisible = true,
 }) => {
-  if (!isVisible) return null;
-
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -287,6 +285,9 @@ const AIAssistant: FC<AIAssistantProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Early return after all hooks
+  if (!isVisible) return null;
 
   return (
     <div className="relative" ref={assistantRef}>

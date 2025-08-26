@@ -1,7 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['@sentry/node'],
+  serverExternalPackages: ['@sentry/node'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
   webpack: (config, { isServer }) => {
     // Suppress OpenTelemetry warnings
@@ -27,4 +41,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig; 
+export default nextConfig; 

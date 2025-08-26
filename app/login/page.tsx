@@ -22,6 +22,7 @@ import { SocialIcons } from '@/components/ui/social-icons'
 import PhoneInput from 'react-phone-input-2'
 import 'react-phone-input-2/lib/style.css'
 import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
+import { getUserRoleAndRedirect } from '@/lib/utils/auth'
 
 const emailLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -63,62 +64,27 @@ export default function LoginPage() {
   })
 
   const onSubmitEmail = async (data: any) => {
+    setIsLoading(true)
+    setError("")
     try {
-      setIsLoading(true)
-      setError("")
-
-      // Sign in with credentials
-      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       })
-
-      if (signInError) {
-        console.error('Sign in error:', signInError)
-        throw new Error(signInError.message)
-      }
-
-      // Get user data
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', authData.user?.id)
-        .single()
-
-      if (userError) {
-        console.error('Error fetching user data:', userError)
-        throw new Error('Failed to fetch user data')
-      }
-
-      if (userData?.role === 'admin') {
-        router.push('/dashboard/admin');
-      } else if (userData?.role === 'mentor') {
-        router.push('/dashboard/mentor');
-      } else if (userData?.role === 'instructor') {
-        router.push('/dashboard/instructor');
-      } else if (userData?.role === 'student') {
-        router.push('/dashboard');
-      } else {
-        router.push('/dashboard');
-      }
-
-      toast.success("Logged in successfully!")
+      if (error) throw error
       
-      // Trigger welcome email check (non-blocking)
-      if (authData.user?.id) {
-        fetch('/api/auth/welcome-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: authData.user.id }),
-        }).catch(error => {
-          console.error('Welcome email check failed:', error);
-        });
-      }
-    } catch (error) {
+      // Use utility function for role-based redirection
+      await getUserRoleAndRedirect(supabase, router)
+    } catch (error: any) {
       console.error('Login error:', error)
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      
+      // Handle rate limiting specifically
+      if (error.message?.includes('rate limit') || error.status === 429) {
+        setError('Too many login attempts. Please wait a moment before trying again.');
+      } else {
+        setError(error instanceof Error ? error.message : 'An error occurred')
+      }
+      
       if (error.code) {
         showApiErrorToast({
           code: error.code,
@@ -160,7 +126,8 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          // Remove hardcoded redirect - let the auth callback handle it
+          redirectTo: `${window.location.origin}/auth/callback`
         }
       })
       if (error) throw error

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -24,9 +24,11 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useParams } from "next/navigation"
 
-export default async function VerifyPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function VerifyPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [verificationStatus, setVerificationStatus] = useState<"verified" | "invalid" | "pending">("verified")
   const [isVerifying, setIsVerifying] = useState(false)
 

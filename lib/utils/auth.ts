@@ -81,3 +81,51 @@ export async function enforceRateLimit(userId: string): Promise<boolean> {
   }
   return false;
 }
+
+/**
+ * Redirects user to the appropriate dashboard based on their role
+ */
+export function redirectToRoleDashboard(role: string | null | undefined): string {
+  switch (role) {
+    case 'admin':
+      return '/dashboard/admin'
+    case 'mentor':
+      return '/dashboard/mentor'
+    case 'instructor':
+      return '/dashboard/instructor'
+    case 'student':
+    default:
+      return '/dashboard'
+  }
+}
+
+/**
+ * Gets the user's role and redirects to appropriate dashboard
+ */
+export async function getUserRoleAndRedirect(supabase: any, router: any) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push('/dashboard')
+      return
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (userError) {
+      console.error('Error fetching user role:', userError)
+      router.push('/dashboard')
+      return
+    }
+
+    const redirectPath = redirectToRoleDashboard(userData?.role)
+    router.push(redirectPath)
+  } catch (error) {
+    console.error('Error in getUserRoleAndRedirect:', error)
+    router.push('/dashboard')
+  }
+}

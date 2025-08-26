@@ -26,6 +26,7 @@ import {
   ArrowRight
 } from "lucide-react"
 import Link from "next/link"
+import Image from 'next/image';
 
 export default function HelpCenterPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -251,10 +252,12 @@ export default function HelpCenterPage() {
               {videoTutorials.map((video, index) => (
                 <Card key={index} className="overflow-hidden">
                   <div className="relative aspect-video">
-                    <img
+                    <Image
                       src={video.thumbnail}
                       alt={video.title}
-                      className="object-cover w-full h-full"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
                       <Play className="h-12 w-12 text-white" />

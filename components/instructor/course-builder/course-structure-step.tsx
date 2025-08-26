@@ -187,18 +187,19 @@ export function CourseStructureStep({ courseData, updateCourseData }: CourseStru
   }
 
   const deleteModule = (moduleId: number) => {
-    const updatedModules = updateOrders(courseData.modules.filter((m) => m.id !== moduleId))
-    updateCourseData({ modules: updatedModules })
-  }
+    const updatedModules = courseData.modules.filter((m) => m.id !== moduleId);
+    const moduleItem = courseData.modules.find((m) => m.id === moduleId);
+    updateCourseData({ modules: updatedModules });
+  };
 
   const addLesson = (moduleId: number) => {
     if (newLessonTitle.trim() && newLessonType) {
-      const module = courseData.modules.find((m) => m.id === moduleId)
+      const moduleItem = courseData.modules.find((m) => m.id === moduleId)
       const newLesson: Lesson = {
         id: Date.now(),
         title: newLessonTitle.trim(),
         type: newLessonType,
-        order: module ? module.lessons.length + 1 : 1,
+        order: moduleItem ? moduleItem.lessons.length + 1 : 1,
       }
       const updatedModules = updateOrders(
         courseData.modules.map((module) =>

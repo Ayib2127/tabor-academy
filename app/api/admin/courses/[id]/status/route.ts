@@ -11,10 +11,9 @@ const statusUpdateSchema = z.object({
 
 export async function POST(
   req: Request,
-  context: Promise<{ params: { id: string } }>
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { params } = await context;
-  const courseId = params.id;
+  const { id: courseId } = await params;
 
   try {
     const cookieStore = await cookies();
@@ -94,19 +93,24 @@ export async function POST(
 
     // If published, also publish all lessons in the course
     if (status === 'published') {
-      const { error: lessonsError } = await supabase
-        .from('module_lessons')
-        .update({ is_published: true })
-        .in('module_id', 
-          supabase
-            .from('course_modules')
-            .select('id')
-            .eq('course_id', courseId)
-        );
+      // Get module IDs for this course
+      const { data: modules } = await supabase
+        .from('course_modules')
+        .select('id')
+        .eq('course_id', courseId);
 
-      if (lessonsError) {
-        console.error('Error publishing lessons:', lessonsError);
-        // Don't fail the entire operation, but log the error
+      if (modules && modules.length > 0) {
+        const moduleIds = modules.map(m => m.id);
+        
+        const { error: lessonsError } = await supabase
+          .from('module_lessons')
+          .update({ is_published: true })
+          .in('module_id', moduleIds);
+
+        if (lessonsError) {
+          console.error('Error publishing lessons:', lessonsError);
+          // Don't fail the entire operation, but log the error
+        }
       }
     }
 

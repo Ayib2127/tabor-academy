@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
-export async function GET(req: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const courseId = params.id;
   try {
     const supabase = await createSupabaseServerClient();
@@ -69,8 +69,8 @@ export async function GET(req: Request, context: { params: { id: string } }) {
   }
 }
 
-export async function POST(request: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   try {
     const courseId = params.id;
     const supabase = await createSupabaseServerClient();

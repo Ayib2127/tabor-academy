@@ -14,6 +14,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
+import Image from 'next/image';
 
 interface CourseCardProps {
   course: {
@@ -35,10 +36,12 @@ interface CourseCardProps {
       enrollmentCount?: number;
       rating?: number;
     };
+    is_featured?: boolean;
   };
   showInstructor?: boolean;
   showPrice?: boolean;
   variant?: 'default' | 'compact';
+  index?: number;
 }
 
 const CourseCard: FC<CourseCardProps> = ({
@@ -46,6 +49,7 @@ const CourseCard: FC<CourseCardProps> = ({
   showInstructor = true,
   showPrice = true,
   variant = 'default',
+  index,
 }) => {
   const formatPrice = (price: number) => {
     return price === 0 ? 'Free' : `$${price}`;
@@ -97,10 +101,12 @@ const CourseCard: FC<CourseCardProps> = ({
           <div className="flex items-start gap-4">
             {/* Thumbnail */}
             <div className="w-16 h-16 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <img
+              <Image
                 src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
                 alt={course.title}
-                className="w-full h-full object-cover rounded-lg"
+                fill
+                className="object-cover rounded-lg"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
             </div>
 
@@ -147,33 +153,20 @@ const CourseCard: FC<CourseCardProps> = ({
   return (
     <Card className="border-[#E5E8E8] shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
       {/* Thumbnail */}
-      <div className="relative h-48 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20">
-        <img
-          src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
+      <div className="relative h-48 overflow-hidden rounded-t-lg">
+        <Image
+          src={course.thumbnail_url || '/placeholder-course.jpg'}
           alt={course.title}
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={index < 3}
         />
-        
-        {/* Content Type Badge */}
-        <div className="absolute top-3 left-3">
-          {getContentTypeBadge()}
-        </div>
-
-        {/* Price Badge */}
-        {showPrice && (
-          <div className="absolute top-3 right-3">
-            <Badge className="bg-white/90 text-[#2C3E50] border-0">
-              {formatPrice(course.price)}
-            </Badge>
+        {course.is_featured && (
+          <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-semibold">
+            Featured
           </div>
         )}
-
-        {/* Play Button Overlay */}
-        <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-          <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
-            <Play className="w-5 h-5 text-[#2C3E50] ml-1" />
-          </div>
-        </div>
       </div>
 
       <CardContent className="p-6">
@@ -191,15 +184,13 @@ const CourseCard: FC<CourseCardProps> = ({
         {showInstructor && (
           <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center">
-              {course.instructor.avatar_url ? (
-                <img
-                  src={course.instructor.avatar_url}
-                  alt={course.instructor.full_name}
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <User className="w-3 h-3 text-[#4ECDC4]" />
-              )}
+              <Image
+                src={course.instructor?.avatar_url || '/default-avatar.png'}
+                alt={course.instructor?.full_name || 'Instructor'}
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
             </div>
             <span className="text-sm text-[#2C3E50]/70">
               {course.instructor.full_name}

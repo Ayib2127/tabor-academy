@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -126,19 +126,9 @@ export default function CoursesClient() {
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Fetch courses when filters change
-  useEffect(() => {
-    fetchCourses();
-  }, [filters, sortBy, sortOrder, debouncedSearchQuery, pagination.page]);
-
-  // Update URL when filters change
-  useEffect(() => {
-    updateURL();
-  }, [filters, sortBy, sortOrder, debouncedSearchQuery]);
-
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const params = new URLSearchParams();
 
       // Add all filters to query params
@@ -176,9 +166,9 @@ export default function CoursesClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, sortBy, sortOrder, debouncedSearchQuery, pagination.page, pagination.limit]);
 
-  const updateURL = () => {
+  const updateURL = useCallback(() => {
     const params = new URLSearchParams();
     
     filters.levels.forEach(level => params.append('level', level));
@@ -208,7 +198,15 @@ export default function CoursesClient() {
       params.append('limit', pagination.limit.toString());
     }
     router.replace(`/courses?${params.toString()}`);
-  };
+  }, [filters, sortBy, sortOrder, debouncedSearchQuery, pagination.page]);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  useEffect(() => {
+    updateURL();
+  }, [updateURL]);
 
   // Client-side filtering and sorting for now
   const getFilteredAndSortedCourses = () => {

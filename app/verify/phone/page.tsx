@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { countries } from "@/lib/countries"
+import { getUserRoleAndRedirect } from "@/lib/utils/auth"
 
 export default function PhoneVerificationPage() {
   const router = useRouter()
@@ -79,7 +80,9 @@ export default function PhoneVerificationPage() {
         type: "sms",
       });
       if (error) throw error;
-      router.push("/dashboard");
+      
+      // Use utility function for role-based redirection
+      await getUserRoleAndRedirect(supabase, router);
     } catch (err: any) {
       setError(err.message || "Invalid verification code. Please try again.");
       setCode(["", "", "", "", "", ""]);

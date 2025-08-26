@@ -1,5 +1,5 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import QuizzesPageClient from './QuizzesPageClient';
+import QuizzesPageClient from './page-client';
 
 export default async function QuizzesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -43,10 +43,10 @@ export async function GET(request: NextRequest, context: { params: { id: string 
         console.log("API Route: Is user instructor?", isInstructor);
 
         let query = supabase
-            .from('lessons')
+            .from('module_lessons')
             .select('*')
             .eq('course_id', courseId)
-            .order('position', { ascending: true });
+            .order('order_index', { ascending: true });
 
         if (!isInstructor) {
             query = query.eq('is_published', true);
@@ -106,7 +106,7 @@ export async function POST(
 
     // 4. Determine the position for the new lesson
     const { count, error: countError } = await supabase
-      .from('lessons')
+      .from('module_lessons')
       .select('id', { count: 'exact', head: true })
       .eq('course_id', courseId);
     if (countError) {
@@ -116,14 +116,14 @@ export async function POST(
 
     // 5. Insert the new lesson into the database
     const { data: newLesson, error: insertError } = await supabase
-      .from('lessons')
+      .from('module_lessons')
       .insert({
         title,
         content,
         video_url,
         duration,
         course_id: courseId,
-        position: newPosition,
+        order_index: newPosition,
         is_published: false // Lessons are drafts by default
       })
       .select()

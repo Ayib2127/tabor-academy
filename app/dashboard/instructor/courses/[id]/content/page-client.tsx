@@ -432,6 +432,7 @@ const AIAssistant = dynamic(() => import("@/components/instructor/course-editor/
 const VersionHistory = dynamic(() => import("@/components/instructor/course-editor/VersionHistory"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/instructor/course-editor/CommandPalette"), { ssr: false });
 const CoursePreview = dynamic(() => import("@/components/instructor/course-editor/CoursePreview"), { ssr: false });
+const EditModuleModal = dynamic(() => import("@/components/instructor/course-editor/EditModuleModal"), { ssr: false });
 
 const levelOptions = [
   { value: "beginner", label: "🌱 Beginner" },
@@ -559,7 +560,7 @@ function ModuleAccordionCard({ module, courseData, handleModuleTitleChange, hand
                       <SelectItem value="assignment">📄 Assignment</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white" onClick={e => { e.stopPropagation(); handleAddLesson(); }}>Add</Button>
+                  <Button onClick={handleAddLesson} className="bg-[#4ECDC4] hover:bg-[#4ECDC4]/90 text-white">Add</Button>
                   <Button variant="outline" onClick={e => { e.stopPropagation(); setAddLessonState(prev => ({ ...prev, [module.id]: { open: false, title: '', type: 'text' } })); }}>Cancel</Button>
                 </div>
               ) : (
@@ -839,16 +840,20 @@ export default function CourseContentPage() {
   }, []);
 
   useEffect(() => {
-    async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace("/login");
-      } else {
-        setAuthChecked(true);
-      }
+    if (courseData) {
+      handleSaveChanges();
     }
+  }, [courseData, handleSaveChanges]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+      }
+    };
     checkAuth();
-  }, []);
+  }, [router, supabase.auth]);
 
   useEffect(() => {
     async function fetchCourse() {
@@ -940,8 +945,8 @@ export default function CourseContentPage() {
 
   const addLesson = async (moduleId: string, title: string, type: 'text' | 'video' | 'quiz') => {
     // 1. Find the order for the new lesson
-    const module = courseData?.modules.find(m => m.id === moduleId);
-    const order = module ? module.lessons.length : 0;
+    const moduleItem = courseData?.modules.find(m => m.id === moduleId);
+    const order = moduleItem ? moduleItem.lessons.length : 0;
 
     // 2. Call the backend API
     const response = await fetch('/api/instructor/lessons', {

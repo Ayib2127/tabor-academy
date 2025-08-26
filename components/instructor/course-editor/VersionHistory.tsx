@@ -43,8 +43,7 @@ const VersionHistory: FC<VersionHistoryProps> = ({
   onClose,
   isVisible = true,
 }) => {
-  if (!isVisible) return null;
-
+  const [isOpen, setIsOpen] = useState(false);
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<any>(null);
@@ -117,8 +116,13 @@ const VersionHistory: FC<VersionHistoryProps> = ({
       setIsLoading(false);
     };
 
-    loadVersionHistory();
+    if (lessonId) {
+      loadVersionHistory();
+    }
   }, [lessonId, currentContent]);
+
+  // Early return after all hooks
+  if (!lessonId) return null;
 
   const formatTimestamp = (timestamp: Date) => {
     const now = new Date();

@@ -1,6 +1,7 @@
 'use client';
 
 import { FC } from 'react';
+import { withValidImageUrl, DEFAULT_BANNER_URL } from '@/lib/defaults';
 
 interface Props {
   content: any; // Tiptap JSON content or other content types
@@ -32,6 +33,7 @@ const LessonContentDisplay: FC<Props> = ({ content, type = 'text' }) => {
 // Component to render Tiptap JSON content as HTML
 const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
   console.log("TiptapContentRenderer content:", content);
+  
   // Helper: Check if heading should be orange-highlighted
   const isOrangeHeading = (text: string) => {
     const keywords = ["Key", "Guidelines", "Submission", "Grading", "Criteria"];
@@ -72,14 +74,12 @@ const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
 
       case "bulletList": {
         const ulContent = node.content?.map(renderContent).join("") || "";
-        // Change 'list-inside' to 'list-outside'
         html = `<ul class="list-disc list-outside mb-4">${ulContent}</ul>`;
         break;
       }
 
       case "orderedList": {
         const olContent = node.content?.map(renderContent).join("") || "";
-        // Change 'list-inside' to 'list-outside'
         html = `<ol class="list-decimal list-outside mb-4">${olContent}</ol>`;
         break;
       }
@@ -109,7 +109,21 @@ const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
       case "image": {
         const src = node.attrs?.src || "";
         const alt = node.attrs?.alt || "";
-        html = `<img src="${src}" alt="${alt}" class="rounded-lg max-w-full h-auto mb-4 shadow" />`;
+        
+        // Validate image URL before using it
+        const validSrc = withValidImageUrl(src, DEFAULT_BANNER_URL);
+        
+        // Only render image if we have a valid URL
+        if (validSrc !== DEFAULT_BANNER_URL || src) {
+          html = `<img src="${validSrc}" alt="${alt}" class="rounded-lg max-w-full h-auto mb-4 shadow" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                   <div class="rounded-lg max-w-full h-auto mb-4 shadow bg-[#F7F9F9] p-4 text-center text-[#2C3E50]/60" style="display: none;">
+                     <p>Image not available</p>
+                   </div>`;
+        } else {
+          html = `<div class="rounded-lg max-w-full h-auto mb-4 shadow bg-[#F7F9F9] p-4 text-center text-[#2C3E50]/60">
+                   <p>Image not available</p>
+                 </div>`;
+        }
         break;
       }
 
@@ -129,7 +143,9 @@ const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
                 break;
               case "link":
                 const href = mark.attrs?.href || "#";
-                textContent = `<a href="${href}" class="text-[#4ECDC4] hover:underline" target="_blank" rel="noopener noreferrer">${textContent}</a>`;
+                // Validate link URL
+                const validHref = href.startsWith('http') || href.startsWith('/') ? href : '#';
+                textContent = `<a href="${validHref}" class="text-[#4ECDC4] hover:underline" target="_blank" rel="noopener noreferrer">${textContent}</a>`;
                 break;
             }
           });
@@ -143,7 +159,7 @@ const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
         break;
 
       case "callout": {
-        const calloutType = node.attrs?.type || "info"; // info, tip, warning, success
+        const calloutType = node.attrs?.type || "info";
         const iconMap = {
           info: "ℹ️",
           tip: "💡",
@@ -186,12 +202,10 @@ const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
       }
       case "taskList": {
         const listContent = node.content?.map(renderContent).join("") || "";
-        // Modern background, padding, and rounded corners for the checklist group
         html = `<ul data-type="taskList" class="mb-4 bg-[#F7F9F9] rounded-lg p-6">${listContent}</ul>`;
         break;
       }
       case "taskItem": {
-        // Interactive checkboxes (UI only, not persisted)
         const checked = node.attrs?.checked ? "checked" : "";
         const itemContent = node.content?.map(renderContent).join("") || "";
         html = `
@@ -224,6 +238,7 @@ const TiptapContentRenderer: FC<{ content: any }> = ({ content }) => {
     <div
       className="prose prose-lg max-w-none text-[#2C3E50]"
       dangerouslySetInnerHTML={{ __html: htmlContent }}
+      suppressHydrationWarning
     />
   );
 };

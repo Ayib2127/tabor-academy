@@ -128,8 +128,8 @@ export function SiteHeader() {
           </Link>
         </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 ml-6">
+        {/* Desktop Navigation - Centered */}
+        <nav className="hidden md:flex items-center justify-center flex-1 space-x-6">
           {/* Removed: For Partners */}
           {/* <Link 
             href="/#partners" 
@@ -143,7 +143,7 @@ export function SiteHeader() {
             href="/about" 
             className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
           >
-            About
+            About Us
           </Link>
           
           {/* Courses Dropdown */}
@@ -219,60 +219,33 @@ export function SiteHeader() {
           </Link> */}
 
           <Link 
-            href="/success-stories" 
-            className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
-          >
-            Success Stories
-          </Link>
-
-          <Link 
             href="/faqs" 
             className="text-sm font-medium text-[#2C3E50] transition-colors hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
           >
             FAQs
           </Link>
 
-          {/* Become Instructor - visually unique, after FAQs */}
-          <Link
-            href="/become-instructor"
-            className="relative group text-sm font-bold px-5 py-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] text-white shadow-md transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#4ECDC4] focus:ring-offset-2
-              before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-r before:from-[#FF6B35]/30 before:to-[#4ECDC4]/30 before:blur-lg before:opacity-0 group-hover:before:opacity-100 before:transition-opacity before:duration-500"
-            style={{ overflow: 'hidden' }}
-          >
-            <span className="relative z-10">Become Instructor</span>
-          </Link>
+          {/* Become Instructor - matching design */}
+          <Button className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white shadow-md transition-all duration-300 hover:scale-105" asChild>
+            <Link href="/become-instructor">Become Instructor</Link>
+          </Button>
         </nav>
 
-        <div className="flex items-center ml-auto space-x-4">
-          {/* Dark Mode Toggle */}
-          <div className="flex items-center space-x-2">
-            <Sun className="h-4 w-4 text-[#2C3E50] dark:text-white" />
-            <Switch
-              checked={darkMode}
-              onCheckedChange={toggleDarkMode}
-              className="data-[state=checked]:bg-[#4ECDC4]"
-            />
-            <Moon className="h-4 w-4 text-[#2C3E50] dark:text-white" />
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-[#2C3E50] hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]"
-                aria-label="Language"
-              >
-                <Globe className="h-4 w-4" />
-                <span className="sr-only">Language</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="border-[#E5E8E8] shadow-sm">
-              <DropdownMenuItem className="focus:bg-[#4ECDC4]/10 focus:text-[#4ECDC4]">English</DropdownMenuItem>
-              <DropdownMenuItem className="focus:bg-[#4ECDC4]/10 focus:text-[#4ECDC4]">French</DropdownMenuItem>
-              <DropdownMenuItem className="focus:bg-[#4ECDC4]/10 focus:text-[#4ECDC4]">Swahili</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <div className="flex items-center ml-auto space-x-4">
+            {/* Simplified Dark Mode Toggle - Single Icon */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDarkMode}
+              className="text-[#2C3E50] hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4] transition-colors duration-200"
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Button>
 
           {loading ? (
             <div className="h-9 w-9 rounded-full bg-[#E5E8E8] animate-pulse"></div>
@@ -300,16 +273,13 @@ export function SiteHeader() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <div className="hidden md:flex items-center space-x-2">
-              <Button variant="ghost" asChild className="text-[#2C3E50] hover:text-[#4ECDC4] dark:text-white dark:hover:text-[#4ECDC4]">
-                <Link href="/login">Login</Link>
-              </Button>
-              <Button className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white" asChild>
-                <Link href="/signup">Start Learning Free</Link>
-              </Button>
-            </div>
-          )}
+                      ) : (
+              <div className="hidden md:flex items-center">
+                <Button className="bg-gradient-to-r from-[#FF6B35] to-[#4ECDC4] hover:from-[#FF6B35]/90 hover:to-[#4ECDC4]/90 text-white shadow-md transition-all duration-300 hover:scale-105" asChild>
+                  <Link href="/signup">Start Learning Free</Link>
+                </Button>
+              </div>
+            )}
 
           {/* Mobile Menu Button */}
           <Button

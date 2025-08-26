@@ -35,7 +35,6 @@ interface LessonEditorProps {
   lastSaved?: Date | null;
 }
 
-// Move all hooks to the top, before any early returns
 const LessonEditor: FC<LessonEditorProps> = ({
   lesson,
   moduleId,
@@ -47,60 +46,54 @@ const LessonEditor: FC<LessonEditorProps> = ({
   saveStatus: externalSaveStatus,
   lastSaved: externalLastSaved,
 }) => {
-  // All hooks must be called before any return
-  const [localLesson, setLocalLesson] = useState<LocalLesson>(() => ({
-    ...lesson,
-    content: parseContent(lesson.content),
-  }));
-
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(externalSaveStatus || 'idle');
-  const [lastSaved, setLastSaved] = useState<Date | null>(externalLastSaved || null);
-  const [selectedText, setSelectedText] = useState<string>('');
-  const [showAIQuizGenerator, setShowAIQuizGenerator] = useState(false);
-  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
-
   const supabase = createClientComponentClient();
+  const [localLesson, setLocalLesson] = useState<LocalLesson | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+  const [aiAssistantPosition, setAiAssistantPosition] = useState({ x: 0, y: 0 });
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<any>(null);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastContentRef = useRef<any>(lesson.content);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastContentRef = useRef<string>('');
+  const editorRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Helper functions
   function parseContent(content: any) {
-    if (!content) return undefined;
+    if (!content) return {};
     if (typeof content === 'string') {
       try {
         return JSON.parse(content);
       } catch {
-        // Fallback: wrap legacy HTML string in a minimal JSON structure for the editor
-        return {
-          type: 'doc',
-          content: [
-            {
-              type: 'paragraph',
-              content: [
-                { type: 'text', text: content }
-              ]
-            }
-          ]
-        };
+        return content;
       }
     }
     return content;
   }
+
   function serializeContent(content: any) {
+    if (!content) return '';
     if (typeof content === 'string') return content;
     return JSON.stringify(content);
   }
 
-  // Early return after all hooks
-  if (!isVisible || !lesson) return null;
-
   // Reset local state when a new lesson is selected
   useEffect(() => {
-    setLocalLesson({
-      ...lesson,
-      content: parseContent(lesson.content),
-    });
+    if (lesson) {
+      setLocalLesson({
+        ...lesson,
+        content: parseContent(lesson.content),
+      });
+    }
   }, [lesson?.id]);
 
   // Debounced save function
@@ -205,17 +198,18 @@ const LessonEditor: FC<LessonEditorProps> = ({
             'points',
             'allow_late',
             'resources',
-          ].forEach((key) => {
-            const value = (updatedLesson as any)[key];
-            if (value !== undefined) updateData[key] = value;
+          ].forEach(field => {
+            if (field in updatedLesson && updatedLesson[field as keyof LocalLesson] !== undefined) {
+              updateData[field] = updatedLesson[field as keyof LocalLesson];
+            }
           });
 
-          const { error: updateError } = await supabase
+          const { error } = await supabase
             .from('module_lessons')
             .update(updateData)
             .eq('id', updatedLesson.id);
 
-          if (updateError) throw updateError;
+          if (error) throw error;
         }
 
         lastContentRef.current = contentString;
@@ -223,21 +217,13 @@ const LessonEditor: FC<LessonEditorProps> = ({
         setLastSaved(new Date());
         onUpdate({ ...updatedLesson, content: contentString });
         setTimeout(() => setSaveStatus('idle'), 2000);
+
       } catch (error: any) {
-        console.error('Auto-save error:', error);
+        console.error('Save error:', error);
         setSaveStatus('error');
-        if (error.code) {
-          showApiErrorToast({
-            code: error.code,
-            error: error.message,
-            details: error.details,
-          });
-        } else {
-          showApiErrorToast({
-            code: 'INTERNAL_ERROR',
-            error: 'Failed to save lesson: ' + (error?.message || error),
-          });
-        }
+        toast.error(
+          'Failed to save lesson: ' + (error?.message || error),
+        );
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     }, 1000);
@@ -249,7 +235,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         // Flush the debounced save with the latest state
-        debouncedSave(localLesson);
+        debouncedSave(localLesson || {});
       }
     };
   }, [localLesson, debouncedSave]);
@@ -292,9 +278,75 @@ const LessonEditor: FC<LessonEditorProps> = ({
   //   if (!localLesson) return;
   //   const timeout = setTimeout(() => {
   //     onUpdate({ ...localLesson, content: serializeContent(localLesson.content) });
-  //   }, 500); // 500ms debounce
+  //   }, 1000);
   //   return () => clearTimeout(timeout);
   // }, [localLesson, onUpdate]);
+
+  // Auto-generate quiz from lesson content
+  const handleAutoGenerateQuiz = async () => {
+    if (!localLesson?.content) {
+      toast.error('Please add some lesson content first to generate a quiz');
+      return;
+    }
+
+    // setIsGeneratingQuiz(true); // This state was removed, so this line is removed.
+
+    try {
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'quiz',
+          input: serializeContent(localLesson.content),
+          questionCount: 5,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate quiz');
+      }
+
+      const result = await response.json();
+      const quizContent = result.content;
+
+      setLocalLesson(prev => ({
+        ...prev,
+        content: quizContent,
+        type: 'quiz',
+      }));
+
+      toast.success('Quiz generated successfully!');
+    } catch (error) {
+      toast.error('Failed to generate quiz: ' + (error as Error).message);
+    } finally {
+      // setIsGeneratingQuiz(false); // This state was removed, so this line is removed.
+    }
+  };
+
+  const [videoUrlInput, setVideoUrlInput] = useState(
+    typeof localLesson?.content === 'object' && localLesson?.content && 'src' in localLesson.content
+      ? String(localLesson.content.src)
+      : ''
+  );
+
+  useEffect(() => {
+    setVideoUrlInput(
+      typeof localLesson?.content === 'object' && localLesson?.content && 'src' in localLesson.content
+        ? String(localLesson.content.src)
+        : ''
+    );
+  }, [localLesson?.content]);
+
+  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (localLesson?.type === 'quiz' && typeof localLesson.content === 'object') {
+      setEditingQuiz(localLesson.content);
+    }
+  }, [localLesson?.type, localLesson?.content]);
+
+  // Early return after all hooks
+  if (!isVisible || !lesson) return null;
 
   const handleLessonUpdate = (updates: Partial<Lesson>) => {
     const updatedLesson = { ...localLesson, ...updates };
@@ -348,92 +400,6 @@ const LessonEditor: FC<LessonEditorProps> = ({
     toast.success('AI quiz generated and applied successfully!');
   };
 
-  // Auto-generate quiz from lesson content
-  const handleAutoGenerateQuiz = async () => {
-    if (!localLesson.content) {
-      toast.error('Please add some lesson content first to generate a quiz');
-      return;
-    }
-
-    setIsGeneratingQuiz(true);
-
-    try {
-      const response = await fetch('/api/ai/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'quiz',
-          input: localLesson.content,
-          questionCount: 5,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.code) {
-          showApiErrorToast({
-            code: errorData.code,
-            error: errorData.error,
-            details: errorData.details,
-          });
-        } else {
-          throw new Error(errorData.error || 'Failed to generate quiz');
-        }
-      }
-
-      const result = await response.json();
-      
-      // Switch to quiz type and apply the generated quiz
-      handleLessonUpdate({
-        type: 'quiz',
-        content: result.content,
-      });
-
-      toast.success('Quiz generated successfully from lesson content!');
-      
-    } catch (error: any) {
-      console.error('Quiz generation error:', error);
-      if (error.code) {
-        showApiErrorToast({
-          code: error.code,
-          error: error.message,
-          details: error.details,
-        });
-      } else {
-        showApiErrorToast({
-          code: 'INTERNAL_ERROR',
-          error: error.message || 'Failed to generate quiz. Please try again.',
-        });
-      }
-    } finally {
-      setIsGeneratingQuiz(false);
-    }
-  };
-
-  const [videoUrlInput, setVideoUrlInput] = useState(
-    typeof localLesson.content === 'object' && localLesson.content && 'src' in localLesson.content
-      ? String(localLesson.content.src)
-      : ''
-  );
-
-  useEffect(() => {
-    setVideoUrlInput(
-      typeof localLesson.content === 'object' && localLesson.content && 'src' in localLesson.content
-        ? String(localLesson.content.src)
-        : ''
-    );
-  }, [localLesson.content]);
-
-  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (localLesson.type === 'quiz' && typeof localLesson.content === 'object') {
-      setEditingQuiz(localLesson.content);
-    }
-  }, [localLesson.type, localLesson.content]);
-
   return (
     <div className="space-y-6">
       {/* Lesson Header */}
@@ -446,7 +412,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               </Label>
               <Input
                 id="lesson-title"
-                value={localLesson.title}
+                value={localLesson?.title || ''}
                 onChange={(e) => setLocalLesson(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Enter lesson title"
                 className="mt-1 text-lg font-semibold border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
@@ -456,7 +422,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <Label htmlFor="lesson-description" className="text-[#2C3E50]">Lesson Description <span className="text-xs text-gray-400">(optional)</span></Label>
               <Input
                 id="lesson-description"
-                value={localLesson.description || ''}
+                value={localLesson?.description || ''}
                 onChange={e => setLocalLesson(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Enter a short description for this lesson (optional)"
                 className="mt-1 border-[#E5E8E8] focus:border-[#4ECDC4] focus:ring-[#4ECDC4]/20"
@@ -469,7 +435,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   Lesson Type
                 </Label>
                 <Select
-                  value={localLesson.type}
+                  value={localLesson?.type}
                   onValueChange={(value: 'video' | 'text' | 'quiz' | 'assignment') =>
                     setLocalLesson(prev => ({ ...prev, type: value }))
                   }
@@ -489,7 +455,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div className="flex items-center space-x-2">
                 <Switch
                   id="lesson-published"
-                  checked={localLesson.is_published}
+                  checked={localLesson?.is_published}
                   onCheckedChange={(checked) => setLocalLesson(prev => ({ ...prev, is_published: checked }))}
                 />
                 <Label htmlFor="lesson-published" className="text-[#2C3E50] font-semibold">
@@ -505,7 +471,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 id="lesson-duration"
                 type="number"
                 min={1}
-                value={localLesson.duration ?? ''}
+                value={localLesson?.duration ?? ''}
                 onChange={e => {
                   const value = e.target.value;
                   setLocalLesson(prev => ({
@@ -526,12 +492,12 @@ const LessonEditor: FC<LessonEditorProps> = ({
               onContentGenerated={handleAIContentGenerated}
               onQuizGenerated={handleAIQuizGenerated}
               lessonType={
-                ['video', 'text', 'quiz'].includes(localLesson.type)
+                ['video', 'text', 'quiz'].includes(localLesson?.type as 'video' | 'text' | 'quiz')
                   ? (localLesson.type as 'video' | 'text' | 'quiz')
                   : 'text'
               }
-              lessonTitle={localLesson.title}
-              currentContent={localLesson.content}
+              lessonTitle={localLesson?.title || ''}
+              currentContent={localLesson?.content}
             />
             
             <Button
@@ -548,21 +514,21 @@ const LessonEditor: FC<LessonEditorProps> = ({
 
         {/* Status Badge */}
         <div className="flex items-center gap-2">
-          <Badge variant={localLesson.is_published ? "default" : "secondary"}>
-            {localLesson.is_published ? "Published" : "Draft"}
+          <Badge variant={localLesson?.is_published ? "default" : "secondary"}>
+            {localLesson?.is_published ? "Published" : "Draft"}
           </Badge>
           <Badge variant="outline">
-            {localLesson.type === 'text' && '📝 Text'}
-            {localLesson.type === 'video' && '🎬 Video'}
-            {localLesson.type === 'quiz' && '❓ Quiz'}
-            {localLesson.type === 'assignment' && '📄 Assignment'}
+            {localLesson?.type === 'text' && '📝 Text'}
+            {localLesson?.type === 'video' && '🎬 Video'}
+            {localLesson?.type === 'quiz' && '❓ Quiz'}
+            {localLesson?.type === 'assignment' && '📄 Assignment'}
           </Badge>
         </div>
       </div>
 
       {/* Lesson Content */}
       <div className="bg-white rounded-lg border border-[#E5E8E8] shadow-sm overflow-hidden">
-        {localLesson.type === 'text' && (
+        {localLesson?.type === 'text' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <div className="flex items-center justify-between">
@@ -576,7 +542,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
             </div>
             <div className="p-0">
               <RichTextEditor
-                content={localLesson.content}
+                content={localLesson?.content}
                 onChange={handleContentChange}
                 placeholder="Start writing your lesson content. Use the toolbar to format text, add images, links, and more..."
               />
@@ -584,7 +550,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
           </div>
         )}
 
-        {localLesson.type === 'video' && (
+        {localLesson?.type === 'video' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <div className="flex items-center justify-between">
@@ -618,8 +584,8 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   }
                 }}
               />
-              {typeof localLesson.content === 'object' &&
-                localLesson.content &&
+              {typeof localLesson?.content === 'object' &&
+                localLesson?.content &&
                 'src' in (localLesson.content as any) && (
                   <VideoPlayer src={(localLesson.content as any).src} />
                 )}
@@ -627,7 +593,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
           </div>
         )}
 
-        {localLesson.type === 'quiz' && (
+        {localLesson?.type === 'quiz' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <div className="flex items-center justify-between">
@@ -639,7 +605,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    onClick={() => setShowAIQuizGenerator(!showAIQuizGenerator)}
+                    onClick={() => setShowAIAssistant(!showAIAssistant)}
                     variant="outline"
                     size="sm"
                     className="border-purple-300 text-purple-700 hover:bg-purple-50"
@@ -651,17 +617,17 @@ const LessonEditor: FC<LessonEditorProps> = ({
               </div>
               
               {/* AI Quiz Generator Panel */}
-              {showAIQuizGenerator && (
+              {showAIAssistant && (
                 <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
                   <h4 className="text-sm font-semibold text-purple-900 mb-3">AI Quiz Generation</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Button
                       onClick={handleAutoGenerateQuiz}
-                      disabled={isGeneratingQuiz}
+                      // disabled={isGeneratingQuiz} // This state was removed, so this line is removed.
                       className="bg-purple-600 hover:bg-purple-700 text-white"
                       size="sm"
                     >
-                      {isGeneratingQuiz ? (
+                      {/* {isGeneratingQuiz ? ( // This state was removed, so this line is removed.
                         <>
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                           Generating...
@@ -671,12 +637,14 @@ const LessonEditor: FC<LessonEditorProps> = ({
                           <Wand2 className="w-4 h-4 mr-2" />
                           Generate New Quiz
                         </>
-                      )}
+                      )} */}
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      Generate New Quiz
                     </Button>
                     <Button
                       onClick={() => {
                         // This will open the AI Assistant with quiz focus
-                        setShowAIQuizGenerator(false);
+                        setShowAIAssistant(false);
                       }}
                       variant="outline"
                       size="sm"
@@ -696,7 +664,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <QuizBuilder
                 quiz={editingQuiz || {
                   id: `quiz-${Date.now()}`,
-                  title: localLesson.title || 'New Quiz',
+                  title: localLesson?.title || 'New Quiz',
                   questions: [],
                   passingScore: 70,
                   attemptsAllowed: 3,
@@ -713,7 +681,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
           </div>
         )}
 
-        {localLesson.type === 'assignment' && (
+        {localLesson?.type === 'assignment' && (
           <div>
             <div className="px-6 py-4 border-b border-[#E5E8E8] bg-[#F7F9F9]">
               <h3 className="text-lg font-semibold text-[#2C3E50]">Assignment Details</h3>
@@ -728,7 +696,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 <Label htmlFor="assignment-brief" className="text-[#2C3E50] font-semibold">Brief / Description</Label>
                 <Input
                   id="assignment-brief"
-                  value={localLesson.brief ?? ''}
+                  value={localLesson?.brief ?? ''}
                   onChange={e => {
                     setLocalLesson(prev => ({ ...prev, brief: e.target.value }));
                     handleLessonUpdate({ brief: e.target.value });
@@ -742,7 +710,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div>
                 <Label className="text-[#2C3E50] font-semibold">Main Instructions</Label>
                 <RichTextEditor
-                  content={localLesson.content}
+                  content={localLesson?.content}
                   onChange={handleContentChange}
                   placeholder="Write assignment instructions here..."
                 />
@@ -752,7 +720,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div>
                 <Label className="text-[#2C3E50] font-semibold">Requirements</Label>
                 <DynamicListInput
-                  items={localLesson.requirements ?? []}
+                  items={localLesson?.requirements ?? []}
                   onChange={items => {
                     setLocalLesson(prev => ({ ...prev, requirements: items }));
                     handleLessonUpdate({ requirements: items });
@@ -765,7 +733,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div>
                 <Label className="text-[#2C3E50] font-semibold">Submission Guidelines</Label>
                 <DynamicListInput
-                  items={localLesson.guidelines ?? []}
+                  items={localLesson?.guidelines ?? []}
                   onChange={items => {
                     setLocalLesson(prev => ({ ...prev, guidelines: items }));
                     handleLessonUpdate({ guidelines: items });
@@ -778,7 +746,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div>
                 <Label className="text-[#2C3E50] font-semibold">Grading Criteria</Label>
                 <DynamicListInput
-                  items={localLesson.grading_criteria ?? []}
+                  items={localLesson?.grading_criteria ?? []}
                   onChange={items => {
                     setLocalLesson(prev => ({ ...prev, grading_criteria: items }));
                     handleLessonUpdate({ grading_criteria: items });
@@ -794,7 +762,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                   id="assignment-points"
                   type="number"
                   min={0}
-                  value={localLesson.points ?? ''}
+                  value={localLesson?.points ?? ''}
                   onChange={e => {
                     setLocalLesson(prev => ({ ...prev, points: Number(e.target.value) }));
                     handleLessonUpdate({ points: Number(e.target.value) });
@@ -810,7 +778,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 <Input
                   id="assignment-due-date"
                   type="date"
-                  value={localLesson.duedate ?? ''}
+                  value={localLesson?.duedate ?? ''}
                   onChange={e => {
                     setLocalLesson(prev => ({ ...prev, duedate: e.target.value }));
                     handleLessonUpdate({ duedate: e.target.value });
@@ -828,7 +796,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 <Label>
                   <input
                     type="checkbox"
-                    checked={localLesson.needsgrading ?? false}
+                    checked={localLesson?.needsgrading ?? false}
                     onChange={e => {
                       setLocalLesson(prev => ({ ...prev, needsgrading: e.target.checked }));
                       handleLessonUpdate({ needsgrading: e.target.checked });
@@ -843,7 +811,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
                 <Label>
                   <input
                     type="checkbox"
-                    checked={localLesson.allow_late ?? false}
+                    checked={localLesson?.allow_late ?? false}
                     onChange={e => {
                       setLocalLesson(prev => ({ ...prev, allow_late: e.target.checked }));
                       handleLessonUpdate({ allow_late: e.target.checked });
@@ -857,7 +825,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
               <div>
                 <Label className="text-[#2C3E50] font-semibold">Attachments / Resources</Label>
                 <DynamicListInput
-                  items={localLesson.resources ?? []}
+                  items={localLesson?.resources ?? []}
                   onChange={items => {
                     setLocalLesson(prev => ({ ...prev, resources: items }));
                     handleLessonUpdate({ resources: items });

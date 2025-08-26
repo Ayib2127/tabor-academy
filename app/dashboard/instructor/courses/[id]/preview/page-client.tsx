@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, BookOpen, PlayCircle, Lock, CheckCircle, Video } from 'lucide-react';
 import Link from 'next/link';
+import { SafeHtmlContent } from '@/components/ui/safe-html-content'
 
 interface Lesson {
   id: string;
@@ -188,9 +189,9 @@ export default function CoursePreviewPage() {
                       </div>
                     )}
                     {selectedLesson.content && (
-                      <div className="prose max-w-none"> {/* Use prose for basic markdown styling if you have @tailwindcss/typography */}
+                      <div className="prose max-w-none">
                         <h3 className="text-xl font-semibold mb-2">Lesson Content</h3>
-                        <div dangerouslySetInnerHTML={{ __html: selectedLesson.content }} />
+                        <SafeHtmlContent content={selectedLesson.content} />
                       </div>
                     )}
                     {!selectedLesson.video_url && !selectedLesson.content && (

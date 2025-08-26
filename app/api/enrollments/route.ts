@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
           .from('progress')
           .select('*')
           .eq('user_id', session.user.id)
-          .eq('lesson_id', supabase.from('lessons').select('id').eq('course_id', enrollment.course_id));
+          .eq('lesson_id', supabase.from('module_lessons').select('id').eq('course_id', enrollment.course_id));
           
         if (progressError) {
           console.error('Error fetching progress:', progressError);
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         
         // Calculate progress percentage
         const totalLessons = await supabase
-          .from('lessons')
+          .from('module_lessons')
           .select('id', { count: 'exact', head: true })
           .eq('course_id', enrollment.course_id)
           .eq('is_published', true);

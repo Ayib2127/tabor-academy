@@ -63,10 +63,9 @@ export async function GET(
 
         // Fetch all published lessons for this course
         const { data: lessons, error: lessonsError } = await supabase
-          .from('lessons')
-          .select('id, is_published')
-          .eq('course_id', course.id)
-          .eq('is_published', true); // Only count published lessons
+          .from('module_lessons')  // Changed from 'lessons'
+          .select('*')
+          .eq('course_id', course.id);
 
         if (lessonsError) {
           console.error(`Error fetching lessons for course ${course.id}:`, lessonsError);

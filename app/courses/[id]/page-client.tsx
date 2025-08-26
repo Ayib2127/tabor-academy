@@ -32,6 +32,7 @@ import { useParams } from "next/navigation"
 import { snakeToCamel } from "@/lib/utils/snakeToCamel";
 import { EnrollmentButton } from "@/components/course/enrollment-button";
 import { supabase } from "@/lib/supabase/client";
+import { withValidImageUrl, DEFAULT_BANNER_URL, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
@@ -98,20 +99,27 @@ export default function CourseDetailsPage() {
       if (!currentUserId || !course?.id) return;
       try {
         const res = await fetch(`/api/enrollments?courseId=${course.id}`);
-        const data = await res.json();
-        if (data && data.enrollment) {
-          setIsEnrolled(true);
-          setCompletedLessons(data.completedLessons || 0);
-          setTotalValidLessons(data.totalValidLessons || 0);
+        if (res.ok) {
+          const enrollmentData = await res.json();
+          // Enhanced enrollment check
+          const isEnrolled = !!enrollmentData.enrollment;
+          setIsEnrolled(isEnrolled);
+          setCompletedLessons(enrollmentData.completedLessons || 0);
+          setTotalValidLessons(enrollmentData.totalValidLessons || 0);
+          
+          // Debug logging
+          console.log('Enrollment status:', {
+            courseId: course.id,
+            isEnrolled,
+            enrollment: enrollmentData.enrollment,
+            completedLessons: enrollmentData.completedLessons,
+            totalValidLessons: enrollmentData.totalValidLessons
+          });
         } else {
-          setIsEnrolled(false);
-          setCompletedLessons(0);
-          setTotalValidLessons(0);
+          console.error('Failed to fetch enrollment status:', res.status, res.statusText);
         }
-      } catch (err) {
-        setIsEnrolled(false);
-        setCompletedLessons(0);
-        setTotalValidLessons(0);
+      } catch (error) {
+        console.error('Error fetching enrollment status:', error);
       }
     }
     fetchEnrollmentStatus();
@@ -121,9 +129,9 @@ export default function CourseDetailsPage() {
   let firstLessonId: string | null = null;
   if (modules && modules.length > 0) {
     const sortedModules = [...modules].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
-    for (const module of sortedModules) {
-      if (module.lessons && module.lessons.length > 0) {
-        const sortedLessons = [...module.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
+    for (const moduleItem of sortedModules) {
+      if (moduleItem.lessons && moduleItem.lessons.length > 0) {
+        const sortedLessons = [...moduleItem.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
         const publishedLesson = sortedLessons.find((lesson) => {
           if (!lesson.is_published) return false;
           switch (lesson.type) {
@@ -167,14 +175,14 @@ export default function CourseDetailsPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col" suppressHydrationWarning>
       <SiteHeader />
       
       {/* Course Hero Section */}
       <section className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src={course.banner || "/default-banner.png"}
+            src={withValidImageUrl(course.banner, DEFAULT_BANNER_URL)}
             alt={course.title || "Course Banner"}
             fill
             className="object-cover opacity-20"
@@ -224,7 +232,7 @@ export default function CourseDetailsPage() {
 
               <div className="flex items-center gap-4">
                 <Image
-                  src={typeof course.instructor?.avatar_url === "string" && course.instructor.avatar_url ? course.instructor.avatar_url : "/default-avatar.png"}
+                  src={withValidImageUrl(course.instructor?.avatar_url, DEFAULT_AVATAR_URL)}
                   alt={course.instructor?.full_name || "Instructor"}
                   width={40}
                   height={40}
@@ -240,7 +248,7 @@ export default function CourseDetailsPage() {
             <Card className="p-6 bg-white/10 backdrop-blur-lg text-white">
               <div className="aspect-video relative rounded-lg overflow-hidden mb-6">
                 <Image
-                  src={typeof course.banner === "string" && course.banner ? course.banner : "/default-banner.png"}
+                  src={withValidImageUrl(course.banner, DEFAULT_BANNER_URL)}
                   alt={course.title || "Course Banner"}
                   fill
                   className="object-cover"
@@ -386,7 +394,7 @@ export default function CourseDetailsPage() {
                   <Card key={index} className="p-6">
                     <div className="flex items-center gap-4 mb-4">
                       <Image
-                        src={typeof story.photo === "string" && story.photo ? story.photo : "/default-avatar.png"}
+                        src={withValidImageUrl(story.photo, DEFAULT_AVATAR_URL)}
                         alt={story.name || "Success Story"}
                         width={60}
                         height={60}
@@ -453,7 +461,7 @@ export default function CourseDetailsPage() {
           <TabsContent value="instructor" className="space-y-8">
             <div className="flex items-start gap-6">
               <Image
-                src={typeof course.instructor?.avatar_url === "string" && course.instructor.avatar_url ? course.instructor.avatar_url : "/default-avatar.png"}
+                src={withValidImageUrl(course.instructor?.avatar_url, DEFAULT_AVATAR_URL)}
                 alt={course.instructor?.full_name || "Instructor"}
                 width={120}
                 height={120}
@@ -508,7 +516,7 @@ export default function CourseDetailsPage() {
                 <Card key={index} className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <Image
-                      src={typeof review.user?.avatar_url === "string" && review.user.avatar_url ? review.user.avatar_url : "/default-avatar.png"}
+                      src={withValidImageUrl(review.user?.avatar_url, "/default-avatar.png")}
                       alt={review.user?.name || "Student"}
                       width={40}
                       height={40}

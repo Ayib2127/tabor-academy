@@ -97,10 +97,17 @@ export function EnrollmentButton({
             router.push('/login')
             return
           }
-          // If already enrolled, update UI immediately
-          if (data.enrolled) {
+          // If already enrolled, update UI immediately and redirect
+          if (data.code === 'RESOURCE_CONFLICT' || data.error?.includes('already enrolled')) {
             if (onEnrolled) onEnrolled();
-            // No toast, just update UI
+            toast.success("You're already enrolled! Redirecting to your course...")
+            setTimeout(() => {
+              if (firstLessonId) {
+                router.push(`/courses/lesson/${firstLessonId}`)
+              } else {
+                router.push(`/courses/${courseId}`)
+              }
+            }, 1500)
             return
           }
           throw new Error(data.error || 'Enrollment failed')

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin, Send, Heart, Shield, Award, Users, Globe, Zap } from "lucide-react"
-import Image from "next/image"
+import { SafeImage } from "@/components/ui/safe-image"
 
 export function SiteFooter() {
   const handleNewsletterSubmit = (e: React.FormEvent) => {
@@ -14,7 +14,7 @@ export function SiteFooter() {
   }
 
   return (
-    <footer className="bg-gradient-to-br from-[#2C3E50] via-[#1B4D3E] to-[#2C3E50] text-white relative overflow-hidden">
+    <footer className="bg-gradient-to-br from-[#2C3E50] via-[#1B4D3E] to-[#2C3E50] text-white relative overflow-hidden" suppressHydrationWarning>
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
       
@@ -30,7 +30,7 @@ export function SiteFooter() {
           <div className="lg:col-span-2 space-y-6">
             {/* Logo and Brand */}
             <Link href="/" className="flex items-center space-x-3 group">
-              <Image
+              <SafeImage
                 src="/logo.jpg"
                 alt="Tabor Academy"
                 width={50}

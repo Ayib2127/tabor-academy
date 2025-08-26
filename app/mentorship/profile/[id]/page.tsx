@@ -1,5 +1,4 @@
 "use client"
-"use client"
 
 import { useState } from "react"
 import { SiteHeader } from "@/components/site-header"
@@ -32,8 +31,138 @@ import Link from "next/link"
 import Image from "next/image"
 import { withDefault, DEFAULT_AVATAR_URL } from "@/lib/defaults";
 
-export default async function MentorshipProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function MentorshipProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+  
+  // Mock data - replace with actual data fetching
+  const mentor = {
+    id: "1",
+    name: "Dr. Sarah Johnson",
+    title: "Senior Software Engineer",
+    company: "Tech Corp",
+    avatar: DEFAULT_AVATAR_URL,
+    rating: 4.8,
+    reviewCount: 127,
+    hourlyRate: 150,
+    experience: "8+ years",
+    languages: ["English", "Spanish"],
+    skills: ["React", "Node.js", "Python", "AWS"],
+    availability: {
+      sessionDurations: [30, 60, 90],
+      schedule: {
+        "Monday": ["9:00 AM", "2:00 PM", "4:00 PM"],
+        "Tuesday": ["10:00 AM", "3:00 PM"],
+        "Wednesday": ["9:00 AM", "1:00 PM", "5:00 PM"]
+      }
+    },
+    education: [
+      { degree: "PhD Computer Science", institution: "Stanford University", year: "2020" },
+      { degree: "MS Software Engineering", institution: "MIT", year: "2018" }
+    ],
+    certifications: [
+      { name: "AWS Solutions Architect", issuer: "Amazon", year: "2021" },
+      { name: "Google Cloud Professional", issuer: "Google", year: "2020" }
+    ],
+    achievements: [
+      "Led 50+ successful projects",
+      "Mentored 200+ developers",
+      "Published 15 technical articles"
+    ],
+    reviews: [
+      {
+        id: "1",
+        author: "John Doe",
+        rating: 5,
+        content: "Excellent mentor! Very knowledgeable and patient.",
+        date: new Date("2024-01-15"),
+        helpful: 12
+      },
+      {
+        id: "2", 
+        author: "Jane Smith",
+        rating: 4,
+        content: "Great session, learned a lot about React best practices.",
+        date: new Date("2024-01-10"),
+        helpful: 8
+      }
+    ]
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Profile Header */}
+            <Card className="p-6">
+              <div className="flex items-start gap-6">
+                <Image
+                  src={mentor.avatar}
+                  alt={mentor.name}
+                  width={120}
+                  height={120}
+                  className="rounded-full"
+                />
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold mb-2">{mentor.name}</h1>
+                  <p className="text-lg text-muted-foreground mb-2">
+                    {mentor.title} at {mentor.company}
+                  </p>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                      <span className="font-medium">{mentor.rating}</span>
+                      <span className="text-muted-foreground">({mentor.reviewCount} reviews)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      <span>{mentor.experience} experience</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Globe className="h-4 w-4" />
+                      <span>${mentor.hourlyRate}/hr</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {mentor.languages.map((language) => (
+                      <span
+                        key={language}
+                        className="px-2 py-1 bg-primary/10 text-primary rounded-full text-sm"
+                      >
+                        {language}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Skills */}
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Skills & Expertise</h2>
+              <div className="flex flex-wrap gap-2">
+                {mentor.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </Card>
+
+            {/* Reviews */}
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Reviews</h2>
+              <div className="space-y-4">
+                {mentor.reviews.map((review) => (
+                  <div key={review.id} className="border-b pb-4 last:border-b-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{review.author}</span>
                         <span className="text-sm text-muted-foreground">
                           {review.date.toLocaleDateString()}
                         </span>
@@ -49,6 +178,7 @@ export default async function MentorshipProfilePage({ params }: { params: Promis
                             }`}
                           />
                         ))}
+                      </div>
                       </div>
                       <p className="text-muted-foreground mb-3">{review.content}</p>
                       <div className="flex items-center gap-4">
@@ -210,7 +340,6 @@ export default async function MentorshipProfilePage({ params }: { params: Promis
                   </Button>
                 </div>
               </Card>
-            </div>
           </div>
         </div>
       </main>

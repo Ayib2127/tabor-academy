@@ -142,7 +142,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
       
       try {
         const result = await supabase
-          .from('lessons')
+          .from('module_lessons')
           .select(`
             id,
             title,

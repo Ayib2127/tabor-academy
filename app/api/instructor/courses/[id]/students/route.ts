@@ -56,8 +56,8 @@ export async function GET(
 
     // Fetch all lessons for the course to calculate total lessons
     const { data: lessons, error: lessonsError } = await supabase
-      .from('lessons')
-      .select('id')
+      .from('module_lessons')
+      .select('*')
       .eq('course_id', courseId);
 
     if (lessonsError) {

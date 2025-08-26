@@ -8,6 +8,7 @@ import Script from 'next/script';
 import { GA_MEASUREMENT_ID } from '@/lib/analytics';
 import { AuthProvider } from '@/components/auth-provider';
 import { Toaster } from "@/components/ui/toaster";
+import { SafeHtmlContent } from '@/components/ui/safe-html-content'
 
 // Load Inter font locally
 const inter = Inter({
@@ -92,10 +93,56 @@ export default function RootLayout({
           type="image/png"
         />
         
-        {/* Favicon */}
-        <link rel="icon" href="/logo.jpg" sizes="any" />
+     {/* Favicon */}
+       <link rel="icon" href="/logo.jpg" sizes="any" />
 
-        {/* Google Analytics */}
+{/* Strip extension-injected attributes before hydration */}
+<Script id="pre-hydration-sanitize" strategy="beforeInteractive">
+  {`
+    (() => {
+      const ATTR = 'bis_skin_checked';
+      const strip = (root) => {
+        try {
+          if (!root || typeof root.querySelectorAll !== 'function') return;
+          root.querySelectorAll('[' + ATTR + ']').forEach(el => {
+            try { el.removeAttribute(ATTR); } catch {}
+          });
+        } catch {}
+      };
+      // Initial cleanup
+      if (typeof document !== 'undefined') {
+        strip(document);
+        try {
+          const mo = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+              if (m.type === 'attributes' && m.attributeName === ATTR && m.target?.removeAttribute) {
+                try { m.target.removeAttribute(ATTR); } catch {}
+              }
+              if (m.addedNodes?.length) {
+                m.addedNodes.forEach((n) => {
+                  if (n && n.nodeType === 1) {
+                    try {
+                      if (n.hasAttribute?.(ATTR)) n.removeAttribute(ATTR);
+                      strip(n);
+                    } catch {}
+                  }
+                });
+              }
+            }
+          });
+          mo.observe(document.documentElement, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: [ATTR],
+            childList: true
+          });
+        } catch {}
+      }
+    })();
+  `}
+</Script>
+
+{/* Google Analytics */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
@@ -110,6 +157,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="font-sans" suppressHydrationWarning={true}>
+        <div suppressHydrationWarning>
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="light">
               {children}
@@ -118,6 +166,7 @@ export default function RootLayout({
               <Toaster />
             </ThemeProvider>
           </AuthProvider>
+        </div>
       </body>
     </html>
   );

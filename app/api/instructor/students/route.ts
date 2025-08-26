@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
     // Fetch all lessons for these courses
     const { data: lessons, error: lessonsError } = await supabase
-      .from('lessons')
+      .from('module_lessons')
       .select('id, course_id, is_published')
       .in('course_id', targetCourseIds);
 

@@ -8,9 +8,11 @@ const reviewSchema = z.object({
   rejection_reason: z.string().optional(),
 });
 
-export async function POST(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
-  const courseId = params.id;
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: courseId } = await params;
   const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 

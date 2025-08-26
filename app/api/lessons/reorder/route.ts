@@ -21,7 +21,7 @@ export async function PATCH(request: Request) {
     // Verify ownership of all lessons to prevent unauthorized updates
     const lessonIds = lessons.map((l: { id: string }) => l.id);
     const { data: ownedLessons, error: ownershipError } = await supabase
-      .from('lessons')
+      .from('module_lessons')
       .select('id, course_id')
       .in('id', lessonIds);
 
@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
     }));
 
     const { error: updateError } = await supabase
-      .from('lessons')
+      .from('module_lessons')
       .upsert(updates, { onConflict: 'id' }); // Use upsert to update based on id
 
     if (updateError) {

@@ -181,10 +181,11 @@ export default function VideoTutorialsPage() {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Play className="h-16 w-16 text-white" />
                 </div>
-                <img
+                <Image
                   src={tutorials.gettingStarted[0].thumbnail}
                   alt="Tutorial thumbnail"
-                  className="w-full h-full object-cover opacity-50"
+                  fill
+                  className="object-cover opacity-50"
                 />
               </div>
               <div className="p-6">
@@ -255,10 +256,11 @@ export default function VideoTutorialsPage() {
                       onClick={() => handleVideoPlay(video.id)}
                     >
                       <div className="relative aspect-video">
-                        <img
+                        <Image
                           src={video.thumbnail}
                           alt={video.title}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
                           <Play className="h-12 w-12 text-white" />
@@ -312,10 +314,12 @@ export default function VideoTutorialsPage() {
               ].map((series, index) => (
                 <Card key={index} className="overflow-hidden">
                   <div className="relative aspect-video">
-                    <img
+                    <Image
                       src={series.thumbnail}
                       alt={series.title}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-4 left-4 text-white">

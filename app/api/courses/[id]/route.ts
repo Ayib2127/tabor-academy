@@ -26,10 +26,10 @@ const courses = [
   },
 ];
 
-export async function GET(req: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const courseId = params.id;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   try {
@@ -74,7 +74,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
   }), { status: 200 });
   } catch (error: any) {
     console.error('Course details API error:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return new Response(
       JSON.stringify({ code: apiError.code, error: apiError.message, details: apiError.details }),
       { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 }
@@ -82,10 +82,10 @@ export async function GET(req: Request, context: { params: { id: string } }) {
   }
 }
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const courseId = params.id;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
@@ -122,13 +122,13 @@ export async function PUT(request: Request, context: { params: { id: string } })
     return NextResponse.json(data);
   } catch (err: any) {
     console.error('Unexpected error updating course publication status:', err);
-    const apiError = handleApiError(err);
+    const apiError = await handleApiError(err);
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const supabase = await createSupabaseServerClient();
   try {
     const id = params.id;

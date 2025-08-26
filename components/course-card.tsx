@@ -14,6 +14,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
+import Image from 'next/image';
 
 interface CourseCardProps {
   course: {
@@ -22,23 +23,20 @@ interface CourseCardProps {
     description: string;
     thumbnail_url?: string;
     price: number;
-    level: string;
-    category: string;
-    content_type: 'tabor_original' | 'community';
-    instructor: {
-      full_name: string;
+    instructor?: {
+      name: string;
       avatar_url?: string;
     };
-    _stats?: {
-      totalLessons: number;
-      estimatedDuration: number;
-      enrollmentCount?: number;
-      rating?: number;
-    };
+    category?: string;
+    level?: string;
+    duration?: string;
+    rating?: number;
+    is_featured?: boolean;
   };
   showInstructor?: boolean;
   showPrice?: boolean;
   variant?: 'default' | 'compact';
+  index?: number;
 }
 
 const CourseCard: FC<CourseCardProps> = ({
@@ -97,7 +95,7 @@ const CourseCard: FC<CourseCardProps> = ({
           <div className="flex items-start gap-4">
             {/* Thumbnail */}
             <div className="w-16 h-16 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <img
+              <Image
                 src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
                 alt={course.title}
                 className="w-full h-full object-cover rounded-lg"
@@ -148,10 +146,12 @@ const CourseCard: FC<CourseCardProps> = ({
     <Card className="border-[#E5E8E8] shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
       {/* Thumbnail */}
       <div className="relative h-48 bg-gradient-to-br from-[#4ECDC4]/20 to-[#FF6B35]/20">
-        <img
+        <Image
           src={withDefault(course.thumbnail_url, DEFAULT_BANNER_URL)}
           alt={course.title}
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
         
         {/* Content Type Badge */}
@@ -191,15 +191,13 @@ const CourseCard: FC<CourseCardProps> = ({
         {showInstructor && (
           <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 bg-[#4ECDC4]/20 rounded-full flex items-center justify-center">
-              {course.instructor.avatar_url ? (
-                <img
-                  src={course.instructor.avatar_url}
-                  alt={course.instructor.full_name}
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <User className="w-3 h-3 text-[#4ECDC4]" />
-              )}
+              <Image
+                src={course.instructor?.avatar_url || '/default-avatar.png'}
+                alt={course.instructor?.name || 'Instructor'}
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
             </div>
             <span className="text-sm text-[#2C3E50]/70">
               {course.instructor.full_name}

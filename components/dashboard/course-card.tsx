@@ -3,6 +3,7 @@ import { Progress } from '@/components/ui/progress'
 import { Play } from 'lucide-react'
 import Image from 'next/image'
 import { withDefault, DEFAULT_BANNER_URL } from "@/lib/defaults";
+import { SafeImage } from "@/components/ui/safe-image"
 
 interface Course {
   id: number;
@@ -23,8 +24,8 @@ export function CourseCard({ course, onContinue }: CourseCardProps) {
   return (
     <Card className="card-hover gradient-border">
       <div className="relative h-48">
-        <Image
-          src={withDefault(course.image, DEFAULT_BANNER_URL)}
+        <SafeImage
+          src={course.image}
           alt={course.title}
           fill
           className="object-cover rounded-t-lg"
