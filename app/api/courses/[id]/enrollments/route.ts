@@ -7,9 +7,9 @@ import * as Sentry from '@sentry/nextjs';
 
 // Explicit type definition for route context
 type RouteContext = {
-  params: { 
+  params: Promise<{ 
     id: string 
-  };
+  }>;
 };
 
 type Enrollment = {
@@ -20,7 +20,13 @@ type Enrollment = {
     full_name: string;
     email: string;
     avatar_url: string;
-  };
+  }[];  // Users is an array from Supabase
+};
+
+type Lesson = {
+  id: string;
+  is_published: boolean;
+  // Add other lesson properties as needed
 };
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +37,7 @@ export async function GET(
 ): Promise<NextResponse> {
   validateEnv();
   
-  const courseId = context.params.id;  // Access via context.params
+  const { id: courseId } = await context.params;  // Await the Promise
   const supabase = await createApiSupabaseClient();
 
   return trackPerformance('GET /api/courses/[id]/enrollments', async () => {
@@ -157,7 +163,7 @@ export async function GET(
     } catch (error) {
       console.error('Unexpected error:', error);
       Sentry.captureException(error);
-      const apiError = handleApiError(error);
+      const apiError = await handleApiError(error);
       return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
     }
   });
