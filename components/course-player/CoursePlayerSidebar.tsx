@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { isLessonLocked } from '@/lib/utils/lessonLock';
 
-type LessonType = "video" | "quiz" | "assignment" | "text";
+type LessonType = "video" | "quiz" | "assignment" | "text" | "research";
 
 interface Lesson {
   id: string;
@@ -222,7 +222,7 @@ export const CoursePlayerSidebar: FC<CoursePlayerSidebarProps & { courseTitle?: 
                           tabIndex={locked ? -1 : 0}
                           aria-current={isCurrent ? "page" : undefined}
                           aria-label={lesson.title}
-                          aria-selected={isCurrent}
+                          aria-pressed={isCurrent}
                           role="button"
                           onClick={() => !locked && onNavigate?.(lesson.id)}
                           onKeyDown={e => {
