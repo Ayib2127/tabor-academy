@@ -21,10 +21,10 @@ async function verifyLessonOwnership(supabase: any, lessonId: string, userId: st
 // --- PUT: Update a specific lesson ---
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createSupabaseServerClient();
-  const { id: lessonId } = params;
+  const { id: lessonId } = await params;
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -65,7 +65,7 @@ export async function PUT(
     return NextResponse.json(updatedLesson);
 
   } catch (error) {
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error, 'PUT /api/lessons/[id]');
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
@@ -73,10 +73,10 @@ export async function PUT(
 // --- DELETE: Delete a specific lesson ---
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
     const supabase = await createSupabaseServerClient();
-    const { id: lessonId } = params;
+    const { id: lessonId } = await params;
 
     try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -103,7 +103,7 @@ export async function DELETE(
         return NextResponse.json({ message: 'Lesson deleted successfully' });
 
     } catch (error) {
-        const apiError = handleApiError(error);
+        const apiError = await handleApiError(error, 'DELETE /api/lessons/[id]');
         return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
     }
 } 

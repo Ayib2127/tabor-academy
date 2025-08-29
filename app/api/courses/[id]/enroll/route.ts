@@ -13,12 +13,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<any>> {
   const supabase = await createApiSupabaseClient();
-  const { id: courseId } = await params;
 
   try {
+    const { id: courseId } = await context.params;
+
     // 1. Check for authenticated user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -47,7 +48,7 @@ export async function POST(
 
     if (enrollmentCheckError) {
       console.error('Error checking enrollment:', enrollmentCheckError);
-      throw handleApiError(enrollmentCheckError);
+      throw enrollmentCheckError;
     }
 
     if (existingEnrollment) {
@@ -74,7 +75,7 @@ export async function POST(
 
       if (enrollmentError) {
         console.error('Error creating enrollment:', enrollmentError);
-        throw handleApiError(enrollmentError);
+        throw enrollmentError;
       }
 
       // Track enrollment event
@@ -142,7 +143,7 @@ export async function POST(
 
       if (userError) {
         console.error('Error fetching user profile:', userError);
-        throw handleApiError(userError);
+        throw userError;
       }
 
       // Initialize payment with Stripe
@@ -172,7 +173,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Enrollment error:', error);
     Sentry.captureException(error);
-    const apiError = await handleApiError(error);
+    const apiError = await handleApiError(error, 'POST /api/courses/[id]/enroll');
     return NextResponse.json({ 
       code: apiError.code, error: apiError.message, details: apiError.details 
     }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'RESOURCE_CONFLICT' ? 409 : apiError.code === 'NOT_FOUND' ? 404 : apiError.code === 'PAYMENT_ERROR' ? 402 : 500 });

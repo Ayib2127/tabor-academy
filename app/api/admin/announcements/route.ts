@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Announcement API error:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({
       code: apiError.code,
       error: apiError.message,
@@ -88,7 +88,7 @@ export async function GET() {
 
   } catch (error: any) {
     console.error('Get announcements API error:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({
       code: apiError.code,
       error: apiError.message,

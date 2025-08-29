@@ -2,8 +2,8 @@ import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 
 // GET endpoint to check course status
-export async function GET(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const courseId = params.id;
   const supabase = await createApiSupabaseClient();
 

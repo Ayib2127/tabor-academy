@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createApiSupabaseClient();
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
     
     const userId = userData.user.id;
-    const lessonId = params.id;
+    const { id: lessonId } = await params;
     
     console.log('[DEBUG] Fetching notes:', { userId, lessonId });
     
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     console.log('[DEBUG] Notes fetch result:', { data, error });
     
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as any).code === 'PGRST116') {
         // No notes found - return empty string
         return NextResponse.json({ notes: '' });
       }
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createApiSupabaseClient();
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
     
     const userId = userData.user.id;
-    const lessonId = params.id;
+    const { id: lessonId } = await params;
     const body = await req.json();
     
     console.log('[DEBUG] Saving notes:', { userId, lessonId, body });
@@ -65,7 +65,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         updated_at: new Date().toISOString()
       }], { 
         onConflict: 'lesson_id,user_id' 
-      });
+      })
+      .select();
     
     console.log('[DEBUG] Notes upsert result:', { data, error });
     
@@ -74,7 +75,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Failed to save notes' }, { status: 500 });
     }
     
-    return NextResponse.json({ success: true, notes: data?.[0]?.notes || '' });
+    const first = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    return NextResponse.json({ success: true, notes: first?.notes || '' });
     
   } catch (error) {
     console.error('Unexpected error in notes POST:', error);

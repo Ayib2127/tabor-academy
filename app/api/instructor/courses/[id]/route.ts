@@ -3,35 +3,24 @@ import { cookies as getCookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { courseCreationSchema } from '@/lib/validations/course';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
-import { handleApiError } from '@/lib/utils/error-handling';
+import { handleApiError, ValidationError, ForbiddenError } from '@/lib/utils/error-handling';
 
 // Helper to always resolve cookies
 async function resolveCookies() {
-  const maybePromise = getCookies();
-  if (typeof (maybePromise as any)?.then === 'function') {
-    return await maybePromise;
-  }
-  return maybePromise;
+  return getCookies();
 }
 
 // --- Enhanced GET endpoint for fetching course details ---
 export async function GET(
   req: Request,
-  context: { params: { id: string } | Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  // Await params if it's a Promise
-  const params = typeof (context.params as any)?.then === 'function' ? await (context.params as Promise<{ id: string }>) : (context.params as { id: string });
+  const params = await context.params;
   const courseId = params.id;
 
   try {
-    const cookieStore = await resolveCookies();
-    // Log all cookies for debugging
-    console.log('All cookies:', cookieStore.getAll());
-    const sessionCookie = cookieStore.get('sb-fmbakckfxuabratissxg-auth-token');
-    console.log('Session cookie:', sessionCookie);
-
     // Use standardized client for robust SSR/API support
-    const supabase = await createApiSupabaseClient(cookieStore);
+    const supabase = await createApiSupabaseClient();
 
     // Use getUser for more reliable SSR session handling
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -146,19 +135,17 @@ export async function GET(
 
   } catch (error: any) {
     console.error('Course details API error:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request, context: { params: { id: string } | Promise<{ id: string }> }) {
-  const cookieStore = await resolveCookies();
-  // Await params if it's a Promise
-  const params = typeof (context.params as any)?.then === 'function' ? await (context.params as Promise<{ id: string }>) : (context.params as { id: string });
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const courseId = params.id;
 
   try {
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = createRouteHandlerClient({ cookies: getCookies });
 
     // Get session
     const {
@@ -248,8 +235,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
 
     // Update modules and lessons with better error handling
     try {
-      const resolvedCookieStore = await resolveCookies();
-      await updateModulesAndLessons(courseId, validatedData.modules, resolvedCookieStore);
+      await updateModulesAndLessons(courseId, validatedData.modules, getCookies);
     } catch (modErr: any) {
       console.error('Error updating modules/lessons:', modErr);
       throw new ValidationError(`Failed to update course structure: ${modErr.message}`);
@@ -266,7 +252,7 @@ export async function PATCH(req: Request, context: { params: { id: string } | Pr
     });
   } catch (error: any) {
     console.error('Error updating course:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }

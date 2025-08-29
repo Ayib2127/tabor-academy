@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,9 +70,9 @@ export default function CoursePage() {
   useEffect(() => {
     fetchCourseDetails();
     fetchCurriculum();
-  }, [courseId]);
+  }, [courseId, fetchCourseDetails, fetchCurriculum]);
 
-  const fetchCourseDetails = async () => {
+  const fetchCourseDetails = useCallback(async () => {
         try {
             setLoading(true);
       const response = await fetch(`/api/instructor/courses/${courseId}`);
@@ -100,9 +100,9 @@ export default function CoursePage() {
       } finally {
         setLoading(false);
       }
-    };
+    }, [courseId]);
 
-  const fetchCurriculum = async () => {
+  const fetchCurriculum = useCallback(async () => {
     if (!courseId) return;
     try {
       const response = await fetch(`/api/courses/${courseId}/modules`);
@@ -121,7 +121,7 @@ export default function CoursePage() {
         toast.error(err.message || 'Failed to load curriculum');
       }
     }
-  };
+  }, [courseId]);
 
   const handleSubmitForReview = async () => {
     if (!course) return;

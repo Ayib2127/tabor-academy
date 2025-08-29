@@ -1,16 +1,11 @@
 import { withAuth } from '@/lib/utils/withAuth';
 import CourseContentPageClient from './page-client';
 
-export default async function CourseContentPageWrapper({ params }: { params: { id: string } | Promise<{ id: string }> }) {
-  let resolvedParams: { id: string };
-  if (typeof (params as any)?.then === 'function') {
-    resolvedParams = await (params as Promise<{ id: string }>);
-  } else {
-    resolvedParams = params as { id: string };
-  }
+export default async function ContentPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   await withAuth({
     roles: ['instructor'],
-    resource: { table: 'courses', id: resolvedParams.id, ownerField: 'instructor_id' },
+    resource: { table: 'courses', id, ownerField: 'instructor_id' },
   });
   return <CourseContentPageClient />;
 }

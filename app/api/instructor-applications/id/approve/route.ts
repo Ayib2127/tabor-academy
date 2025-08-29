@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 // import { sendWelcomeEmail } from "@/lib/email"; // implement as needed
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   // Fetch application to get user_id
   const { data: app, error: appError } = await supabase

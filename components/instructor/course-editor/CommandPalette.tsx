@@ -233,7 +233,7 @@ const CommandPalette: FC<CommandPaletteProps> = ({
       setFilteredActions(filtered);
     }
     setSelectedIndex(0);
-  }, [searchQuery]);
+  }, [searchQuery, allActions]);
 
   // Handle keyboard navigation
   useEffect(() => {

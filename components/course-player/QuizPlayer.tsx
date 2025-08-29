@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, FC } from 'react';
 import { Quiz, QuizQuestion } from '@/types/quiz';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -99,7 +99,7 @@ const QuizPlayer: FC<QuizPlayerProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, showResults]);
+  }, [timeLeft, showResults, handleSubmit]);
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
 
@@ -122,7 +122,7 @@ const QuizPlayer: FC<QuizPlayerProps> = ({
     }
   };
 
-  const calculateResults = (): QuizResults => {
+  const calculateResults = useCallback((): QuizResults => {
     const correctAnswers = quiz.questions.filter((question) => {
       const userAnswer = answers[question.id];
       if (!userAnswer) return false;
@@ -170,9 +170,9 @@ const QuizPlayer: FC<QuizPlayerProps> = ({
         })(),
       })),
     };
-  };
+  }, [quiz.questions, answers, timeLeft]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
       const results = calculateResults();
@@ -190,7 +190,7 @@ const QuizPlayer: FC<QuizPlayerProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [quiz.id, attempts, onComplete, calculateResults]);
 
   return (
     <div className="space-y-6">

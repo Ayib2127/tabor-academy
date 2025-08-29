@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase/client';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     
     // Get the current user
     const { data: { session } } = await supabase.auth.getSession();
@@ -39,7 +39,7 @@ export async function GET(
       .single();
       
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as any).code === 'PGRST116') {
         return NextResponse.json(
           { error: 'Enrollment not found' },
           { status: 404 }
@@ -102,10 +102,10 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     
     // Get the current user
     const { data: { session } } = await supabase.auth.getSession();

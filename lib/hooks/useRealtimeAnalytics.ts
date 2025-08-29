@@ -191,24 +191,16 @@ export function useRealtimeAnalytics({
     // Show insights as toasts for important alerts
     insights.forEach(insight => {
       if (insight.impact === 'high' && insight.type === 'alert') {
-        if (insight.code) {
-          showApiErrorToast({
-            code: insight.code,
-            error: insight.title,
-            details: insight,
-          });
-        } else {
-          toast.error(insight.title, {
-            description: insight.description,
-            duration: 8000,
-            action: insight.action ? {
-              label: insight.action,
-              onClick: () => {
-                // Handle action click
-              }
-            } : undefined,
-          });
-        }
+        toast.error(insight.title, {
+          description: insight.description,
+          duration: 8000,
+          action: insight.action ? {
+            label: insight.action,
+            onClick: () => {
+              // Handle action click
+            }
+          } : undefined,
+        });
       } else if (insight.impact === 'high' && insight.type === 'success') {
         toast.success(insight.title, {
           description: insight.description,
@@ -216,6 +208,7 @@ export function useRealtimeAnalytics({
         });
       }
     });
+    return insights;
   }, []);
 
   // Set up real-time subscriptions

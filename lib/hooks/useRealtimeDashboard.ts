@@ -271,7 +271,7 @@ export function useRealtimeDashboard({
         console.warn('Error cleaning up real-time dashboard subscriptions:', err);
       }
     };
-  }, [enabled, userId, instructorId, onUpdate]);
+  }, [enabled, userId, instructorId, onUpdate, channels]);
 
   // Manual refresh function
   const refresh = useCallback(() => {

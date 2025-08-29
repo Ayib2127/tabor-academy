@@ -4,7 +4,7 @@ import { Quiz } from '@/types/quiz';
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createApiSupabaseClient();
@@ -21,10 +21,11 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     const { data: quiz, error } = await supabase
       .from('quizzes')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -43,7 +44,7 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createApiSupabaseClient();
@@ -61,6 +62,7 @@ export async function PATCH(
     }
 
     const quiz: Quiz = await req.json();
+    const { id } = await params;
 
     // Update quiz
     const { error } = await supabase
@@ -76,7 +78,7 @@ export async function PATCH(
         showCorrectAnswers: quiz.showCorrectAnswers,
         showExplanations: quiz.showExplanations,
       })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       throw error;

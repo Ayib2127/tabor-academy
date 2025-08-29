@@ -316,7 +316,7 @@ export default function InstructorDashboardPageClient({ user, role, initialData 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []); // Empty dependency array - runs only once on mount
+  }, [initialData.notifications]); // Include initialData.notifications in dependency array
 
   // Handle clicking outside notification dropdown
   useEffect(() => {

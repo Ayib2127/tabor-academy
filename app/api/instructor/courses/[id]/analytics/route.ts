@@ -5,10 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   req: Request,
-  context: Promise<{ params: { id: string } }>
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { params } = await context;
-  const courseId = params.id;
+  const { id: courseId } = await context.params;
 
   try {
     const supabase = await createApiSupabaseClient();

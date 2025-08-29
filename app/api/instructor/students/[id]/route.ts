@@ -4,14 +4,14 @@ import { handleApiError, ForbiddenError } from '@/lib/utils/error-handling';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     console.log('--- API Call: /api/instructor/students/[id] ---');
     console.log('Request URL:', request.url);
-    console.log('Student ID:', params.id);
+    const { id: studentId } = await params;
+    console.log('Student ID:', studentId);
 
-    const studentId = params.id;
     const supabase = await createApiSupabaseClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -61,11 +61,29 @@ export async function GET(
         const course = enrollment.courses;
         if (!course) return null; // Should not happen if join is successful and RLS is correct
 
-        // Fetch all published lessons for this course
-        const { data: lessons, error: lessonsError } = await supabase
-          .from('module_lessons')  // Changed from 'lessons'
-          .select('*')
+        // Resolve lessons across modules for this course
+        const { data: modules, error: modulesError } = await supabase
+          .from('course_modules')
+          .select('id')
           .eq('course_id', course.id);
+        if (modulesError) {
+          console.error(`Error fetching modules for course ${course.id}:`, modulesError);
+          return {
+            course_id: course.id,
+            course_title: course.title,
+            enrolled_at: enrollment.enrolled_at,
+            progress: 0,
+            completed_lessons: 0,
+            total_lessons: 0,
+            status: 'in-progress'
+          };
+        }
+        const moduleIds = (modules || []).map(m => m.id);
+
+        const { data: lessons, error: lessonsError } = await supabase
+          .from('module_lessons')
+          .select('id, is_published')
+          .in('module_id', moduleIds);
 
         if (lessonsError) {
           console.error(`Error fetching lessons for course ${course.id}:`, lessonsError);
@@ -80,14 +98,15 @@ export async function GET(
           };
         }
 
-        const totalLessons = lessons.length;
+        const publishedLessons = (lessons || []).filter(l => (l as any).is_published);
+        const totalLessons = publishedLessons.length;
 
         // Fetch progress for this student in this course
         const { data: progressRecords, error: progressError } = await supabase
           .from('progress')
           .select('lesson_id, completed')
           .eq('user_id', studentId)
-          .in('lesson_id', lessons.map(l => l.id));
+          .in('lesson_id', publishedLessons.map(l => (l as any).id));
 
         if (progressError) {
           console.error(`Error fetching progress for student ${studentId} in course ${course.id}:`, progressError);
@@ -97,12 +116,12 @@ export async function GET(
             enrolled_at: enrollment.enrolled_at,
             progress: 0,
             completed_lessons: 0,
-            total_lessons: 0,
+            total_lessons: totalLessons,
             status: 'in-progress'
           };
         }
 
-        const completedLessons = progressRecords.filter(pr => pr.completed).length;
+        const completedLessons = (progressRecords || []).filter(pr => pr.completed).length;
         const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
         const status = progressPercentage === 100 ? 'completed' : 'in-progress';
 
@@ -134,7 +153,7 @@ export async function GET(
 
   } catch (err: any) {
     console.error('Unexpected error fetching individual student data:', err);
-    const apiError = handleApiError(err);
+    const apiError = await handleApiError(err, 'GET /api/instructor/students/[id]');
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 

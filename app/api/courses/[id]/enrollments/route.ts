@@ -20,13 +20,7 @@ type Enrollment = {
     full_name: string;
     email: string;
     avatar_url: string;
-  }[];  // Users is an array from Supabase
-};
-
-type Lesson = {
-  id: string;
-  is_published: boolean;
-  // Add other lesson properties as needed
+  };
 };
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +31,7 @@ export async function GET(
 ): Promise<NextResponse> {
   validateEnv();
   
-  const { id: courseId } = await context.params;  // Await the Promise
+  const { id: courseId } = await context.params;  // Access via awaited params
   const supabase = await createApiSupabaseClient();
 
   return trackPerformance('GET /api/courses/[id]/enrollments', async () => {
@@ -100,11 +94,27 @@ export async function GET(
         }, { status: 500 });
       }
 
-      // Get published lessons
-      const { data: lessons, error: lessonsError } = await supabase
-        .from('module_lessons')  // Changed from 'lessons'
-        .select('*')
+      // Fetch modules for this course then lessons
+      const { data: modules, error: modulesError } = await supabase
+        .from('course_modules')
+        .select('id')
         .eq('course_id', courseId);
+      if (modulesError) {
+        console.error('Error fetching modules:', modulesError);
+        Sentry.captureException(modulesError);
+        return NextResponse.json({
+          code: 'INTERNAL_SERVER_ERROR',
+          error: 'Failed to fetch modules',
+          details: modulesError
+        }, { status: 500 });
+      }
+      const moduleIds = (modules || []).map(m => m.id);
+
+      // Get lessons across modules
+      const { data: lessons, error: lessonsError } = await supabase
+        .from('module_lessons')
+        .select('id, is_published')
+        .in('module_id', moduleIds);
 
       if (lessonsError) {
         console.error('Error fetching lessons:', lessonsError);
@@ -116,21 +126,19 @@ export async function GET(
         }, { status: 500 });
       }
 
-      const lessonsTyped = (lessons ?? []) as Lesson[];
-      const publishedLessons = lessonsTyped.filter(l => l.is_published);
+      const publishedLessons = (lessons || []).filter(l => (l as any).is_published);
       const totalLessons = publishedLessons.length;
 
-      const enrollmentsTyped = (enrollments ?? []) as Enrollment[];
       const studentsWithProgress = await Promise.all(
-        enrollmentsTyped.map(async (enrollment) => {
-          const studentId = enrollment.user_id;
+        (enrollments || []).map(async (enrollment: any) => {
+          const studentId = enrollment.user_id as string;
 
           // Get completed lessons
           const { data: progressRecords, error: progressError } = await supabase
             .from('progress')
             .select('lesson_id, completed')
             .eq('user_id', studentId)
-            .in('lesson_id', publishedLessons.map(l => l.id));
+            .in('lesson_id', publishedLessons.map(l => (l as any).id));
 
           if (progressError) {
             console.error('Error fetching progress:', progressError);
@@ -144,7 +152,7 @@ export async function GET(
             };
           }
 
-          const completedLessonsCount = progressRecords.filter(pr => pr.completed).length;
+          const completedLessonsCount = (progressRecords || []).filter(pr => pr.completed).length;
           const progressPercentage = totalLessons > 0 
             ? Math.round((completedLessonsCount / totalLessons) * 100) 
             : 0;
@@ -163,7 +171,7 @@ export async function GET(
     } catch (error) {
       console.error('Unexpected error:', error);
       Sentry.captureException(error);
-      const apiError = await handleApiError(error);
+      const apiError = await handleApiError(error, 'GET /api/courses/[id]/enrollments');
       return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
     }
   });

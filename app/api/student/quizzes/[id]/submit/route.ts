@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import { QuizResults } from '@/types/quiz';
 import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 
-export async function POST(req: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   console.log("Quiz submit: params.id =", params.id);
   try {
     const supabase = await createApiSupabaseClient();
@@ -81,7 +81,7 @@ export async function POST(req: Request, context: { params: { id: string } }) {
   } catch (error: any) {
     // Log the full error stack for debugging
     console.error('Error submitting quiz:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json(
       { code: apiError.code, error: apiError.message, details: apiError.details },
       { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 }

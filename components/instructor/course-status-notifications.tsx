@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,12 +58,7 @@ export function CourseStatusNotifications({ userId, courses }: CourseStatusNotif
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<StatusNotification | null>(null);
 
-  useEffect(() => {
-    // Generate notifications based on course status changes
-    generateNotificationsFromCourses();
-  }, [courses, userId]);
-
-  const generateNotificationsFromCourses = () => {
+  const generateNotificationsFromCourses = useCallback(() => {
     const newNotifications: StatusNotification[] = [];
 
     courses.forEach(course => {
@@ -126,7 +121,12 @@ export function CourseStatusNotifications({ userId, courses }: CourseStatusNotif
 
     setNotifications(newNotifications);
     setUnreadCount(newNotifications.filter(n => !n.read).length);
-  };
+  }, [courses]);
+
+  useEffect(() => {
+    // Generate notifications based on course status changes
+    generateNotificationsFromCourses();
+  }, [courses, userId, generateNotificationsFromCourses]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications(prev => prev.map(notification => 

@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     console.error('Course creation error:', err);
     Sentry.captureException(err);
-    const apiError = handleApiError(err);
+    const apiError = await handleApiError(err, 'POST /api/courses');
     return NextResponse.json(
       { code: apiError.code, error: apiError.message, details: apiError.details },
       { status: apiError.code === 'VALIDATION_ERROR' ? 400 :
@@ -261,31 +261,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET_BY_ID(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await createApiSupabaseClient();
-    
-    const { data, error } = await supabase
-      .from('courses')
-      .select('*')
-      .eq('id', params.id)
-      .single();
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
-  }
-}

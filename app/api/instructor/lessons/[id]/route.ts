@@ -7,8 +7,8 @@ const bodySchema = z.object({
   type: z.string().optional(),
 });
 
-export async function PATCH(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const lessonId = params.id;
   const supabase = await createApiSupabaseClient();
 

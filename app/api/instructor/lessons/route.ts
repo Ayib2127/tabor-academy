@@ -10,8 +10,8 @@ const bodySchema = z.object({
   is_published: z.boolean().optional(),
 });
 
-export async function PATCH(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const lessonId = params.id;
   const supabase = await createApiSupabaseClient();
 
@@ -121,7 +121,7 @@ export async function PATCH(req: Request, context: Promise<{ params: { id: strin
 
   } catch (error: any) {
     console.error('Error updating lesson:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({
       code: apiError.code,
       error: apiError.message,
@@ -236,7 +236,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ lesson, quiz });
   } catch (error: any) {
     console.error('[LESSON API] Error creating lesson:', error, error?.stack);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({
       code: apiError.code,
       error: apiError.message,

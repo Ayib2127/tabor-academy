@@ -3,6 +3,35 @@ import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { cookies } from 'next/headers';
 import { handleApiError } from '@/lib/utils/error-handling';
 
+// CORS configuration
+const ALLOWED_ORIGINS = [
+  process.env.NEXT_PUBLIC_APP_URL,
+  process.env.NEXT_PUBLIC_SITE_URL,
+  process.env.NEXT_PUBLIC_API_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: Request): HeadersInit {
+  const origin = request.headers.get('origin') || '';
+  const isAllowed = ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin);
+
+  const headers: HeadersInit = {
+    'Access-Control-Allow-Origin': isAllowed ? origin : (ALLOWED_ORIGINS[0] || '*'),
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization, apikey, prefer',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin',
+  };
+
+  return headers;
+}
+
+export async function OPTIONS(request: Request) {
+  const headers = getCorsHeaders(request);
+  return new Response(null, { status: 204, headers });
+}
+
 interface DashboardStats {
   totalStudents: number;
   totalRevenue: number;
@@ -70,6 +99,7 @@ interface DashboardData {
 
 export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/dashboard ---');
+  const corsHeaders = getCorsHeaders(request);
   const cookieStore = await cookies();
   const allCookies = await cookieStore.getAll();
   console.log('API cookies:', allCookies);
@@ -80,7 +110,7 @@ export async function GET(request: Request) {
 
   if (!sessionCookie || !sessionCookie.value) {
     console.error('No Supabase auth cookie found!');
-    return NextResponse.json({ code: 'AUTH_REQUIRED', error: 'No Supabase auth cookie found' }, { status: 401 });
+    return new NextResponse(JSON.stringify({ code: 'AUTH_REQUIRED', error: 'No Supabase auth cookie found' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 
   // Optionally, decode the JWT and log expiry (for debugging)
@@ -110,12 +140,12 @@ export async function GET(request: Request) {
 
     if (userError) {
       console.error('Error getting user session:', userError);
-      return NextResponse.json({ code: 'INTERNAL_SERVER_ERROR', error: userError.message, details: userError }, { status: 500 });
+      return new NextResponse(JSON.stringify({ code: 'INTERNAL_SERVER_ERROR', error: userError.message, details: userError }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     if (!user) {
       console.log('Authentication failed: No user found for instructor dashboard API.');
-      return NextResponse.json({ code: 'UNAUTHORIZED', error: 'Unauthorized: No active session' }, { status: 401 });
+      return new NextResponse(JSON.stringify({ code: 'UNAUTHORIZED', error: 'Unauthorized: No active session' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     // Verify user is an instructor
@@ -126,7 +156,7 @@ export async function GET(request: Request) {
       .single();
 
     if (profileError || profile?.role !== 'instructor') {
-      return NextResponse.json({ code: 'FORBIDDEN', error: 'Instructor access required' }, { status: 403 });
+      return new NextResponse(JSON.stringify({ code: 'FORBIDDEN', error: 'Instructor access required' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     // Fetch all instructor courses with detailed information
@@ -150,7 +180,7 @@ export async function GET(request: Request) {
 
     if (coursesError) {
       console.error('Error fetching instructor courses:', coursesError);
-      return NextResponse.json({ code: 'INTERNAL_SERVER_ERROR', error: coursesError.message, details: coursesError }, { status: 500 });
+      return new NextResponse(JSON.stringify({ code: 'INTERNAL_SERVER_ERROR', error: coursesError.message, details: coursesError }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     // Calculate summary statistics
@@ -438,11 +468,15 @@ export async function GET(request: Request) {
       activityCount: recentActivity.length,
     });
 
-    return NextResponse.json(dashboardData);
+    const response = NextResponse.json(dashboardData);
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      if (value !== undefined) response.headers.set(key, String(value));
+    });
+    return response;
 
   } catch (err: any) {
     console.error('Unexpected error fetching instructor dashboard:', err);
-    const apiError = handleApiError(err);
-    return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: 500 });
+    const apiError = await handleApiError(err, 'instructor dashboard');
+    return new NextResponse(JSON.stringify({ code: apiError.code, error: apiError.message, details: apiError.details }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } as any });
   }
 }

@@ -75,6 +75,15 @@ export function HowItWorksSection() {
   const [visibleConnectors, setVisibleConnectors] = useState<number[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
 
+  // Initialize steps for mobile devices immediately
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024; // lg breakpoint
+    if (isMobile) {
+      setVisibleSteps([1, 2, 3]);
+      setVisibleConnectors([1, 2]);
+    }
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -86,8 +95,8 @@ export function HowItWorksSection() {
         });
       },
       {
-        threshold: 0.3,
-        rootMargin: '-50px'
+        threshold: 0.1, // Reduced threshold for better mobile detection
+        rootMargin: '0px'
       }
     );
 
@@ -95,8 +104,19 @@ export function HowItWorksSection() {
       observer.observe(sectionRef.current);
     }
 
-    return () => observer.disconnect();
-  }, []);
+    // Fallback: Show all steps after 2 seconds if intersection observer fails
+    const fallbackTimer = setTimeout(() => {
+      if (visibleSteps.length === 0) {
+        setVisibleSteps([1, 2, 3]);
+        setVisibleConnectors([1, 2]);
+      }
+    }, 2000);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallbackTimer);
+    };
+  }, [visibleSteps.length]);
 
   const animateSteps = () => {
     // Reset animations
@@ -202,7 +222,7 @@ export function HowItWorksSection() {
                 )}
                 <div
                   className={`transition-all duration-800 ${
-                    visibleSteps.includes(step.number)
+                    visibleSteps.includes(step.number) || visibleSteps.length === 0
                       ? 'opacity-100 translate-y-0'
                       : 'opacity-0 translate-y-8'
                   }`}

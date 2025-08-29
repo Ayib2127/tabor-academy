@@ -54,7 +54,7 @@ export default function MobileSettingsPage() {
     };
 
     fetchCategories();
-  }, []);
+  }, [supabase]);
 
   // Mock settings data
   const settings = {

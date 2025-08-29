@@ -10,9 +10,9 @@ const announcementSchema = z.object({
 
 export async function POST(
   req: Request,
-  context: Promise<{ params: { id: string } }>
+  props: { params: Promise<{ id: string }> }
 ) {
-  const { params } = await context;
+  const params = await props.params;
   const courseId = params.id;
 
   try {
@@ -130,7 +130,7 @@ export async function POST(
 
   } catch (error: any) {
     console.error('Course announcement API error:', error);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error);
     return NextResponse.json({
       code: apiError.code,
       error: apiError.message,

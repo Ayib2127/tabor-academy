@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
 
 export default function ApiDocs() {
-  const [spec, setSpec] = useState(null);
+  const [spec, setSpec] = useState<any>(null);
 
   useEffect(() => {
     fetch('/api/swagger')
@@ -19,9 +19,11 @@ export default function ApiDocs() {
     return <div>Loading...</div>;
   }
 
+  const SwaggerComponent = SwaggerUI as any;
+
   return (
     <div className="container mx-auto p-4">
-      <SwaggerUI spec={spec} />
+      <SwaggerComponent spec={spec} />
     </div>
   );
 }

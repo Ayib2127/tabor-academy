@@ -66,7 +66,8 @@ interface DashboardData {
 }
 
 async function fetchDashboardData(userId: string): Promise<DashboardData> {
-  const supabase = await createApiSupabaseClient();
+  const cookieStore = await cookies();
+  const supabase = await createApiSupabaseClient(cookieStore);
 
   // Fetch all instructor courses with detailed information
   const { data: coursesData, error: coursesError } = await supabase
@@ -136,55 +137,50 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
 
       const currentCourseRating = courseRating || 0;
 
-      // Fetch lessons for the course (fallback to old structure)
-      let lessonsData = null;
-      let lessonsError = null;
-      
+      // Fetch modules and lessons for this course (correct relation)
+      let modules: Array<{ id: string; title: string; order: number; lessons: Array<{ id: string; title: string; type: 'video' | 'text' | 'quiz' | 'assignment'; position: number; dueDate?: string; needsGrading?: boolean; }> }> = [];
       try {
-        const result = await supabase
-          .from('module_lessons')
+        const { data: modulesData, error: modulesError } = await supabase
+          .from('course_modules')
           .select(`
             id,
             title,
-            description,
-            content,
-            video_url,
-            duration,
-            position,
-            is_published
+            order,
+            module_lessons (
+              id,
+              title,
+              type,
+              position,
+              due_date,
+              needs_grading
+            )
           `)
           .eq('course_id', course.id)
-          .order('position', { ascending: true });
-        
-        lessonsData = result.data;
-        lessonsError = result.error;
+          .order('order', { ascending: true });
+
+        if (modulesError) {
+          console.error(`Error fetching modules for course ${course.id}:`, modulesError?.message || modulesError);
+        }
+
+        modules = (modulesData || []).map((module: any) => ({
+          id: module.id,
+          title: module.title,
+          order: module.order,
+          lessons: (module.module_lessons || []).map((lesson: any) => ({
+            id: lesson.id,
+            title: lesson.title,
+            type: (lesson.type || 'text') as 'video' | 'text' | 'quiz' | 'assignment',
+            position: lesson.position,
+            dueDate: lesson.due_date,
+            needsGrading: !!lesson.needs_grading,
+          })).sort((a: any, b: any) => a.position - b.position),
+        }));
+
+        if (modules.length === 0) {
+          console.log(`No lessons found for course ${course.id} - this is normal for new courses`);
+        }
       } catch (error) {
-        console.error(`Error fetching lessons for course ${course.id}:`, error);
-        lessonsError = error;
-      }
-
-      if (lessonsError) {
-        console.error(`Error fetching lessons for course ${course.id}:`, lessonsError);
-      }
-
-      // Transform lessons data to match expected format
-      const modules = [{
-        id: `module-${course.id}`,
-        title: 'Course Content',
-        order: 1,
-        lessons: (lessonsData || []).map(lesson => ({
-          id: lesson.id,
-          title: lesson.title,
-          type: 'text' as 'video' | 'text' | 'quiz' | 'assignment', // Default to text
-          position: lesson.position,
-          dueDate: undefined, // Will be populated from assignments table if needed
-          needsGrading: false, // Will be populated from assignments table if needed
-        })).sort((a, b) => a.position - b.position)
-      }];
-
-      // If no lessons found, create a placeholder module to prevent errors
-      if (modules[0].lessons.length === 0) {
-        console.log(`No lessons found for course ${course.id} - this is normal for new courses`);
+        console.error(`Error fetching modules for course ${course.id}:`, error);
       }
 
       // Fetch assignment data for this course to populate due dates and grading status
@@ -220,7 +216,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
         ...module,
         lessons: module.lessons.map(lesson => {
           // Check if this lesson has an assignment by matching title or lesson_id
-          const assignment = (assignmentsData || []).find(a => 
+          const assignment = (assignmentsData || []).find((a: any) => 
             a.lesson_id === lesson.id || a.title === lesson.title
           );
           

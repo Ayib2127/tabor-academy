@@ -311,7 +311,7 @@ export function useRealtimeNotifications({
         }
       }
     };
-  }, [enabled, userId, onNotificationReceived, onNotificationUpdated]);
+  }, [enabled, userId, onNotificationReceived, onNotificationUpdated, channel, notifications]);
 
   return {
     notifications,

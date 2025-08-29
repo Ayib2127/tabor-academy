@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Star } from 'lucide-react';
@@ -33,11 +33,7 @@ export function RatingsDisplay({
   const [distribution, setDistribution] = useState([0, 0, 0, 0, 0]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchRatings();
-  }, [courseId]);
-
-  const fetchRatings = async () => {
+  const fetchRatings = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/courses/${courseId}/ratings`);
@@ -58,7 +54,11 @@ export function RatingsDisplay({
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchRatings();
+  }, [fetchRatings]);
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (

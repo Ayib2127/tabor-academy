@@ -1,10 +1,11 @@
 import { withAuth } from '@/lib/utils/withAuth';
 import ModulesPageClient from './page-client';
 
-export default async function ModulesPageWrapper({ params }: { params: { id: string } }) {
+export default async function ModulesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   await withAuth({
     roles: ['instructor'],
-    resource: { table: 'courses', id: params.id, ownerField: 'instructor_id' },
+    resource: { table: 'courses', id, ownerField: 'instructor_id' },
   });
-  return <ModulesPageClient id={params.id} />;
-} 
+  return <ModulesPageClient id={id} />;
+}

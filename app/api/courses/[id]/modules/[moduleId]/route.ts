@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; moduleId: string } }
+  { params }: { params: Promise<{ id: string; moduleId: string }> }
 ) {
   try {
-    const courseId = params.id;
-    const moduleId = params.moduleId;
+    const { id: courseId, moduleId } = await params;
 
     // In a real app, you would delete from your database
     return NextResponse.json({ success: true });

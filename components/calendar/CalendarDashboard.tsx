@@ -80,18 +80,8 @@ interface CalendarDashboardProps {
   role: string;
 }
 
-export default function CalendarDashboard({ userId, role }: CalendarDashboardProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [view, setView] = useState<'month' | 'week' | 'day'>('month');
-  const [filter, setFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  // Mock events data - replace with real API calls
-  const mockEvents: CalendarEvent[] = [
+// Mock events data - replace with real API calls
+const mockEvents: CalendarEvent[] = [
     {
       id: '1',
       title: 'Digital Marketing Workshop',
@@ -172,6 +162,16 @@ export default function CalendarDashboard({ userId, role }: CalendarDashboardPro
       },
     },
   ];
+
+export default function CalendarDashboard({ userId, role }: CalendarDashboardProps) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [view, setView] = useState<'month' | 'week' | 'day'>('month');
+  const [filter, setFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadEvents = async () => {

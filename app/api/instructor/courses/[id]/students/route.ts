@@ -4,9 +4,9 @@ import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/err
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const courseId = params.id;
+  const { id: courseId } = await params;
   const supabase = await createApiSupabaseClient();
 
   const {
@@ -54,22 +54,30 @@ export async function GET(
       throw enrollmentsError;
     }
 
-    // Fetch all lessons for the course to calculate total lessons
-    const { data: lessons, error: lessonsError } = await supabase
-      .from('module_lessons')
-      .select('*')
+    // Fetch lessons via course modules to calculate total lessons
+    const { data: modules, error: modulesError } = await supabase
+      .from('course_modules')
+      .select('id')
       .eq('course_id', courseId);
+    if (modulesError) {
+      console.error('Error fetching modules:', modulesError.message);
+      throw modulesError;
+    }
+    const moduleIds = (modules || []).map(m => m.id);
+
+    const { count: totalLessons, error: lessonsError } = await supabase
+      .from('module_lessons')
+      .select('id', { count: 'exact', head: true })
+      .in('module_id', moduleIds);
 
     if (lessonsError) {
       console.error('Error fetching lessons:', lessonsError.message);
       throw lessonsError;
     }
 
-    const totalLessons = lessons ? lessons.length : 0;
-
     const studentsData = enrollments.map(enrollment => {
       const completedLessons = enrollment.progress ? enrollment.progress.filter((p: any) => p.completed).length : 0;
-      const completionRate = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+      const completionRate = totalLessons ? (completedLessons / totalLessons) * 100 : 0;
 
       return {
         enrollmentId: enrollment.id,
@@ -85,7 +93,7 @@ export async function GET(
     return NextResponse.json({ students: studentsData });
   } catch (error: any) {
     console.error('Unexpected error:', error.message);
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error, 'GET /api/instructor/courses/[id]/students');
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 }

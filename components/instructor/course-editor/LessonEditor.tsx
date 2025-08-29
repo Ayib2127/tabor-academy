@@ -94,7 +94,7 @@ const LessonEditor: FC<LessonEditorProps> = ({
         content: parseContent(lesson.content),
       });
     }
-  }, [lesson?.id]);
+  }, [lesson?.id, lesson]);
 
   // Debounced save function
   const debouncedSave = useCallback(async (updatedLesson: LocalLesson) => {

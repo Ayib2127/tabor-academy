@@ -4,16 +4,16 @@ import { cookies } from 'next/headers';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = userData.user.id;
-  const lessonId = params.id;
+  const { id: lessonId } = await params;
   console.log('[DEBUG] Marking lesson complete:', { userId, lessonId });
   const upsertPayload = { user_id: userId, lesson_id: lessonId, completed: true };
   console.log('[DEBUG] Upsert payload:', upsertPayload);

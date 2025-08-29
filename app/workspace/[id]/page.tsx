@@ -31,7 +31,8 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 
-export default function ProjectWorkspacePage({ params }: { params: { id: string } }) {
+export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+  await params;
   const [isAutoSaving, setIsAutoSaving] = useState(false)
   const [activeMembers, setActiveMembers] = useState([
     {

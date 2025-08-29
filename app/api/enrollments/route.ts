@@ -24,11 +24,13 @@ export async function GET(request: NextRequest) {
           .eq('course_id', courseId);
         if (modulesError) throw modulesError;
         const moduleIds = (modules || []).map(m => m.id);
+
         let { data: lessons, error: lessonsError } = await supabase
           .from('module_lessons')
           .select('id, type, content, is_published')
           .in('module_id', moduleIds);
         if (lessonsError) throw lessonsError;
+
         // Only count published lessons with valid content
         lessons = (lessons || []).filter(lesson => {
           if (!lesson.is_published) return false;
@@ -49,6 +51,7 @@ export async function GET(request: NextRequest) {
           }
         });
         const lessonIds = lessons.map(l => l.id);
+
         // Get completed lessons for the user
         const { data: progressRows, error: progressError } = await supabase
           .from('progress')
@@ -57,6 +60,7 @@ export async function GET(request: NextRequest) {
           .in('lesson_id', lessonIds);
         if (progressError) throw progressError;
         const completedLessons = (progressRows || []).filter(p => p.completed).length;
+
         // Get enrollment as before
         const { data: enrollment, error } = await supabase
           .from('enrollments')
@@ -66,7 +70,7 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
         if (error) {
           console.error('Supabase error in enrollments GET:', error);
-          throw handleApiError(error);
+          throw error;
         }
         return NextResponse.json({
           enrollment,
@@ -75,7 +79,7 @@ export async function GET(request: NextRequest) {
         });
       } catch (err) {
         console.error('Unexpected error in enrollments GET:', err);
-        const apiError = handleApiError(err);
+        const apiError = await handleApiError(err, 'GET /api/enrollments?courseId');
         return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
       }
     }
@@ -98,17 +102,39 @@ export async function GET(request: NextRequest) {
       .eq('user_id', session.user.id);
       
     if (error) {
-      throw handleApiError(error);
+      throw error;
     }
     
     // Get progress for each enrollment
     const enrollmentsWithProgress = await Promise.all(
       data.map(async (enrollment) => {
+        // Fetch modules for this course
+        const { data: modulesForCourse, error: modulesForCourseError } = await supabase
+          .from('course_modules')
+          .select('id')
+          .eq('course_id', enrollment.course_id);
+        if (modulesForCourseError) {
+          console.error('Error fetching modules for course progress:', modulesForCourseError);
+          return enrollment;
+        }
+        const moduleIds = (modulesForCourse || []).map(m => m.id);
+
+        // Fetch lesson IDs for these modules
+        const { data: lessonsForModules, error: lessonsForModulesError } = await supabase
+          .from('module_lessons')
+          .select('id')
+          .in('module_id', moduleIds);
+        if (lessonsForModulesError) {
+          console.error('Error fetching lessons for course progress:', lessonsForModulesError);
+          return enrollment;
+        }
+        const lessonIds = (lessonsForModules || []).map(l => l.id);
+
         const { data: progressData, error: progressError } = await supabase
           .from('progress')
           .select('*')
           .eq('user_id', session.user.id)
-          .eq('lesson_id', supabase.from('module_lessons').select('id').eq('course_id', enrollment.course_id));
+          .in('lesson_id', lessonIds);
           
         if (progressError) {
           console.error('Error fetching progress:', progressError);
@@ -116,27 +142,30 @@ export async function GET(request: NextRequest) {
         }
         
         // Calculate progress percentage
-        const totalLessons = await supabase
+        const { count: totalLessonsCount, error: totalLessonsError } = await supabase
           .from('module_lessons')
           .select('id', { count: 'exact', head: true })
-          .eq('course_id', enrollment.course_id)
-          .eq('is_published', true);
-          
+          .in('module_id', moduleIds);
+        if (totalLessonsError) {
+          console.error('Error counting lessons for course progress:', totalLessonsError);
+          return enrollment;
+        }
+        
         const completedLessons = progressData.filter(p => p.completed).length;
-        const progressPercentage = totalLessons.count ? (completedLessons / totalLessons.count) * 100 : 0;
+        const progressPercentage = totalLessonsCount ? (completedLessons / totalLessonsCount) * 100 : 0;
         
         return {
           ...enrollment,
           progress: progressPercentage,
           completed_lessons: completedLessons,
-          total_lessons: totalLessons.count
+          total_lessons: totalLessonsCount
         };
       })
     );
     
     return NextResponse.json({ enrollments: enrollmentsWithProgress });
   } catch (error) {
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error, 'GET /api/enrollments');
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : 500 });
   }
 }
@@ -166,7 +195,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
       
     if (checkError) {
-      throw handleApiError(checkError);
+      throw checkError;
     }
     
     if (existingEnrollment) {
@@ -184,12 +213,12 @@ export async function POST(request: NextRequest) {
       .single();
       
     if (error) {
-      throw handleApiError(error);
+      throw error;
     }
     
     return NextResponse.json({ enrollment: data });
   } catch (error) {
-    const apiError = handleApiError(error);
+    const apiError = await handleApiError(error, 'POST /api/enrollments');
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'FORBIDDEN' ? 403 : apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'RESOURCE_CONFLICT' ? 409 : 500 });
   }
 }

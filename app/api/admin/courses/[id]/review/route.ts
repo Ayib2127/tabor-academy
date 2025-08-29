@@ -13,8 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: courseId } = await params;
-  const cookieStore = await cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ cookies });
 
   const {
     data: { session },
@@ -94,19 +93,24 @@ export async function POST(
 
     // If approved, also publish all lessons in the course
     if (action === 'approve') {
-      const { error: lessonsError } = await supabase
-        .from('module_lessons')
-        .update({ is_published: true })
-        .in('module_id', 
-          supabase
-            .from('course_modules')
-            .select('id')
-            .eq('course_id', courseId)
-        );
+      // First get the module IDs
+      const { data: moduleIds, error: moduleError } = await supabase
+        .from('course_modules')
+        .select('id')
+        .eq('course_id', courseId);
 
-      if (lessonsError) {
-        console.error('Error publishing lessons:', lessonsError);
-        // Don't fail the entire operation, but log the error
+      if (moduleError) {
+        console.error('Error fetching module IDs:', moduleError);
+      } else if (moduleIds && moduleIds.length > 0) {
+        const { error: lessonsError } = await supabase
+          .from('module_lessons')
+          .update({ is_published: true })
+          .in('module_id', moduleIds.map(m => m.id));
+
+        if (lessonsError) {
+          console.error('Error publishing lessons:', lessonsError);
+          // Don't fail the entire operation, but log the error
+        }
       }
     }
 

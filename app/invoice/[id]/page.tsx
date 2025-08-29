@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { QRCodeSVG } from "qrcode.react"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import {
   Download,
-  Mail,
   Printer,
+  Mail,
   Share2,
   CheckCircle,
   Building,
@@ -18,8 +18,11 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useParams } from "next/navigation"
+import { SiteHeader } from "@/components/site-header"
 
-export default function InvoicePage({ params }: { params: { id: string } }) {
+export default function InvoicePage() {
+  const params = useParams();
   const [isDownloading, setIsDownloading] = useState(false)
 
   // Mock invoice data

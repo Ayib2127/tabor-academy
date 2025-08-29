@@ -115,14 +115,8 @@ interface PredictiveAnalyticsProps {
   currentData: any;
 }
 
-export default function PredictiveAnalytics({ userId, role, currentData }: PredictiveAnalyticsProps) {
-  const [predictions, setPredictions] = useState<PredictionData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('3m');
-  const [showDetails, setShowDetails] = useState(false);
-
-  // Mock prediction data - replace with real AI predictions
-  const mockPredictions: PredictionData = {
+// Mock prediction data - replace with real AI predictions
+const createMockPredictions = (currentData: any): PredictionData => ({
     revenue: {
       current: currentData?.overview?.totalRevenue || 45680,
       predicted: 52340,
@@ -261,7 +255,13 @@ export default function PredictiveAnalytics({ userId, role, currentData }: Predi
         },
       ],
     },
-  };
+  });
+
+export default function PredictiveAnalytics({ userId, role, currentData }: PredictiveAnalyticsProps) {
+  const [predictions, setPredictions] = useState<PredictionData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('3m');
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     const loadPredictions = async () => {
@@ -269,7 +269,7 @@ export default function PredictiveAnalytics({ userId, role, currentData }: Predi
       try {
         // Simulate AI prediction loading
         await new Promise(resolve => setTimeout(resolve, 2000));
-        setPredictions(mockPredictions);
+        setPredictions(createMockPredictions(currentData));
       } catch (error) {
         console.error('Error loading predictions:', error);
         toast.error('Failed to load predictions');

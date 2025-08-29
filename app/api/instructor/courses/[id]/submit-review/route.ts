@@ -1,8 +1,8 @@
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request, context: Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const courseId = params.id;
   const supabase = await createApiSupabaseClient();
 

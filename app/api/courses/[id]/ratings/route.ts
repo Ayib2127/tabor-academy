@@ -9,9 +9,9 @@ const ratingSchema = z.object({
 
 export async function POST(
   req: Request,
-  context: Promise<{ params: { id: string } }>
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { params } = await context;
+  const params = await context.params;
   const courseId = params.id;
 
   try {
@@ -118,9 +118,9 @@ export async function POST(
 
 export async function GET(
   req: Request,
-  context: Promise<{ params: { id: string } }>
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { params } = await context;
+  const params = await context.params;
   const courseId = params.id;
 
   try {

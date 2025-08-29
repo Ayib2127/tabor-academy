@@ -133,6 +133,7 @@ interface AnalyticsData {
     studentRetentionRate: number;
     courseCompletionPrediction: number;
     atRiskStudents: number;
+    newPredictionField: number;
   };
 }
 
@@ -141,15 +142,8 @@ interface AdvancedAnalyticsDashboardProps {
   role: string;
 }
 
-export default function AdvancedAnalyticsDashboard({ userId, role }: AdvancedAnalyticsDashboardProps) {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [timeframe, setTimeframe] = useState('30d');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedView, setSelectedView] = useState('overview');
-
-  // Mock data - replace with real API calls
-  const mockData: AnalyticsData = {
+// Mock data - replace with real API calls
+const mockData: AnalyticsData = {
     overview: {
       totalStudents: 1247,
       totalRevenue: 45680,
@@ -255,8 +249,16 @@ export default function AdvancedAnalyticsDashboard({ userId, role }: AdvancedAna
       studentRetentionRate: 82.3,
       courseCompletionPrediction: 81.2,
       atRiskStudents: 23,
+      newPredictionField: 0,
     },
   };
+
+export default function AdvancedAnalyticsDashboard({ userId, role }: AdvancedAnalyticsDashboardProps) {
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [timeframe, setTimeframe] = useState('30d');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedView, setSelectedView] = useState('overview');
 
   useEffect(() => {
     const fetchData = async () => {

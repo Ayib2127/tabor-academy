@@ -1,17 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
+import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError, ForbiddenError, handleApiError } from '@/lib/utils/error-handling';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 // GET function to list all lessons for a course
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-    const { id: courseId } = await context.params;
+    const { params } = context;
     console.log('API Route: /api/courses/[id]/lessons - Incoming request');
     const incomingCookies = request.headers.get('cookie');
     console.log('API Route: Incoming Cookies Header:', incomingCookies); // Log the raw cookie header
 
     const supabase = await createApiSupabaseClient();
+    const { id: courseId } = await params;
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -20,8 +21,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
             console.error("API Route: Authentication error:", userError?.message);
             // Added more specific logging for debugging
             if (userError) {
-                console.error("API Route: Supabase Auth Error Code:", userError.code);
-                console.error("API Route: Supabase Auth Error Message:", userError.message);
+                console.error("API Route: Supabase Auth Error Code:", (userError as any).code);
             }
             throw new ForbiddenError('Auth session missing!');
         }
@@ -42,10 +42,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         const isInstructor = user.id === courseData.instructor_id;
         console.log("API Route: Is user instructor?", isInstructor);
 
+        // Resolve lessons via modules
+        const { data: modules, error: modulesError } = await supabase
+          .from('course_modules')
+          .select('id')
+          .eq('course_id', courseId);
+        if (modulesError) throw modulesError;
+        const moduleIds = (modules || []).map(m => m.id);
+
         let query = supabase
             .from('module_lessons')
             .select('*')
-            .eq('course_id', courseId)
+            .in('module_id', moduleIds)
             .order('order_index', { ascending: true });
 
         if (!isInstructor) {
@@ -64,7 +72,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     } catch (error: any) {
         console.error("API Route: Unexpected error in GET /api/courses/[id]/lessons:", error.message);
-        const apiError = await handleApiError(error);
+        const apiError = await handleApiError(error, 'GET /api/courses/[id]/lessons');
         return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
     }
 }
@@ -105,16 +113,28 @@ export async function POST(
     }
 
     // 4. Determine the position for the new lesson
+    // Count lessons across modules of this course
+    const { data: modules, error: modulesError } = await supabase
+      .from('course_modules')
+      .select('id')
+      .eq('course_id', courseId);
+    if (modulesError) throw modulesError;
+    const moduleIds = (modules || []).map(m => m.id);
+
     const { count, error: countError } = await supabase
       .from('module_lessons')
       .select('id', { count: 'exact', head: true })
-      .eq('course_id', courseId);
+      .in('module_id', moduleIds);
     if (countError) {
       throw countError;
     }
     const newPosition = (count || 0) + 1;
 
-    // 5. Insert the new lesson into the database
+    // 5. Insert the new lesson into the database (assign to first module by default)
+    const targetModuleId = moduleIds[0] || null;
+    if (!targetModuleId) {
+      throw new ValidationError('No module found to attach the lesson');
+    }
     const { data: newLesson, error: insertError } = await supabase
       .from('module_lessons')
       .insert({
@@ -122,9 +142,9 @@ export async function POST(
         content,
         video_url,
         duration,
-        course_id: courseId,
+        module_id: targetModuleId,
         order_index: newPosition,
-        is_published: false // Lessons are drafts by default
+        is_published: false
       })
       .select()
       .single();
@@ -137,7 +157,7 @@ export async function POST(
 
   } catch (error) {
     console.error('An unexpected error occurred:', error);
-    const apiError = await handleApiError(error);
+    const apiError = await handleApiError(error, 'POST /api/courses/[id]/lessons');
     return NextResponse.json({ code: apiError.code, error: apiError.message, details: apiError.details }, { status: apiError.code === 'VALIDATION_ERROR' ? 400 : apiError.code === 'FORBIDDEN' ? 403 : 500 });
   }
 } 
