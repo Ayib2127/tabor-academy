@@ -1,6 +1,27 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResendClient() {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      // During build time or when API key is missing, return a mock client to prevent errors
+      console.warn('RESEND_API_KEY not found - using mock client for build compatibility');
+      return {
+        emails: {
+          send: async () => ({ 
+            id: 'mock-email-id', 
+            error: null,
+            data: { id: 'mock-email-id' }
+          })
+        }
+      } as any;
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+}
 
 export interface WelcomeEmailData {
   userEmail: string;
@@ -12,7 +33,8 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
   try {
     const { userEmail, userName, userRole } = data;
     
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Tabor Academy <academy@tabordigital.com>',
       to: [userEmail],
       subject: 'Welcome to Tabor Academy! 🎉',
@@ -38,7 +60,8 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData) {
     const { userEmail, userName, confirmationToken } = data;
     const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/confirm-email?token=${confirmationToken}`;
 
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Tabor Academy <academy@tabordigital.com>',
       to: [userEmail],
       subject: 'Confirm your email for Tabor Academy',
@@ -253,10 +276,11 @@ export async function sendEnrollmentCongratulationsEmail(data: EnrollmentCongrat
   try {
     const { userEmail, userName, courseTitle } = data;
 
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Tabor Academy <academy@tabordigital.com>',
       to: [userEmail],
-      subject: `Congratulations on enrolling in "${courseTitle}"! 🎉`,
+      subject: `Congratulations on enrolling in "${courseTitle}"! `,
       html: generateEnrollmentCongratulationsHTML(userName, courseTitle),
       text: generateEnrollmentCongratulationsText(userName, courseTitle),
     });

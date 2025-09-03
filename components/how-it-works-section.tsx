@@ -75,28 +75,47 @@ export function HowItWorksSection() {
   const [visibleConnectors, setVisibleConnectors] = useState<number[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Initialize steps for mobile devices immediately
+  // Initialize steps for mobile devices immediately with Android compatibility
   useEffect(() => {
-    const isMobile = window.innerWidth < 1024; // lg breakpoint
-    if (isMobile) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+    
+    // For Android devices or mobile, show all steps immediately to prevent animation issues
+    if (isMobile || isAndroid) {
       setVisibleSteps([1, 2, 3]);
       setVisibleConnectors([1, 2]);
+      return;
     }
   }, []);
 
   useEffect(() => {
+    // Skip intersection observer on Android to prevent compatibility issues
+    const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    
+    if (isAndroid || isMobile) {
+      return;
+    }
+
+    // Check if IntersectionObserver is supported
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisibleSteps([1, 2, 3]);
+      setVisibleConnectors([1, 2]);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Animate steps sequentially
+          if (entry.isIntersecting && visibleSteps.length === 0) {
+            // Only animate if not already animated
             animateSteps();
           }
         });
       },
       {
-        threshold: 0.1, // Reduced threshold for better mobile detection
-        rootMargin: '0px'
+        threshold: 0.2,
+        rootMargin: '50px'
       }
     );
 
@@ -104,19 +123,21 @@ export function HowItWorksSection() {
       observer.observe(sectionRef.current);
     }
 
-    // Fallback: Show all steps after 2 seconds if intersection observer fails
+    // Fallback for older browsers
     const fallbackTimer = setTimeout(() => {
       if (visibleSteps.length === 0) {
         setVisibleSteps([1, 2, 3]);
         setVisibleConnectors([1, 2]);
       }
-    }, 2000);
+    }, 3000);
 
     return () => {
-      observer.disconnect();
+      if (observer) {
+        observer.disconnect();
+      }
       clearTimeout(fallbackTimer);
     };
-  }, [visibleSteps.length]);
+  }, []);
 
   const animateSteps = () => {
     // Reset animations
@@ -288,25 +309,45 @@ export function HowItWorksSection() {
 
 function StepCard({ step }: { step: Step }) {
   const IconComponent = step.icon;
+  const [isHovered, setIsHovered] = useState(false);
   
   return (
-    <Card className="relative overflow-hidden border-[#E5E8E8] hover:border-[#4ECDC4]/40 transition-all duration-300 hover:shadow-xl group">
+    <Card 
+      className="relative overflow-hidden border-[#E5E8E8] transition-all duration-500 ease-out group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        borderColor: isHovered ? `${step.color}40` : '#E5E8E8',
+        boxShadow: isHovered ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' : 'none',
+        transform: isHovered ? 'translateY(-2px)' : 'translateY(0px)',
+        willChange: 'transform, box-shadow, border-color'
+      }}
+    >
       {/* Step Number Badge */}
       <div 
-        className="absolute -top-4 -left-4 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg"
-        style={{ backgroundColor: step.color }}
+        className="absolute -top-4 -left-4 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg transition-transform duration-300 ease-out"
+        style={{ 
+          backgroundColor: step.color,
+          transform: isHovered ? 'scale(1.1)' : 'scale(1)'
+        }}
       >
         {step.number}
       </div>
 
       {/* Background Gradient */}
-      <div className={`absolute inset-0 ${step.bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+      <div 
+        className={`absolute inset-0 ${step.bgColor} transition-opacity duration-500 ease-out`}
+        style={{ opacity: isHovered ? 1 : 0 }}
+      />
 
       <div className="relative p-6">
         {/* Icon */}
         <div 
-          className="w-16 h-16 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-          style={{ backgroundColor: `${step.color}20` }}
+          className="w-16 h-16 rounded-lg flex items-center justify-center mb-4 transition-all duration-300 ease-out"
+          style={{ 
+            backgroundColor: `${step.color}20`,
+            transform: isHovered ? 'scale(1.05)' : 'scale(1)'
+          }}
         >
           <IconComponent className="w-8 h-8" style={{ color: step.color }} />
         </div>
@@ -335,10 +376,11 @@ function StepCard({ step }: { step: Step }) {
           <Button
             variant="outline"
             size="sm"
-            className="w-full group-hover:border-current group-hover:text-current transition-colors"
+            className="w-full transition-all duration-300 ease-out"
             style={{ 
-              borderColor: `${step.color}40`,
-              color: step.color
+              borderColor: isHovered ? step.color : `${step.color}40`,
+              color: isHovered ? step.color : `${step.color}80`,
+              backgroundColor: isHovered ? `${step.color}10` : 'transparent'
             }}
             asChild
           >
