@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
+import { useStableCallback } from './useStableCallback';
 
 interface AutoSaveConfig<T> {
   data: T;
@@ -22,6 +23,9 @@ export function useAutoSave<T>({
   const timeoutRef = useRef<NodeJS.Timeout>();
   const lastDataRef = useRef<T>(data);
 
+  const stableOnSave = useStableCallback(onSave);
+  const stableOnError = useStableCallback(onError || (() => {}));
+
   const save = useCallback(async (dataToSave: T) => {
     // Skip if data hasn't actually changed
     if (JSON.stringify(lastDataRef.current) === JSON.stringify(dataToSave)) {
@@ -30,7 +34,7 @@ export function useAutoSave<T>({
 
     try {
       setIsSaving(true);
-      await onSave(dataToSave);
+      await stableOnSave(dataToSave);
       lastDataRef.current = dataToSave;
       setLastSaved(new Date());
     } catch (error) {
@@ -38,7 +42,7 @@ export function useAutoSave<T>({
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       if (onError) {
-        onError(error as Error);
+        stableOnError(error as Error);
       } else {
         if ((error as any).code) {
           showApiErrorToast({
@@ -53,7 +57,7 @@ export function useAutoSave<T>({
     } finally {
       setIsSaving(false);
     }
-  }, [onSave, onError]);
+  }, [stableOnSave, stableOnError, onError]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -73,7 +77,7 @@ export function useAutoSave<T>({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [data, debounceTime, save, enabled]);
+  }, [data, debounceTime, enabled, save]);
 
   // Cleanup on unmount
   useEffect(() => {

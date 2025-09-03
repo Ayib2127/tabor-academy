@@ -11,6 +11,28 @@ const nextConfig = {
   },
   images: {
     unoptimized: process.env.NODE_ENV === 'development',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'randomuser.me',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fmbakckfxuabratissxg.supabase.co',
+        pathname: '/**',
+      },
+    ],
     domains: [
       'images.unsplash.com',
       'res.cloudinary.com',
@@ -129,7 +151,7 @@ const nextConfig = {
           default-src 'self';
           script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.cloudinary.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.vimeo.com https://www.googletagmanager.com https://va.vercel-scripts.com;
           frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.vimeo.com;
-          img-src 'self' data: https://*.cloudinary.com https://i.ytimg.com https://*.vimeocdn.com https://images.unsplash.com;
+          img-src 'self' data: https://*.cloudinary.com https://i.ytimg.com https://*.vimeocdn.com https://images.unsplash.com https://randomuser.me;
           style-src 'self' 'unsafe-inline';
           connect-src *;
           worker-src 'self' blob:;

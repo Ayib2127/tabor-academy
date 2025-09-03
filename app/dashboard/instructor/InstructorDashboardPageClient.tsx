@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -54,8 +54,9 @@ import AnalyticsCard from '@/components/dashboard/AnalyticsCard';
 import StudentProgressCard from '@/components/dashboard/StudentProgressCard';
 import RecentActivityCard from '@/components/dashboard/RecentActivityCard';
 import QuickActionsCard from '@/components/dashboard/QuickActionsCard';
-import { useRealtimeNotifications } from '@/lib/hooks/useRealtimeNotifications';
-import { useRealtimeDashboard } from '@/lib/hooks/useRealtimeDashboard';
+// Temporarily disabled to prevent infinite loops
+// import { useRealtimeNotifications } from '@/lib/hooks/useRealtimeNotifications';
+// import { useRealtimeDashboard } from '@/lib/hooks/useRealtimeDashboard';
 import { NotificationService } from '@/lib/services/notificationService';
 
 interface DashboardStats {
@@ -259,53 +260,25 @@ export default function InstructorDashboardPageClient({ user, role, initialData 
     [router]
   );
 
-  // Real-time notifications hook
-  const {
-    notifications: realtimeNotifications,
-    unreadCount,
-    loading: notificationsLoading,
-    error: notificationsError,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
-  } = useRealtimeNotifications({
-    userId: user?.id || '',
-    enabled: !!user?.id,
-    onNotificationReceived: handleNotificationReceived
-  });
+  // Temporarily disable real-time hooks to prevent infinite loops
+  const realtimeNotifications = [];
+  const unreadCount = 0;
+  const notificationsLoading = false;
+  const notificationsError = null;
+  const markAsRead = async () => {};
+  const markAllAsRead = async () => {};
+  const deleteNotification = async () => {};
+  const dashboardConnected = true;
+  const lastUpdate = null;
+  const refreshDashboard = () => {};
 
-  // Real-time dashboard updates hook
-  const {
-    isConnected: dashboardConnected,
-    lastUpdate,
-    refresh: refreshDashboard
-  } = useRealtimeDashboard({
-    userId: user?.id || '',
-    instructorId: user?.id || '',
-    enabled: !!user?.id,
-    onUpdate: handleDashboardUpdate
-  });
-
-  // Update connection status based on real-time hooks
+  // Static connection status (no real-time updates)
   useEffect(() => {
-    if (dashboardConnected) {
-      setConnectionStatus('connected');
-    } else {
-      setConnectionStatus('disconnected');
-    }
-  }, [dashboardConnected]);
+    setConnectionStatus('connected');
+  }, []);
 
-  // Initialize notifications and mobile detection (run only once)
+  // Initialize mobile detection only (removed notifications to prevent loops)
   useEffect(() => {
-    // Only show notifications on initial load, not on every re-render
-    const unreadStatusNotifications = initialData.notifications.filter(
-      notification => !notification.read && notification.type === 'status_change'
-    );
-    
-    unreadStatusNotifications.forEach(notification => {
-      toast.info(notification.message);
-    });
-    
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
       if (window.innerWidth >= 768) {
@@ -316,7 +289,7 @@ export default function InstructorDashboardPageClient({ user, role, initialData 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [initialData.notifications]); // Include initialData.notifications in dependency array
+  }, []); // Empty dependency array - run only once on mount
 
   // Handle clicking outside notification dropdown
   useEffect(() => {

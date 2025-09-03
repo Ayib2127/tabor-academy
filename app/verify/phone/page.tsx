@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -18,10 +18,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
-import { countries } from "@/lib/countries"
+// import { countries } from "@/lib/countries" // Temporarily disabled
 import { getUserRoleAndRedirect } from "@/lib/utils/auth"
 
-export default function PhoneVerificationPage() {
+function PhoneVerificationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const phone = searchParams.get("phone") || ""
@@ -193,5 +193,27 @@ export default function PhoneVerificationPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function PhoneVerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1">
+          <div className="container max-w-lg py-10">
+            <Card className="p-6">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+                <p>Loading verification page...</p>
+              </div>
+            </Card>
+          </div>
+        </main>
+      </div>
+    }>
+      <PhoneVerificationContent />
+    </Suspense>
   )
 }

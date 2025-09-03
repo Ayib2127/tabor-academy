@@ -1,7 +1,7 @@
-import { createApiSupabaseClient } from '@/lib/supabase/standardized-client';
-import { cookies } from 'next/headers';
+import { createSupabaseServerClient } from '@/lib/supabase/standardized-client';
 import { redirect } from 'next/navigation';
 import InstructorDashboardPageClient from './InstructorDashboardPageClient';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -66,8 +66,7 @@ interface DashboardData {
 }
 
 async function fetchDashboardData(userId: string): Promise<DashboardData> {
-  const cookieStore = await cookies();
-  const supabase = await createApiSupabaseClient(cookieStore);
+  const supabase = await createSupabaseServerClient();
 
   // Fetch all instructor courses with detailed information
   const { data: coursesData, error: coursesError } = await supabase
@@ -150,9 +149,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
               id,
               title,
               type,
-              position,
-              due_date,
-              needs_grading
+              position
             )
           `)
           .eq('course_id', course.id)
@@ -171,8 +168,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
             title: lesson.title,
             type: (lesson.type || 'text') as 'video' | 'text' | 'quiz' | 'assignment',
             position: lesson.position,
-            dueDate: lesson.due_date,
-            needsGrading: !!lesson.needs_grading,
+            needsGrading: false,
           })).sort((a: any, b: any) => a.position - b.position),
         }));
 
@@ -429,8 +425,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
 }
 
 export default async function InstructorDashboardPage() {
-  const cookieStore = await cookies();
-  const supabase = await createApiSupabaseClient(cookieStore);
+  const supabase = await createSupabaseServerClient();
 
   // Get the current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -454,10 +449,12 @@ export default async function InstructorDashboardPage() {
   const dashboardData = await fetchDashboardData(user.id);
 
   return (
-    <InstructorDashboardPageClient 
-      user={user} 
-      role={profile.role}
-      initialData={dashboardData}
-    />
+    <ErrorBoundary>
+      <InstructorDashboardPageClient 
+        user={user} 
+        role={profile.role}
+        initialData={dashboardData} 
+      />
+    </ErrorBoundary>
   );
-} 
+}

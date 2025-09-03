@@ -1052,7 +1052,7 @@ export default function CourseContentPage() {
     });
   };
 
-  const handleSaveChanges = async () => {
+  async function handleSaveChanges() {
     if (!courseData) return;
 
     try {

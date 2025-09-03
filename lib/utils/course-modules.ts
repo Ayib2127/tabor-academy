@@ -36,8 +36,7 @@ export async function fetchCourseModules(courseIds: string[]): Promise<CourseWit
           title,
           type,
           position,
-          due_date,
-          needs_grading
+          due_date
         )
       `)
       .in('course_id', courseIds)
@@ -63,7 +62,7 @@ export async function fetchCourseModules(courseIds: string[]): Promise<CourseWit
         type: lesson.type as 'video' | 'text' | 'quiz' | 'assignment',
         position: lesson.position,
         dueDate: lesson.due_date,
-        needsGrading: lesson.needs_grading || false,
+        needsGrading: false,
       })).sort((a, b) => a.position - b.position);
 
       courseModulesMap.get(courseId)!.push({

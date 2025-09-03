@@ -67,10 +67,6 @@ export default function CoursePage() {
     const [modules, setModules] = useState<Module[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
 
-  useEffect(() => {
-    fetchCourseDetails();
-    fetchCurriculum();
-  }, [courseId, fetchCourseDetails, fetchCurriculum]);
 
   const fetchCourseDetails = useCallback(async () => {
         try {
@@ -122,6 +118,13 @@ export default function CoursePage() {
       }
     }
   }, [courseId]);
+
+  // Fetch course details and curriculum on mount / courseId change
+  useEffect(() => {
+    if (!courseId) return;
+    fetchCourseDetails();
+    fetchCurriculum();
+  }, [courseId, fetchCourseDetails, fetchCurriculum]);
 
   const handleSubmitForReview = async () => {
     if (!course) return;

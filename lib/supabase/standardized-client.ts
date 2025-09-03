@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import type { Database } from '@/lib/supabase/types';
 
 // Migration flag - set to true when ready to switch
@@ -23,6 +22,7 @@ export async function createSupabaseServerClient() {
   validateEnvironment();
   
   try {
+    const { cookies } = await import('next/headers');
     const cookieStore = await cookies();
     
     if (USE_NEW_SSR) {
@@ -32,8 +32,8 @@ export async function createSupabaseServerClient() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
-            get: async (name: string) => {
-              const cookie = await cookieStore.get(name);
+            get: (name: string) => {
+              const cookie = cookieStore.get(name);
               if (!cookie?.value) return undefined;
               try {
                 // Try to parse as JSON array and return the first non-null, non-empty string
@@ -48,16 +48,16 @@ export async function createSupabaseServerClient() {
               }
               return cookie.value;
             },
-            set: async (name: string, value: string, options: any) => {
+            set: (name: string, value: string, options: any) => {
               try {
-                await cookieStore.set(name, value, options);
+                cookieStore.set(name, value, options);
               } catch (error) {
                 console.warn('Failed to set cookie:', name, error);
               }
             },
-            remove: async (name: string, options: any) => {
+            remove: (name: string, options: any) => {
               try {
-                await cookieStore.set(name, '', { ...options, maxAge: 0 });
+                cookieStore.set(name, '', { ...options, maxAge: 0 });
               } catch (error) {
                 console.warn('Failed to remove cookie:', name, error);
               }
@@ -86,7 +86,8 @@ export async function createApiSupabaseClient(passedCookies?: any) {
     if (passedCookies) {
       cookieStore = typeof passedCookies.then === 'function' ? await passedCookies : passedCookies;
     } else {
-      cookieStore = await cookies();
+      const { cookies } = await import('next/headers');
+      cookieStore = cookies();
     }
     
     if (USE_NEW_SSR) {

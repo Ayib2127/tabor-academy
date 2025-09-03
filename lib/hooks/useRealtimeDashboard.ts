@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { useStableCallback } from './useStableCallback';
 
 export interface DashboardUpdate {
   type: 'course_update' | 'enrollment' | 'assignment' | 'activity' | 'progress';
@@ -26,6 +27,9 @@ export function useRealtimeDashboard({
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [channels, setChannels] = useState<RealtimeChannel[]>([]);
+
+  // Stabilize the onUpdate callback to prevent infinite loops
+  const stableOnUpdate = useStableCallback(onUpdate || (() => {}));
 
   // Setup real-time subscriptions for dashboard data
   useEffect(() => {
@@ -55,7 +59,7 @@ export function useRealtimeDashboard({
                     timestamp: new Date().toISOString()
                   };
                   setLastUpdate(update.timestamp);
-                  onUpdate?.(update);
+                  stableOnUpdate(update);
                 } catch (err) {
                   console.warn('Error handling course update:', err);
                 }
@@ -94,7 +98,7 @@ export function useRealtimeDashboard({
                     timestamp: new Date().toISOString()
                   };
                   setLastUpdate(update.timestamp);
-                  onUpdate?.(update);
+                  stableOnUpdate(update);
                 } catch (err) {
                   console.warn('Error handling enrollment update:', err);
                 }
@@ -133,7 +137,7 @@ export function useRealtimeDashboard({
                     timestamp: new Date().toISOString()
                   };
                   setLastUpdate(update.timestamp);
-                  onUpdate?.(update);
+                  stableOnUpdate(update);
                 } catch (err) {
                   console.warn('Error handling assignment update:', err);
                 }
@@ -172,7 +176,7 @@ export function useRealtimeDashboard({
                     timestamp: new Date().toISOString()
                   };
                   setLastUpdate(update.timestamp);
-                  onUpdate?.(update);
+                  stableOnUpdate(update);
                 } catch (err) {
                   console.warn('Error handling activity update:', err);
                 }
@@ -211,7 +215,7 @@ export function useRealtimeDashboard({
                     timestamp: new Date().toISOString()
                   };
                   setLastUpdate(update.timestamp);
-                  onUpdate?.(update);
+                  stableOnUpdate(update);
                 } catch (err) {
                   console.warn('Error handling progress update:', err);
                 }
@@ -266,26 +270,25 @@ export function useRealtimeDashboard({
         channels.forEach(channel => {
           supabase.removeChannel(channel);
         });
-        setIsConnected(false);
       } catch (err) {
         console.warn('Error cleaning up real-time dashboard subscriptions:', err);
       }
     };
-  }, [enabled, userId, instructorId, onUpdate, channels]);
+  }, [enabled, userId, instructorId]); // Removed onUpdate and channels from dependencies
 
   // Manual refresh function
   const refresh = useCallback(() => {
     setLastUpdate(new Date().toISOString());
-    onUpdate?.({
+    stableOnUpdate({
       type: 'activity',
       data: { manual_refresh: true },
       timestamp: new Date().toISOString()
     });
-  }, [onUpdate]);
+  }, [stableOnUpdate]);
 
   return {
     isConnected,
     lastUpdate,
     refresh
   };
-} 
+}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useStableCallback } from '@/lib/hooks/useStableCallback';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -173,23 +174,23 @@ export default function CalendarDashboard({ userId, role }: CalendarDashboardPro
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadEvents = async () => {
-      setLoading(true);
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setEvents(mockEvents);
-      } catch (error) {
-        console.error('Error loading events:', error);
-        toast.error('Failed to load calendar events');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const stableLoadEvents = useStableCallback(async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setEvents(mockEvents);
+    } catch (error) {
+      console.error('Error loading events:', error);
+      toast.error('Failed to load calendar events');
+    } finally {
+      setLoading(false);
+    }
+  });
 
-    loadEvents();
-  }, []);
+  useEffect(() => {
+    stableLoadEvents();
+  }, [stableLoadEvents]);
 
   // Calendar navigation
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -263,21 +264,21 @@ export default function CalendarDashboard({ userId, role }: CalendarDashboardPro
   };
 
   // Handle event creation
-  const handleCreateEvent = () => {
+  const handleCreateEvent = useCallback(() => {
     setIsCreatingEvent(true);
-  };
+  }, []);
 
   // Handle event deletion
-  const handleDeleteEvent = (eventId: string) => {
-    setEvents(events.filter(event => event.id !== eventId));
+  const handleDeleteEvent = useCallback((eventId: string) => {
+    setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
     toast.success('Event deleted successfully');
-  };
+  }, []);
 
   // Export calendar
-  const handleExportCalendar = (format: 'ics' | 'csv') => {
+  const handleExportCalendar = useCallback((format: 'ics' | 'csv') => {
     toast.success(`Calendar exported as ${format.toUpperCase()}`);
     // Implement export functionality
-  };
+  }, []);
 
   if (loading) {
     return (

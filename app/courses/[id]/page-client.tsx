@@ -44,6 +44,7 @@ export default function CourseDetailsPage() {
   const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
   const [completedLessons, setCompletedLessons] = useState(0);
   const [totalValidLessons, setTotalValidLessons] = useState(0);
+  const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
 
   // Move these up!
   const [activeTab, setActiveTab] = useState("overview");
@@ -125,38 +126,41 @@ export default function CourseDetailsPage() {
     fetchEnrollmentStatus();
   }, [currentUserId, course?.id]);
 
-  // Find the first published lesson (sorted by module order and lesson order)
-  let firstLessonId: string | null = null;
-  if (modules && modules.length > 0) {
-    const sortedModules = [...modules].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
-    for (const moduleItem of sortedModules) {
-      if (moduleItem.lessons && moduleItem.lessons.length > 0) {
-        const sortedLessons = [...moduleItem.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
-        const publishedLesson = sortedLessons.find((lesson) => {
-          if (!lesson.is_published) return false;
-          switch (lesson.type) {
-            case 'video':
-              return lesson.content && lesson.content.src;
-            case 'text':
-              return lesson.content && lesson.content.length > 0;
-            case 'quiz':
-              try {
-                const quizContent = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
-                return quizContent && Array.isArray(quizContent.questions) && quizContent.questions.length > 0;
-              } catch { return false; }
-            case 'assignment':
-              return lesson.content && lesson.content.length > 0;
-            default:
-              return false;
+  // Calculate first lesson ID when modules change
+  useEffect(() => {
+    let foundFirstLessonId: string | null = null;
+    if (modules && modules.length > 0) {
+      const sortedModules = [...modules].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
+      for (const moduleItem of sortedModules) {
+        if (moduleItem.lessons && moduleItem.lessons.length > 0) {
+          const sortedLessons = [...moduleItem.lessons].sort((a, b) => (a.order ?? a.position ?? 0) - (b.order ?? b.position ?? 0));
+          const publishedLesson = sortedLessons.find((lesson) => {
+            if (!lesson.is_published) return false;
+            switch (lesson.type) {
+              case 'video':
+                return lesson.content && lesson.content.src;
+              case 'text':
+                return lesson.content && lesson.content.length > 0;
+              case 'quiz':
+                try {
+                  const quizContent = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+                  return quizContent && Array.isArray(quizContent.questions) && quizContent.questions.length > 0;
+                } catch { return false; }
+              case 'assignment':
+                return lesson.content && lesson.content.length > 0;
+              default:
+                return false;
+            }
+          });
+          if (publishedLesson) {
+            foundFirstLessonId = publishedLesson.id;
+            break;
           }
-        });
-        if (publishedLesson) {
-          firstLessonId = publishedLesson.id;
-          break;
         }
       }
     }
-  }
+    setFirstLessonId(foundFirstLessonId);
+  }, [modules]);
 
   // Calculate progress percentage
   const progressPercent = totalValidLessons > 0 ? Math.round((completedLessons / totalValidLessons) * 100) : 0;

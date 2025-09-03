@@ -6,6 +6,9 @@ dist/
 out/
 coverage/
 *.log
+# Ignore backup copies
+*.bak
+archive/
 .DS_Store
 .vscode/
 .env.*

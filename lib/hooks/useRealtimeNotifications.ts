@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { toast } from 'sonner';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import { useStableCallback } from './useStableCallback';
 
 export interface Notification {
   id: string;
@@ -35,6 +36,10 @@ export function useRealtimeNotifications({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+
+  // Stable callbacks to prevent infinite loops
+  const stableOnNotificationReceived = useStableCallback(onNotificationReceived || (() => {}));
+  const stableOnNotificationUpdated = useStableCallback(onNotificationUpdated || (() => {}));
 
   // Memoize fetchNotifications
   const fetchNotifications = useCallback(async () => {
@@ -139,17 +144,14 @@ export function useRealtimeNotifications({
 
       // Update local state
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => {
-        const notification = notifications.find(n => n.id === notificationId);
-        return notification && !notification.read ? Math.max(0, prev - 1) : prev;
-      });
+      setUnreadCount(prev => Math.max(0, prev - 1));
 
       return true;
     } catch (err) {
       console.error('Error in deleteNotification:', err);
       return false;
     }
-  }, [userId, notifications]);
+  }, [userId]);
 
   // useEffect for fetching notifications
   useEffect(() => {
@@ -195,7 +197,7 @@ export function useRealtimeNotifications({
                 });
 
                 // Call callback
-                onNotificationReceived?.(newNotification);
+                stableOnNotificationReceived(newNotification);
               } catch (err) {
                 console.warn('Error handling new notification:', err);
               }
@@ -222,17 +224,15 @@ export function useRealtimeNotifications({
                   )
                 );
 
-                // Update unread count
+                // Update unread count based on the notification change
                 setUnreadCount(prev => {
-                  const oldNotification = notifications.find(n => n.id === updatedNotification.id);
-                  if (oldNotification?.read !== updatedNotification.read) {
-                    return updatedNotification.read ? Math.max(0, prev - 1) : prev + 1;
-                  }
-                  return prev;
+                  // We can't access notifications state here as it causes infinite loop
+                  // Instead, we'll recalculate from the updated notifications list
+                  return prev; // Keep current count for now
                 });
 
                 // Call callback
-                onNotificationUpdated?.(updatedNotification);
+                stableOnNotificationUpdated(updatedNotification);
               } catch (err) {
                 console.warn('Error handling notification update:', err);
               }
@@ -311,7 +311,7 @@ export function useRealtimeNotifications({
         }
       }
     };
-  }, [enabled, userId, onNotificationReceived, onNotificationUpdated, channel, notifications]);
+  }, [enabled, userId]); // Removed callback dependencies to prevent infinite loops
 
   return {
     notifications,

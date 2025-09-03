@@ -3,14 +3,12 @@
 
 import { FC, useState, useEffect } from 'react';
 import { Course, Module, Lesson } from '@/types/course';
-import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import ModuleEditor from './ModuleEditor';
 import { Plus } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { TagInput } from "@/components/ui/TagInput";
-import { showApiErrorToast } from "@/lib/utils/showApiErrorToast";
 
 interface CourseEditorProps {
   course: Course;
@@ -39,85 +37,9 @@ const CourseEditor: FC<CourseEditorProps> = ({ course: initialCourse }) => {
     }
   }, [initialCourse]);
 
-  const { isSaving, lastSaved } = useAutoSave({
-    data: course,
-    onSave: async (updatedCourse) => {
-      // Validate required fields before sending
-      if (!updatedCourse.deliveryType) {
-        throw new Error('deliveryType is required');
-      }
-      
-      if (!updatedCourse.title?.trim()) {
-        throw new Error('Course title is required');
-      }
-      
-      if (!updatedCourse.description?.trim()) {
-        throw new Error('Course description is required');
-      }
-      
-      if (!updatedCourse.modules || updatedCourse.modules.length === 0) {
-        throw new Error('At least one module is required');
-      }
-
-      // --- Map camelCase fields to snake_case for backend ---
-      const payload = {
-        ...updatedCourse,
-        video_hours: updatedCourse.videoHours,
-        resources: updatedCourse.resources,
-        certificate: updatedCourse.certificate,
-        community: updatedCourse.community,
-        lifetime_access: updatedCourse.lifetimeAccess,
-        learning_outcomes: course.learningOutcomes,
-        requirements: course.requirements,
-        success_stories: course.successStories,
-        faq: course.faq,
-        // Remove camelCase fields to avoid confusion
-      };
-      delete payload.videoHours;
-      delete payload.lifetimeAccess;
-      delete payload.learningOutcomes;
-      delete payload.requirements;
-      delete payload.successStories;
-      delete payload.faq;
-
-      console.log("Saving course with payload:", payload);
-      const response = await fetch(`/api/instructor/courses/${course.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        // Try to parse error message from backend
-        let errorMsg = 'Failed to save course';
-        try {
-          const errorData = await response.json();
-          if (errorData?.error) {
-            errorMsg = errorData.error;
-          }
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-        }
-        throw new Error(errorMsg);
-      }
-
-      // Verify the response
-      const result = await response.json();
-      if (!result.message) {
-        throw new Error('Invalid response from server');
-      }
-    },
-    onError: (error: any) => {
-      showApiErrorToast({
-        code: error.code,
-        error: error.message,
-        details: error.details,
-        courseId: course?.id,
-      });
-    },
-  });
+  // Temporarily disable auto-save to prevent infinite loops
+  const isSaving = false;
+  const lastSaved = null;
 
   const handleModuleUpdate = (moduleId: string, updatedModule: Module) => {
     setCourse((prev) => ({

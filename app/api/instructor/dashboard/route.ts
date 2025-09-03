@@ -101,11 +101,11 @@ export async function GET(request: Request) {
   console.log('--- API Call: /api/instructor/dashboard ---');
   const corsHeaders = getCorsHeaders(request);
   const cookieStore = await cookies();
-  const allCookies = await cookieStore.getAll();
+  const allCookies = cookieStore.getAll();
   console.log('API cookies:', allCookies);
 
   // Log the session cookie value directly
-  const sessionCookie = await cookieStore.get('sb-fmbakckfxuabratissxg-auth-token');
+  const sessionCookie = cookieStore.get('sb-fmbakckfxuabratissxg-auth-token');
   console.log('Session cookie value:', sessionCookie);
 
   if (!sessionCookie || !sessionCookie.value) {
@@ -240,8 +240,7 @@ export async function GET(request: Request) {
               title,
               type,
               position,
-              due_date,
-              needs_grading
+              due_date
             )
           `)
           .eq('course_id', course.id)
@@ -262,7 +261,7 @@ export async function GET(request: Request) {
             type: lesson.type as 'video' | 'text' | 'quiz' | 'assignment',
             position: lesson.position,
             dueDate: lesson.due_date,
-            needsGrading: lesson.needs_grading || false,
+            needsGrading: false,
           })).sort((a, b) => a.position - b.position)
         }));
 
