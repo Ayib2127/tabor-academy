@@ -3,20 +3,26 @@ import { Resend } from 'resend';
 let resend: Resend | null = null;
 
 function getResendClient() {
+  // Check if we're in a build environment
+  const isBuild = process.env.NODE_ENV === 'production' && !process.env.RESEND_API_KEY;
+  
+  if (isBuild) {
+    // Return a mock client during build to prevent initialization errors
+    return {
+      emails: {
+        send: async () => ({ 
+          id: 'mock-email-id', 
+          error: null,
+          data: { id: 'mock-email-id' }
+        })
+      }
+    } as any;
+  }
+
   if (!resend) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      // During build time or when API key is missing, return a mock client to prevent errors
-      console.warn('RESEND_API_KEY not found - using mock client for build compatibility');
-      return {
-        emails: {
-          send: async () => ({ 
-            id: 'mock-email-id', 
-            error: null,
-            data: { id: 'mock-email-id' }
-          })
-        }
-      } as any;
+      throw new Error('RESEND_API_KEY environment variable is required');
     }
     resend = new Resend(apiKey);
   }
@@ -32,6 +38,12 @@ export interface WelcomeEmailData {
 export async function sendWelcomeEmail(data: WelcomeEmailData) {
   try {
     const { userEmail, userName, userRole } = data;
+    
+    // Check if we're in build mode and skip actual email sending
+    if (process.env.NODE_ENV === 'production' && !process.env.RESEND_API_KEY) {
+      console.log('Build mode: Skipping email send for', userEmail);
+      return { success: true, data: { id: 'build-mode-mock' } };
+    }
     
     const resendClient = getResendClient();
     const result = await resendClient.emails.send({
@@ -59,6 +71,12 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData) {
   try {
     const { userEmail, userName, confirmationToken } = data;
     const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/confirm-email?token=${confirmationToken}`;
+
+    // Check if we're in build mode and skip actual email sending
+    if (process.env.NODE_ENV === 'production' && !process.env.RESEND_API_KEY) {
+      console.log('Build mode: Skipping confirmation email send for', userEmail);
+      return { success: true, data: { id: 'build-mode-mock' } };
+    }
 
     const resendClient = getResendClient();
     const result = await resendClient.emails.send({

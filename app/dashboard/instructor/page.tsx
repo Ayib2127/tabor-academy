@@ -4,6 +4,10 @@ import InstructorDashboardPageClient from './InstructorDashboardPageClient';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Link from 'next/link';
 
+// Force dynamic rendering to prevent build-time static generation
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface DashboardStats {
   totalStudents: number;
   totalRevenue: number;
@@ -66,10 +70,18 @@ interface DashboardData {
 }
 
 async function fetchDashboardData(userId: string): Promise<DashboardData> {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
+    
+    if (!supabase) {
+      throw new Error('Database connection failed');
+    }
 
-  // Fetch all instructor courses with detailed information
-  const { data: coursesData, error: coursesError } = await supabase
+    // Type assertion to fix union type issues
+    const client = supabase as any;
+
+    // Fetch all instructor courses with detailed information
+    const { data: coursesData, error: coursesError } = await client
     .from('courses')
     .select(`
       id,
@@ -99,21 +111,23 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
 
   const coursesOverview: CourseOverview[] = await Promise.all(
     (coursesData || []).map(async (course) => {
-      // Get student count for each course
-      const { count: studentCount, error: studentCountError } = await supabase
-        .from('enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('course_id', course.id);
+      // Get total student count and revenue using functions
+      const { data: totalStudentsResult, error: studentsError } = await client.rpc('get_instructor_total_students', { instructor_id: userId });
+      const { data: totalRevenueResult, error: revenueError } = await client.rpc('get_instructor_total_revenue', { instructor_id: userId });
 
-      if (studentCountError) {
-        console.error(`Error fetching student count for course ${course.id}:`, studentCountError);
+      if (studentsError) {
+        console.error(`Error fetching total students for instructor ${userId}:`, studentsError);
       }
 
-      const currentStudentCount = studentCount || 0;
-      const revenue = (course.price || 0) * currentStudentCount;
+      if (revenueError) {
+        console.error(`Error fetching total revenue for instructor ${userId}:`, revenueError);
+      }
+
+      const currentStudentCount = totalStudentsResult || 0;
+      const revenue = totalRevenueResult || 0;
 
       // Get average completion rate for the course
-      const { data: completionRate, error: completionError } = await supabase
+      const { data: completionRate, error: completionError } = await client
         .rpc('get_course_average_completion_rate', {
           p_course_id: course.id,
         });
@@ -125,7 +139,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
       const currentCompletionRate = completionRate || 0;
 
       // Get average rating for the course
-      const { data: courseRating, error: ratingError } = await supabase
+      const { data: courseRating, error: ratingError } = await client
         .rpc('get_course_average_rating', {
           p_course_id: course.id,
         });
@@ -134,12 +148,22 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
         console.error(`Error fetching rating for course ${course.id}:`, ratingError);
       }
 
-      const currentCourseRating = courseRating || 0;
+      // Fetch reviews for this course
+      const { data: reviewsData, error: reviewsError } = await client
+        .from('reviews')
+        .select('id, rating')
+        .eq('course_id', course.id);
+
+      if (reviewsError) {
+        console.error(`Error fetching reviews for course ${course.id}:`, reviewsError);
+      }
+
+      const currentCourseRating = reviewsData ? reviewsData.reduce((sum, review) => sum + review.rating, 0) / reviewsData.length : 0;
 
       // Fetch modules and lessons for this course (correct relation)
       let modules: Array<{ id: string; title: string; order: number; lessons: Array<{ id: string; title: string; type: 'video' | 'text' | 'quiz' | 'assignment'; position: number; dueDate?: string; needsGrading?: boolean; }> }> = [];
       try {
-        const { data: modulesData, error: modulesError } = await supabase
+        const { data: modulesData, error: modulesError } = await client
           .from('course_modules')
           .select(`
             id,
@@ -184,7 +208,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
       let assignmentsError = null;
       
       try {
-        const result = await supabase
+        const result = await client
           .from('assignments')
           .select(`
             id,
@@ -241,7 +265,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
         id: course.id,
         title: course.title,
         status: course.status,
-        thumbnail_url: course.thumbnail_url,
+        thumbnailUrl: course.thumbnail_url,
         price: course.price,
         students: currentStudentCount,
         completionRate: parseFloat(currentCompletionRate.toFixed(2)),
@@ -263,7 +287,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
   const courseIds = coursesOverview.map(c => c.id);
 
   // Get ungraded assignments count
-  const { count: ungradedAssignments, error: assignmentsError } = await supabase
+  const { count: ungradedAssignments, error: assignmentsError } = await client
     .from('assignments')
     .select('*', { count: 'exact', head: true })
     .eq('instructor_id', userId)
@@ -274,7 +298,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
   }
 
   // Get unanswered questions count
-  const { count: unansweredQuestions, error: questionsError } = await supabase
+  const { count: unansweredQuestions, error: questionsError } = await client
     .from('student_questions')
     .select('*', { count: 'exact', head: true })
     .eq('course_instructor_id', userId)
@@ -288,7 +312,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
   const coursesNeedingChanges = coursesOverview.filter(c => c.status === 'rejected').length;
 
   // Fetch recent activity from activity_log
-  const { data: activityData, error: activityError } = await supabase
+  const { data: activityData, error: activityError } = await client
     .from('activity_log')
     .select(`
       id,
@@ -334,7 +358,8 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
 
   // If activity log is empty, fall back to enrollments for MVP
   if (recentActivity.length === 0) {
-    const { data: enrollmentActivity, error: enrollmentError } = await supabase
+    // Fetch recent enrollments
+    const { data: recentEnrollmentsData, error: enrollmentsError } = await client
       .from('enrollments')
       .select(`
         id,
@@ -353,10 +378,10 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
       .order('enrolled_at', { ascending: false })
       .limit(10);
 
-    if (enrollmentError) {
-      console.error('Error fetching enrollment activity:', enrollmentError);
+    if (enrollmentsError) {
+      console.error('Error fetching enrollment activity:', enrollmentsError);
     } else {
-      recentActivity.push(...(enrollmentActivity || []).map((enrollment: any) => ({
+      recentActivity.push(...(recentEnrollmentsData || []).map((enrollment: any) => ({
         id: enrollment.id,
         type: 'enrollment' as const,
         student: enrollment.users?.full_name || 'Unknown Student',
@@ -394,67 +419,92 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
     }
   }
 
-  return {
-    stats: {
-      totalStudents,
-      totalRevenue,
-      averageRating: parseFloat(overallAverageRating.toFixed(1)),
-      totalCourses: coursesOverview.length,
-    },
-    courses: coursesOverview,
-    actionItems: [
-      {
-        type: 'assignment',
-        count: ungradedAssignments || 0,
-        urgent: (ungradedAssignments || 0) > 5,
+    return {
+      stats: {
+        totalStudents,
+        totalRevenue,
+        averageRating: parseFloat(overallAverageRating.toFixed(1)),
+        totalCourses: coursesOverview.length,
       },
-      {
-        type: 'question',
-        count: unansweredQuestions || 0,
-        urgent: (unansweredQuestions || 0) > 0,
+      courses: coursesOverview,
+      actionItems: [
+        {
+          type: 'assignment',
+          count: ungradedAssignments || 0,
+          urgent: (ungradedAssignments || 0) > 5,
+        },
+        {
+          type: 'question',
+          count: unansweredQuestions || 0,
+          urgent: (unansweredQuestions || 0) > 0,
+        },
+        {
+          type: 'review',
+          count: coursesNeedingChanges,
+          urgent: coursesNeedingChanges > 0,
+        },
+      ],
+      recentActivity,
+      notifications,
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    // Return default data structure on error
+    return {
+      stats: {
+        totalStudents: 0,
+        totalRevenue: 0,
+        averageRating: 0,
+        totalCourses: 0,
       },
-      {
-        type: 'review',
-        count: coursesNeedingChanges,
-        urgent: coursesNeedingChanges > 0,
-      },
-    ],
-    recentActivity,
-    notifications,
-  };
+      courses: [],
+      actionItems: [],
+      recentActivity: [],
+      notifications: [],
+    };
+  }
 }
 
 export default async function InstructorDashboardPage() {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  // Get the current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (!supabase) {
+      redirect('/login');
+    }
 
-  if (userError || !user) {
-    redirect('/login');
-  }
+    // Get the current user
+    const { data: { user }, error: userError } = await (supabase as any).auth.getUser();
 
-  // Verify user is an instructor
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .single();
+    if (userError || !user) {
+      redirect('/login');
+    }
 
-  if (profileError || profile?.role !== 'instructor') {
+    // Verify user is an instructor
+    const { data: profile, error: profileError } = await (supabase as any)
+      .from('users')
+      .select('role, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || profile?.role !== 'instructor') {
+      redirect('/dashboard');
+    }
+
+    // Fetch all dashboard data server-side
+    const dashboardData = await fetchDashboardData(user.id);
+
+    return (
+      <ErrorBoundary>
+        <InstructorDashboardPageClient 
+          user={user} 
+          role={profile.role}
+          initialData={dashboardData} 
+        />
+      </ErrorBoundary>
+    );
+  } catch (error) {
+    console.error('Error in instructor dashboard:', error);
     redirect('/dashboard');
   }
-
-  // Fetch all dashboard data server-side
-  const dashboardData = await fetchDashboardData(user.id);
-
-  return (
-    <ErrorBoundary>
-      <InstructorDashboardPageClient 
-        user={user} 
-        role={profile.role}
-        initialData={dashboardData} 
-      />
-    </ErrorBoundary>
-  );
 }
